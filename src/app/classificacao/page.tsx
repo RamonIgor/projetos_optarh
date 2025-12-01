@@ -95,21 +95,21 @@ export default function ClassificationPage() {
     }
   }, [allActivities]);
 
-  const fetchActivities = (filter: 'all' | 'pending' = 'pending') => {
+  const fetchActivities = (filter: 'all' | 'pending' | 'approved' = 'pending') => {
     if (!db) return;
     setIsLoading(true);
     
-    // Listener for all activities to calculate stats
     const allQuery = query(collection(db, ACTIVITIES_COLLECTION));
     const unsubAll = onSnapshot(allQuery, (snapshot) => {
         const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
         setAllActivities(activitiesData);
     });
 
-    // Listener for activities to classify
     let classifyQuery;
     if (filter === 'pending') {
       classifyQuery = query(collection(db, ACTIVITIES_COLLECTION), where('status', '!=', 'aprovada'));
+    } else if (filter === 'approved') {
+      classifyQuery = query(collection(db, ACTIVITIES_COLLECTION), where('status', '==', 'aprovada'));
     } else {
       classifyQuery = query(collection(db, ACTIVITIES_COLLECTION));
     }
@@ -119,7 +119,7 @@ export default function ClassificationPage() {
       
       setActivitiesToClassify(sortedToClassify);
 
-      if (sortedToClassify.length === 0 && allActivities.length > 0) {
+      if (sortedToClassify.length === 0 && filter !== 'approved' && allActivities.length > 0) {
         setShowSummary(true);
       } else {
         setShowSummary(false);
@@ -303,15 +303,23 @@ export default function ClassificationPage() {
   if (showSummary) {
     return (
         <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
-            <SummaryScreen stats={summaryStats} onReviewPending={() => fetchActivities('pending')} />
+            <SummaryScreen 
+              stats={summaryStats} 
+              onReviewPending={() => fetchActivities('pending')}
+              onReviewApproved={() => fetchActivities('approved')}
+            />
         </AppLayout>
     )
   }
 
   if (allActivities.length > 0 && activitiesToClassify.length === 0 && !showSummary) {
     return (
-      <AppLayout unclassifiedCount={0} hasActivities={allActivities.length > 0}>
-         <SummaryScreen stats={summaryStats} onReviewPending={() => fetchActivities('pending')} />
+      <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
+         <SummaryScreen 
+            stats={summaryStats} 
+            onReviewPending={() => fetchActivities('pending')} 
+            onReviewApproved={() => fetchActivities('approved')}
+         />
       </AppLayout>
     )
   }
@@ -535,7 +543,7 @@ function ActivityList({ activities, currentIndex, goToActivity }: { activities: 
   )
 }
 
-function SummaryScreen({ stats, onReviewPending }: { stats: { approved: number, pending: number, unclassified: number }, onReviewPending: () => void }) {
+function SummaryScreen({ stats, onReviewPending, onReviewApproved }: { stats: { approved: number, pending: number, unclassified: number }, onReviewPending: () => void, onReviewApproved: () => void }) {
   const router = useRouter();
   const total = stats.approved + stats.pending + stats.unclassified;
   const approvedPercentage = total > 0 ? (stats.approved / total) * 100 : 0;
@@ -553,10 +561,10 @@ function SummaryScreen({ stats, onReviewPending }: { stats: { approved: number, 
   );
 
   return (
-    <div className="max-w-3xl mx-auto text-center py-12">
+    <div className="max-w-4xl mx-auto text-center py-12">
       <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
-        <h1 className="text-5xl font-bold tracking-tight">🎉 Primeira rodada concluída!</h1>
-        <p className="mt-4 text-lg text-muted-foreground">Vocês revisaram todas as atividades. Veja o resumo:</p>
+        <h1 className="text-5xl font-bold tracking-tight">🎉 Rodada de Classificação Concluída!</h1>
+        <p className="mt-4 text-lg text-muted-foreground">Vocês revisaram as atividades pendentes. Veja o resumo:</p>
       
         <div className="grid md:grid-cols-3 gap-4 my-8 text-left">
           <StatCard title="Atividades Aprovadas" value={stats.approved} color="border-green-500" icon={<ThumbsUp className="h-8 w-8 text-green-500" />}/>
@@ -566,17 +574,20 @@ function SummaryScreen({ stats, onReviewPending }: { stats: { approved: number, 
 
         <div className="my-8">
             <div className="flex justify-between mb-1 text-sm text-muted-foreground">
-                <span>Progresso de Aprovação</span>
+                <span>Progresso Total de Aprovação</span>
                 <span>{Math.round(approvedPercentage)}%</span>
             </div>
             <Progress value={approvedPercentage} className="h-3 [&>div]:bg-green-500" />
         </div>
 
-        <div className="mt-10 grid sm:grid-cols-3 gap-4">
+        <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Button size="lg" className="h-16 text-lg" onClick={onReviewPending} disabled={stats.pending === 0 && stats.unclassified === 0}>
               Revisar Pendentes
           </Button>
-          <Button size="lg" variant="secondary" className="h-16 text-lg" onClick={() => {/* no-op */}}>
+           <Button size="lg" variant="secondary" className="h-16 text-lg" onClick={onReviewApproved} disabled={stats.approved === 0}>
+              Revisar Aprovadas
+          </Button>
+          <Button size="lg" variant="outline" className="h-16 text-lg" onClick={() => {/* no-op */}}>
               Ir para o Dashboard
           </Button>
           <Button size="lg" variant="outline" className="h-16 text-lg" onClick={() => router.push('/')}>
@@ -587,5 +598,3 @@ function SummaryScreen({ stats, onReviewPending }: { stats: { approved: number, 
     </div>
   )
 }
-
-    
