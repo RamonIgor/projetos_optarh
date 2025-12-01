@@ -89,7 +89,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen w-full lg:grid lg:grid-cols-2">
+    <div className="h-screen w-full lg:grid lg:grid-cols-2">
        <div className="hidden bg-gradient-to-br from-primary to-purple-600 lg:flex flex-col items-center justify-center p-12 text-center relative overflow-hidden">
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
@@ -123,7 +123,7 @@ export default function LoginPage() {
             </div>
             
             <form className="mt-8 space-y-6" onSubmit={handleSignIn}>
-              <div className="space-y-4 rounded-md shadow-sm">
+              <div className="space-y-4 rounded-md">
                 <div>
                   <Label htmlFor="email-login" className="sr-only">Email</Label>
                   <Input 
