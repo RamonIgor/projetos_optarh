@@ -584,7 +584,7 @@ function SummaryScreen({ stats, onReviewPending, onReviewApproved }: { stats: { 
           <Button size="lg" className="h-16 text-lg" onClick={onReviewPending} disabled={stats.pending === 0 && stats.unclassified === 0}>
               Revisar Pendentes
           </Button>
-           <Button size="lg" variant="secondary" className="h-16 text-lg" onClick={onReviewApproved} disabled={stats.approved === 0}>
+           <Button size="lg" variant="outline" className="h-16 text-lg" onClick={onReviewApproved} disabled={stats.approved === 0}>
               Revisar Aprovadas
           </Button>
           <Button size="lg" variant="outline" className="h-16 text-lg" onClick={() => {/* no-op */}}>
