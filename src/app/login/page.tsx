@@ -97,22 +97,22 @@ export default function LoginPage() {
             transition={{ duration: 0.8, ease: "easeOut" }}
             className="z-10"
           >
-            <h1 className="text-5xl font-bold text-primary">CollabTask</h1>
-            <p className="mt-4 text-lg text-muted-foreground">
+            <h1 className="text-5xl font-bold text-white">CollabTask</h1>
+            <p className="mt-4 text-lg text-white/80">
               Organize, colabore e execute as atividades do seu time com clareza.
             </p>
           </motion.div>
           <div className="absolute inset-0 z-0">
              <Image 
-                src="https://picsum.photos/seed/3/1200/1800"
+                src="https://picsum.photos/seed/4/1200/1800"
                 alt="Pessoas colaborando em um escritório"
                 data-ai-hint="collaboration office"
                 fill
                 className="object-cover"
              />
-             <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" />
+             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
           </div>
-          <div className="absolute bottom-8 left-8 right-8 z-10 text-background/80 text-sm">
+          <div className="absolute bottom-8 left-8 right-8 z-10 text-white/70 text-sm">
              Painel de gerenciamento de tarefas para equipes de DP e RH.
           </div>
       </div>
