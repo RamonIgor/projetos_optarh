@@ -4,7 +4,7 @@ import { signOut } from 'firebase/auth';
 import { useAuth, useUser } from '@/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { LogOut, LayoutGrid, ListTodo, BarChart3, Shuffle, PlayCircle, Settings, Rows } from 'lucide-react';
+import { LogOut, LayoutGrid, ListTodo, BarChart3, Shuffle, PlayCircle, Settings, Rows, Menu } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
@@ -16,6 +16,12 @@ import {
 } from "@/components/ui/tooltip"
 import { RegisterUserDialog } from './RegisterUserDialog';
 import Image from 'next/image';
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { useState } from 'react';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -28,6 +34,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
   const { user } = useUser();
   const router = useRouter();
   const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -53,66 +60,64 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
     </Button>
   );
 
+  const renderNavItem = (item: typeof navItems[0]) => {
+    const isActive = pathname === item.href;
+    const link = (
+      <Link
+        key={item.href}
+        href={item.disabled ? '#' : item.href}
+        className={cn(
+          "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+          isActive ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground",
+          item.disabled ? "opacity-50 cursor-not-allowed" : "",
+          "sm:flex" // Nav items are flex on sm and up
+        )}
+        aria-disabled={item.disabled}
+        onClick={(e) => {
+          if (item.disabled) e.preventDefault();
+          else setMobileMenuOpen(false);
+        }}
+      >
+        <item.icon className="h-4 w-4" />
+        <span>{item.label}</span>
+        {item.count !== undefined && item.count > 0 && (
+          <Badge variant={isActive ? "default" : "secondary"} className="rounded-full">{item.count}</Badge>
+        )}
+      </Link>
+    );
+
+    if (item.disabled) {
+      const tooltipText = item.href === '/operacional' || item.href === '/classificacao' || item.href === '/dashboard' || item.href === '/transicao'
+        ? "Adicione atividades no Brainstorm primeiro."
+        : "Funcionalidade em desenvolvimento.";
+
+      return (
+        <Tooltip key={item.href}>
+          <TooltipTrigger asChild>{link}</TooltipTrigger>
+          <TooltipContent><p>{tooltipText}</p></TooltipContent>
+        </Tooltip>
+      );
+    }
+    return link;
+  };
+
   return (
     <div className="min-h-screen w-full flex flex-col">
        <TooltipProvider delayDuration={100}>
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <Link href="/">
             <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} className="cursor-pointer" unoptimized/>
           </Link>
-          <nav className="p-1.5 rounded-full bg-background/50 backdrop-blur-sm border border-black/5 flex items-center gap-1 shadow-sm">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href;
-              const link = (
-                <Link
-                  key={item.href}
-                  href={item.disabled ? '#' : item.href}
-                  className={cn(
-                    "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
-                    isActive ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground",
-                    item.disabled ? "opacity-50 cursor-not-allowed" : ""
-                  )}
-                  aria-disabled={item.disabled}
-                  onClick={(e) => item.disabled && e.preventDefault()}
-                >
-                  <item.icon className="h-4 w-4" />
-                  <span>{item.label}</span>
-                  {item.count !== undefined && item.count > 0 && (
-                    <Badge variant={isActive ? "default" : "secondary"} className="rounded-full">{item.count}</Badge>
-                  )}
-                </Link>
-              );
-
-              if (item.disabled) {
-                 const tooltipText = item.href === '/operacional' || item.href === '/classificacao' || item.href === '/dashboard' || item.href === '/transicao'
-                  ? "Adicione atividades no Brainstorm primeiro."
-                  : "Funcionalidade em desenvolvimento.";
-
-                return (
-                    <Tooltip key={item.href}>
-                      <TooltipTrigger asChild>
-                        {link}
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{tooltipText}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                )
-              }
-              return link;
-            })}
+          <nav className="hidden sm:flex p-1.5 rounded-full bg-background/50 backdrop-blur-sm border border-black/5 items-center gap-1 shadow-sm">
+            {navItems.map(renderNavItem)}
           </nav>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="hidden sm:flex items-center gap-2">
             {isConsultancyPanelDisabled ? (
                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      {consultancyButton}
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Acesso restrito à consultoria.</p>
-                    </TooltipContent>
+                    <TooltipTrigger asChild>{consultancyButton}</TooltipTrigger>
+                    <TooltipContent><p>Acesso restrito à consultoria.</p></TooltipContent>
                   </Tooltip>
             ) : consultancyButton}
            
@@ -126,6 +131,49 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
                 <LogOut className="mr-2 h-4 w-4" />
                 Sair
             </Button>
+        </div>
+        <div className="sm:hidden">
+           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-6 w-6" />
+                  <span className="sr-only">Abrir menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-full max-w-xs">
+                <div className="p-4">
+                  <Link href="/" onClick={() => setMobileMenuOpen(false)}>
+                    <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} className="cursor-pointer mb-8" unoptimized/>
+                  </Link>
+                  <nav className="flex flex-col gap-4">
+                    {navItems.map(renderNavItem)}
+                  </nav>
+                  <div className="mt-8 pt-4 border-t">
+                    {isConsultancyPanelDisabled ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>{consultancyButton}</TooltipTrigger>
+                        <TooltipContent><p>Acesso restrito à consultoria.</p></TooltipContent>
+                      </Tooltip>
+                    ) : (
+                       <div onClick={() => setMobileMenuOpen(false)}>{consultancyButton}</div>
+                    )}
+                    <div className="mt-2">
+                      <RegisterUserDialog>
+                          <Button variant="ghost">
+                            <Settings className="mr-2 h-4 w-4" /> Configurações
+                          </Button>
+                      </RegisterUserDialog>
+                    </div>
+                    <div className="mt-2">
+                      <Button variant="ghost" onClick={handleLogout}>
+                          <LogOut className="mr-2 h-4 w-4" />
+                          Sair
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
         </div>
       </header>
        </TooltipProvider>
