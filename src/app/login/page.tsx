@@ -9,12 +9,12 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const auth = useAuth();
@@ -82,43 +82,102 @@ export default function LoginPage() {
 
   if (loading || user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-cyan-50 to-blue-100">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-cyan-50 to-blue-100 dark:from-slate-900 dark:to-blue-950 p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.3 }}
-      >
-        <Card className="w-full max-w-sm shadow-2xl dark:shadow-black/50">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Bem-vindo(a) ao CollabTask</CardTitle>
-            <CardDescription>Acesse sua conta para continuar.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSignIn}>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="email-login">Email</Label>
-                  <Input id="email-login" type="email" placeholder="seu@email.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
+    <div className="min-h-screen w-full lg:grid lg:grid-cols-2">
+       <div className="hidden bg-gray-100 lg:flex flex-col items-center justify-center p-12 text-center relative overflow-hidden">
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="z-10"
+          >
+            <h1 className="text-5xl font-bold text-primary">CollabTask</h1>
+            <p className="mt-4 text-lg text-muted-foreground">
+              Organize, colabore e execute as atividades do seu time com clareza.
+            </p>
+          </motion.div>
+          <div className="absolute inset-0 z-0">
+             <Image 
+                src="https://picsum.photos/seed/3/1200/1800"
+                alt="Pessoas colaborando em um escritório"
+                data-ai-hint="collaboration office"
+                fill
+                className="object-cover"
+             />
+             <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" />
+          </div>
+          <div className="absolute bottom-8 left-8 right-8 z-10 text-background/80 text-sm">
+             Painel de gerenciamento de tarefas para equipes de DP e RH.
+          </div>
+      </div>
+      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-md space-y-8">
+          <motion.div
+             initial={{ opacity: 0, y: 20 }}
+             animate={{ opacity: 1, y: 0 }}
+             transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <div className="text-center">
+              <h2 className="text-3xl font-bold tracking-tight text-foreground">
+                Acesse sua conta
+              </h2>
+              <p className="mt-2 text-muted-foreground">
+                Bem-vindo(a) de volta!
+              </p>
+            </div>
+            
+            <form className="mt-8 space-y-6" onSubmit={handleSignIn}>
+              <div className="space-y-4 rounded-md shadow-sm">
+                <div>
+                  <Label htmlFor="email-login" className="sr-only">Email</Label>
+                  <Input 
+                    id="email-login"
+                    type="email" 
+                    autoComplete="email"
+                    required 
+                    placeholder="seu@email.com" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="h-12 text-base"
+                   />
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="password-login">Senha</Label>
-                  <Input id="password-login" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+                <div>
+                  <Label htmlFor="password-login" className="sr-only">Senha</Label>
+                  <Input 
+                    id="password-login" 
+                    type="password" 
+                    autoComplete="current-password"
+                    required 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Sua senha"
+                    className="h-12 text-base"
+                  />
                 </div>
-                <Button type="submit" className="w-full mt-2 h-11" disabled={isSubmitting}>
-                  {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Entrar"}
+              </div>
+
+              <div>
+                <Button type="submit" className="group relative flex w-full justify-center py-3 text-lg" disabled={isSubmitting}>
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+                    {isSubmitting ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                        <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                    )}
+                  </span>
+                  Entrar
                 </Button>
               </div>
             </form>
-          </CardContent>
-        </Card>
-      </motion.div>
+          </motion.div>
+        </div>
+      </div>
     </div>
   );
 }
