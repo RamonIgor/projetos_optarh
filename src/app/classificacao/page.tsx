@@ -211,9 +211,9 @@ export default function ClassificationPage() {
   }
 
   const handleAddComment = async () => {
-    if (!newComment.trim() || !user?.displayName || !currentActivity) return;
+    if (!newComment.trim() || !user?.email || !currentActivity) return;
     const comment: ActivityComment = {
-      autor: user.displayName,
+      autor: user.email,
       texto: newComment.trim(),
       data: new Date(),
     };
@@ -526,3 +526,5 @@ function SummaryScreen({ stats, onReviewPending }: { stats: { approved: number, 
     </div>
   )
 }
+
+    
