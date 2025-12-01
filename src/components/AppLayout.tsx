@@ -4,7 +4,7 @@ import { signOut } from 'firebase/auth';
 import { useAuth } from '@/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { LogOut, LayoutGrid, ListTodo, BarChart3, Shuffle, PlayCircle } from 'lucide-react';
+import { LogOut, LayoutGrid, ListTodo, BarChart3, Shuffle, PlayCircle, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
@@ -14,6 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { RegisterUserDialog } from './RegisterUserDialog';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -41,7 +42,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
   ];
 
   return (
-    <div className="min-h-screen w-full">
+    <div className="min-h-screen w-full flex flex-col">
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
         <nav className="p-1.5 rounded-full bg-background/50 backdrop-blur-sm border border-black/5 flex items-center gap-1 shadow-sm">
           {navItems.map((item) => {
@@ -87,12 +88,20 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
             return link;
           })}
         </nav>
-        <Button variant="ghost" onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" />
-          Sair
-        </Button>
+        <div className="flex items-center gap-2">
+            <RegisterUserDialog>
+                <Button variant="ghost" size="icon">
+                    <Settings className="h-5 w-5" />
+                    <span className="sr-only">Configurações</span>
+                </Button>
+            </RegisterUserDialog>
+            <Button variant="ghost" onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Sair
+            </Button>
+        </div>
       </header>
-      <main className="container mx-auto p-4 sm:p-6 lg:p-8 pt-2">
+      <main className="container mx-auto p-4 sm:p-6 lg:p-8 pt-2 flex-grow">
         {children}
       </main>
     </div>
