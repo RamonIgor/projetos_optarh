@@ -6,7 +6,7 @@ import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
   title: 'ProcessFlow',
-  description: 'Gerencie atividades entre DP e RH de forma colaborativa.',
+  description: 'Estruture o fluxo de trabalho do seu time, da ideia à rotina.',
 };
 
 export default function RootLayout({

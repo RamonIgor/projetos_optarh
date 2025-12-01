@@ -99,7 +99,7 @@ export default function LoginPage() {
           >
             <h1 className="text-5xl font-bold text-white">ProcessFlow</h1>
             <p className="mt-4 text-lg text-white/80">
-              Organize, colabore e execute as atividades do seu time com clareza.
+              Estruture o fluxo de trabalho do seu time, da ideia à rotina.
             </p>
           </motion.div>
           <div className="absolute bottom-8 left-8 right-8 z-10 text-white/70 text-sm">
@@ -130,7 +130,7 @@ export default function LoginPage() {
                     id="email-login"
                     type="email" 
                     autoComplete="email"
-                    required 
+                    required _
                     placeholder="seu@email.com" 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
