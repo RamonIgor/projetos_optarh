@@ -97,7 +97,7 @@ export default function LoginPage() {
             transition={{ duration: 0.8, ease: "easeOut" }}
             className="z-10"
           >
-            <h1 className="text-5xl font-bold text-white">CollabTask</h1>
+            <h1 className="text-5xl font-bold text-white">ProcessFlow</h1>
             <p className="mt-4 text-lg text-white/80">
               Organize, colabore e execute as atividades do seu time com clareza.
             </p>

@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
-  title: 'CollabTask',
+  title: 'ProcessFlow',
   description: 'Gerencie atividades entre DP e RH de forma colaborativa.',
 };
 
