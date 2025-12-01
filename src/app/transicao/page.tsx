@@ -30,11 +30,13 @@ import { useToast } from '@/hooks/use-toast';
 
 const ACTIVITIES_COLLECTION = 'rh-dp-activities';
 
-const transitionStatusConfig = {
+const transitionStatusConfig: Record<Activity['statusTransicao'] | 'undefined', { label: string; color: string; icon: React.ReactNode }> = {
     a_transferir: { label: 'A Transferir', color: 'bg-gray-200 text-gray-800', icon: <Clock className="h-4 w-4 text-gray-500" /> },
     em_transicao: { label: 'Em Transição', color: 'bg-yellow-200 text-yellow-800', icon: <PlayCircle className="h-4 w-4 text-yellow-600" /> },
     concluida: { label: 'Concluída', color: 'bg-green-200 text-green-800', icon: <CheckCircle2 className="h-4 w-4 text-green-600" /> },
+    undefined: { label: 'Indefinido', color: 'bg-gray-100 text-gray-500', icon: <AlertCircle className="h-4 w-4 text-gray-400" /> },
 };
+
 
 const StatCard = ({ title, value, icon, className }: { title: string, value: string | number, icon: React.ReactNode, className?: string }) => (
     <Card className={cn("shadow-sm", className)}>
@@ -278,7 +280,7 @@ export default function TransitionPage() {
                             <SelectContent>
                                 <SelectItem value="all">Todos os Status</SelectItem>
                                 {Object.entries(transitionStatusConfig).map(([key, config]) => (
-                                    <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                                    (key !== 'undefined') && <SelectItem key={key} value={key}>{config.label}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
@@ -306,7 +308,9 @@ export default function TransitionPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredActivities.length > 0 ? filteredActivities.map(activity => (
+                            {filteredActivities.length > 0 ? filteredActivities.map(activity => {
+                                const statusConfig = transitionStatusConfig[activity.statusTransicao] || transitionStatusConfig.undefined;
+                                return (
                                 <TableRow key={activity.id}>
                                     <TableCell className="font-medium">{activity.nome}</TableCell>
                                     <TableCell>
@@ -327,8 +331,8 @@ export default function TransitionPage() {
                                         )}
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant="outline" className={cn(transitionStatusConfig[activity.statusTransicao].color, "whitespace-nowrap")}>
-                                            {transitionStatusConfig[activity.statusTransicao].label}
+                                        <Badge variant="outline" className={cn(statusConfig.color, "whitespace-nowrap")}>
+                                            {statusConfig.label}
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right space-x-2">
@@ -343,7 +347,7 @@ export default function TransitionPage() {
                                         </EditTransitionModal>
                                     </TableCell>
                                 </TableRow>
-                            )) : (
+                            )}) : (
                                 <TableRow>
                                     <TableCell colSpan={6} className="h-24 text-center">Nenhuma atividade encontrada com os filtros selecionados.</TableCell>
                                 </TableRow>
@@ -355,4 +359,5 @@ export default function TransitionPage() {
 
         </AppLayout>
     );
-}
+
+    
