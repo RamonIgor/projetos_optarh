@@ -13,7 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, ThumbsUp, ActivitySquare, Square, Users, PieChart, CheckSquare, Clock, List, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Pie, Cell, Legend } from 'recharts';
+import { ResponsiveContainer, Tooltip, Pie, Cell, Legend } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -191,7 +191,7 @@ export default function DashboardPage() {
                         {categoryChartData.length > 0 ? (
                            <ResponsiveContainer width="100%" height={150}>
                                 <PieChart>
-                                    <Pie data={categoryChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label>
+                                    <Pie data={categoryChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60}>
                                         {categoryChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
                                     </Pie>
                                     <Tooltip />
