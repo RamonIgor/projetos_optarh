@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useTransition } from 'react';
-import { collection, onSnapshot, query, where, doc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc, serverTimestamp, Timestamp, arrayUnion } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
@@ -11,16 +11,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Calendar, User, Repeat, CheckSquare, XSquare, Clock, ChevronsDown } from 'lucide-react';
+import { Loader2, Calendar, User, Repeat, CheckSquare, Clock, ChevronsDown, History, ListChecks } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { isActivityPending, isActivityOverdue, getNextExecution, type Recurrence } from '@/lib/date-utils';
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 const ACTIVITIES_COLLECTION = 'rh-dp-activities';
@@ -103,9 +105,60 @@ function ActivityItem({ activity, onToggle }: { activity: Activity, onToggle: (i
                    )}
                 </div>
             </div>
-             {isOverdue && <Badge variant="destructive">Atrasada</Badge>}
+             <div className="flex flex-col items-end gap-2">
+                 {isOverdue && <Badge variant="destructive">Atrasada</Badge>}
+                 <HistoryModal activity={activity} />
+            </div>
         </motion.div>
     );
+}
+
+function HistoryModal({ activity }: { activity: Activity }) {
+    const history = useMemo(() => {
+        const sorted = [...(activity.historicoExecucoes || [])];
+        sorted.sort((a, b) => (b as any) - (a as any));
+        return sorted;
+    }, [activity.historicoExecucoes]);
+
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="ghost" size="sm" className="mt-auto">
+                    <History className="h-4 w-4 mr-2" />
+                    Histórico
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Histórico de Execução</DialogTitle>
+                    <DialogDescription>{activity.nome}</DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="max-h-80">
+                    <div className="pr-6">
+                        {history.length > 0 ? (
+                            <ul className="space-y-3">
+                                {history.map((item, index) => (
+                                    <li key={index} className="flex items-center gap-4 text-sm">
+                                        <ListChecks className="h-5 w-5 text-green-500" />
+                                        <div className="flex-1">
+                                            <p className="font-medium">Execução concluída</p>
+                                            <p className="text-muted-foreground text-xs">
+                                                {format((item as Timestamp).toDate(), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
+                                            </p>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <div className="text-center py-10">
+                                <p className="text-muted-foreground">Nenhuma execução registrada.</p>
+                            </div>
+                        )}
+                    </div>
+                </ScrollArea>
+            </DialogContent>
+        </Dialog>
+    )
 }
 
 
@@ -190,9 +243,18 @@ export default function OperationalPage() {
         startUpdateTransition(async () => {
             try {
                 const docRef = doc(db, ACTIVITIES_COLLECTION, activityId);
-                await updateDoc(docRef, {
-                    ultimaExecucao: isCurrentlyPending ? serverTimestamp() : null
-                });
+                const newExecutionTime = serverTimestamp();
+                
+                const updateData: any = {
+                    ultimaExecucao: isCurrentlyPending ? newExecutionTime : null
+                };
+
+                if (isCurrentlyPending) {
+                   updateData.historicoExecucoes = arrayUnion(newExecutionTime);
+                }
+                
+                await updateDoc(docRef, updateData);
+
                 toast({
                     title: `Atividade ${isCurrentlyPending ? 'concluída' : 'reaberta'}!`,
                     description: 'O status da atividade foi atualizado.',
@@ -311,7 +373,7 @@ export default function OperationalPage() {
                             </SelectContent>
                         </Select>
                         <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="w-full sm:w-[180px]">
+                            <SelectTrigger className="w-full sm-w-[180px]">
                                 <SelectValue placeholder="Filtrar por status" />
                             </SelectTrigger>
                             <SelectContent>

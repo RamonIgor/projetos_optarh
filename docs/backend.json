@@ -98,6 +98,14 @@
             "type": ["string", "null"],
             "format": "date-time",
             "description": "The deadline for the transition."
+        },
+        "historicoExecucoes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": "A history of the last execution dates of the activity."
         }
       },
       "required": ["nome", "status", "createdAt", "statusTransicao"]

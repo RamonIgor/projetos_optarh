@@ -23,4 +23,5 @@ export interface Activity {
   dataInicioTransicao: Timestamp | Date | null;
   dataConclusaoTransicao: Timestamp | Date | null;
   prazoTransicao: Timestamp | Date | null;
+  historicoExecucoes?: (Timestamp | Date)[];
 }
