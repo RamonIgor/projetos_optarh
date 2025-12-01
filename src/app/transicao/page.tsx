@@ -31,7 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 const ACTIVITIES_COLLECTION = 'rh-dp-activities';
 
 const transitionStatusConfig: Record<Activity['statusTransicao'] | 'undefined', { label: string; color: string; icon: React.ReactNode }> = {
-    a_transferir: { label: 'A Transferir', color: 'bg-gray-200 text-gray-800', icon: <Clock className="h-4 w-4 text-gray-500" /> },
+    a_transferir: { label: 'Aguardando', color: 'bg-gray-200 text-gray-800', icon: <Clock className="h-4 w-4 text-gray-500" /> },
     em_transicao: { label: 'Em Transição', color: 'bg-yellow-200 text-yellow-800', icon: <PlayCircle className="h-4 w-4 text-yellow-600" /> },
     concluida: { label: 'Concluída', color: 'bg-green-200 text-green-800', icon: <CheckCircle2 className="h-4 w-4 text-green-600" /> },
     undefined: { label: 'Indefinido', color: 'bg-gray-100 text-gray-500', icon: <AlertCircle className="h-4 w-4 text-gray-400" /> },
@@ -270,18 +270,11 @@ export default function TransitionPage() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-8">
-                <StatCard title="Total a Transferir" value={stats.total} icon={<Shuffle className="h-6 w-6 text-muted-foreground" />} />
+                <StatCard title="Atividades no Plano" value={stats.total} icon={<Shuffle className="h-6 w-6 text-muted-foreground" />} />
+                <StatCard title="Aguardando Transição" value={stats.toTransfer} icon={<Clock className="h-6 w-6 text-gray-500" />} />
                 <StatCard title="Em Transição" value={stats.inTransition} icon={<PlayCircle className="h-6 w-6 text-yellow-500" />} />
                 <StatCard title="Concluídas" value={stats.concluded} icon={<CheckCircle2 className="h-6 w-6 text-green-500" />} />
                 <StatCard title="Atrasadas" value={stats.overdue} icon={<AlertCircle className="h-6 w-6 text-red-500" />} />
-                <Link href="/dashboard" passHref>
-                   <Card className="shadow-sm hover:bg-muted transition-colors h-full flex flex-col justify-center items-center">
-                     <CardContent className="p-4 text-center">
-                        <BarChart3 className="h-8 w-8 mx-auto text-primary" />
-                        <p className="mt-2 text-sm font-semibold">Ver Dashboard Geral</p>
-                     </CardContent>
-                   </Card>
-                </Link>
             </div>
 
             <Card>
@@ -387,5 +380,7 @@ export default function TransitionPage() {
         </AppLayout>
     );
 }
+
+    
 
     
