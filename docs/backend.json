@@ -109,6 +109,63 @@
         }
       },
       "required": ["nome", "status", "createdAt", "statusTransicao"]
+    },
+    "ConsultancyAction": {
+      "title": "Consultancy Action",
+      "description": "Represents an action item defined by the consultancy.",
+      "type": "object",
+      "properties": {
+        "acao": {
+          "type": "string",
+          "description": "The name or title of the action."
+        },
+        "como_sera_realizada": {
+          "type": "string",
+          "description": "Description of how the action will be carried out."
+        },
+        "responsavel": {
+          "type": "string",
+          "description": "The person or department responsible for the action."
+        },
+        "data_inicio": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The start date of the action."
+        },
+        "data_termino": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The planned end date of the action."
+        },
+        "prazo_realizado": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "The actual completion date of the action."
+        },
+        "percentual_concluido": {
+          "type": "number",
+          "description": "The actual percentage of completion."
+        },
+        "percentual_planejado": {
+          "type": "number",
+          "description": "The planned percentage of completion for the current date."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["nao_iniciada", "em_andamento", "concluida", "atrasada", "cancelada"],
+          "description": "The current status of the action."
+        },
+        "observacoes": {
+          "type": "string",
+          "description": "General observations or notes."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The creation date of the action."
+        }
+      },
+      "required": ["acao", "responsavel", "data_inicio", "data_termino", "percentual_concluido", "percentual_planejado", "status", "createdAt"]
     }
   },
   "auth": {
@@ -120,6 +177,12 @@
         "$ref": "#/entities/Activity"
       },
       "description": "Stores all the activities created during the brainstorming and classification phases."
+    },
+    "/consultancy-actions/{actionId}": {
+        "schema": {
+            "$ref": "#/entities/ConsultancyAction"
+        },
+        "description": "Stores all action items from the consultancy dashboard."
     }
   }
 }

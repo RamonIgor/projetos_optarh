@@ -89,7 +89,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
           })}
         </nav>
         <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={() => router.push('/dashboard')}>
+            <Button variant="ghost" onClick={() => router.push('/consultoria')}>
                 <Rows className="mr-2 h-4 w-4" />
                 Painel
             </Button>

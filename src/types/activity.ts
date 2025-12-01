@@ -25,3 +25,18 @@ export interface Activity {
   prazoTransicao: Timestamp | Date | null;
   historicoExecucoes?: (Timestamp | Date)[];
 }
+
+export interface ConsultancyAction {
+    id: string;
+    acao: string;
+    como_sera_realizada: string;
+    responsavel: string;
+    data_inicio: Timestamp | Date;
+    data_termino: Timestamp | Date;
+    prazo_realizado: Timestamp | Date | null;
+    percentual_concluido: number;
+    percentual_planejado: number;
+    status: 'nao_iniciada' | 'em_andamento' | 'concluida' | 'atrasada' | 'cancelada';
+    observacoes: string;
+    createdAt: Timestamp | Date;
+}
