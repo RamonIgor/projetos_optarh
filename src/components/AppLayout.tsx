@@ -4,7 +4,7 @@ import { signOut } from 'firebase/auth';
 import { useAuth } from '@/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { LogOut, LayoutGrid, ListTodo } from 'lucide-react';
+import { LogOut, LayoutGrid, ListTodo, BarChart3, Shuffle, PlayCircle } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
@@ -35,15 +35,15 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
   const navItems = [
     { href: '/', label: 'Brainstorm', icon: ListTodo },
     { href: '/classificacao', label: 'Classificação', icon: LayoutGrid, count: unclassifiedCount, disabled: !hasActivities },
-    // { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
-    // { href: '/transicao', label: 'Transição', icon: Shuffle },
-    // { href: '/operacional', label: 'Operacional', icon: PlayCircle },
+    { href: '/dashboard', label: 'Dashboard', icon: BarChart3, disabled: true },
+    { href: '/transicao', label: 'Transição', icon: Shuffle, disabled: true },
+    { href: '/operacional', label: 'Operacional', icon: PlayCircle, disabled: true },
   ];
 
   return (
     <div className="min-h-screen w-full">
-      <header className="container mx-auto px-4 sm:px-6 md:px-8 py-4 flex justify-between items-center">
-        <nav className="p-1.5 rounded-lg bg-background/50 backdrop-blur-sm border border-black/5 flex items-center gap-2">
+      <header className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+        <nav className="p-1.5 rounded-full bg-background/50 backdrop-blur-sm border border-black/5 flex items-center gap-1 shadow-sm">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             const link = (
@@ -51,7 +51,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
                 key={item.href}
                 href={item.disabled ? '#' : item.href}
                 className={cn(
-                  "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
                   isActive ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground",
                   item.disabled ? "opacity-50 cursor-not-allowed" : ""
                 )}
@@ -61,12 +61,27 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
                 <item.icon className="h-4 w-4" />
                 <span>{item.label}</span>
                 {item.count !== undefined && item.count > 0 && (
-                  <Badge variant={isActive ? "default" : "secondary"}>{item.count}</Badge>
+                  <Badge variant={isActive ? "default" : "secondary"} className="rounded-full">{item.count}</Badge>
                 )}
               </Link>
             );
 
-            if (item.disabled) {
+            if (item.disabled && item.href !== '/classificacao') {
+              return (
+                <TooltipProvider key={item.href} delayDuration={100}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      {link}
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Funcionalidade em desenvolvimento.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )
+            }
+            
+             if (item.disabled && item.href === '/classificacao') {
               return (
                 <TooltipProvider key={item.href} delayDuration={100}>
                   <Tooltip>
@@ -88,7 +103,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
           Sair
         </Button>
       </header>
-      <main className="container mx-auto p-4 sm:p-6 md:p-8 pt-0">
+      <main className="container mx-auto p-4 sm:p-6 lg:p-8 pt-2">
         {children}
       </main>
     </div>

@@ -172,7 +172,7 @@ export default function BrainstormPage() {
     );
   }
 
-  const unclassifiedCount = activities.filter(a => a.status === 'brainstorm').length;
+  const unclassifiedCount = activities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length;
 
   return (
     <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0}>
@@ -201,8 +201,7 @@ export default function BrainstormPage() {
                 aria-label="Nova atividade"
               />
               <Button type="submit" size="lg" className="h-12 w-full sm:w-auto" disabled={isAdding || !newActivityName.trim()}>
-                {isAdding ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
-                <span className="sm:hidden">Adicionar Atividade</span>
+                {isAdding ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5 sm:mr-2" />}
                 <span className="hidden sm:inline">Adicionar</span>
               </Button>
             </form>
@@ -219,7 +218,7 @@ export default function BrainstormPage() {
                   <p className="mt-1 text-muted-foreground">Comece a adicionar as atividades da sua equipe no campo acima.</p>
                 </div>
               ) : (
-                <ul className="space-y-3">
+                <ul className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
                   <AnimatePresence>
                     {activities.map((activity) => (
                       <motion.li
@@ -229,7 +228,7 @@ export default function BrainstormPage() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, x: -50, transition: { duration: 0.2 } }}
                         transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                        className="flex items-center justify-between p-3 bg-card-foreground/5 dark:bg-card-foreground/10 rounded-lg"
+                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                       >
                         <span className="font-medium text-foreground">{activity.nome}</span>
                         <div className="flex items-center gap-2 flex-shrink-0">

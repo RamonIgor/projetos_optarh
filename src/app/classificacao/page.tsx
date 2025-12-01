@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { collection, onSnapshot, query, doc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc, updateDoc, arrayUnion, serverTimestamp, where, getDocs } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
@@ -13,7 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ArrowLeft, ArrowRight, Check, Square, ChevronsRight } from 'lucide-react';
+import { Loader2, ArrowLeft, Check, Square, ChevronsRight, ListTodo, ActivitySquare, ThumbsUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -34,9 +34,11 @@ const CategoryButton = ({ category, selected, onClick, color, children }: any) =
   <Button
     variant={selected ? "default" : "outline"}
     className={cn(
-      "h-20 text-lg flex-1",
-      selected && `border-4 ${color}`
+      "h-20 text-lg flex-1 transition-all duration-200",
+      selected && `border-4 shadow-lg transform scale-105 ${color}`,
+      selected ? 'bg-primary' : ''
     )}
+    style={selected ? { borderColor: color } : {}}
     onClick={onClick}
   >
     {children}
@@ -45,8 +47,8 @@ const CategoryButton = ({ category, selected, onClick, color, children }: any) =
 
 const statusIcons = {
   brainstorm: <Square className="h-4 w-4 text-gray-400" />,
-  aguardando_consenso: <Square className="h-4 w-4 text-yellow-500" />,
-  aprovada: <Check className="h-4 w-4 text-green-500" />,
+  aguardando_consenso: <ActivitySquare className="h-4 w-4 text-yellow-500" />,
+  aprovada: <ThumbsUp className="h-4 w-4 text-green-500" />,
 }
 
 const statusLabels = {
@@ -67,10 +69,11 @@ export default function ClassificationPage() {
   const { toast } = useToast();
 
   const [allActivities, setAllActivities] = useState<Activity[]>([]);
-  const [unclassifiedActivities, setUnclassifiedActivities] = useState<Activity[]>([]);
+  const [activitiesToClassify, setActivitiesToClassify] = useState<Activity[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
   
   const [currentCategory, setCurrentCategory] = useState<'DP' | 'RH' | 'Compartilhado' | null>(null);
   const [currentJustification, setCurrentJustification] = useState('');
@@ -79,11 +82,44 @@ export default function ClassificationPage() {
   const [newComment, setNewComment] = useState('');
 
   const currentActivity = useMemo(() => {
-    return unclassifiedActivities.length > 0 ? unclassifiedActivities[currentIndex] : null;
-  }, [unclassifiedActivities, currentIndex]);
+    return activitiesToClassify.length > 0 ? activitiesToClassify[currentIndex] : null;
+  }, [activitiesToClassify, currentIndex]);
 
   const classifiedCount = useMemo(() => allActivities.filter(a => a.status !== 'brainstorm').length, [allActivities]);
+  
+  const summaryStats = useMemo(() => {
+    return {
+      approved: allActivities.filter(a => a.status === 'aprovada').length,
+      pending: allActivities.filter(a => a.status === 'aguardando_consenso').length,
+      unclassified: allActivities.filter(a => a.status === 'brainstorm').length,
+    }
+  }, [allActivities]);
 
+  const fetchActivities = (filter: 'all' | 'pending' = 'all') => {
+    if (!db) return;
+    setIsLoading(true);
+    let q;
+    if (filter === 'pending') {
+      q = query(collection(db, ACTIVITIES_COLLECTION), where('status', '!=', 'aprovada'));
+    } else {
+      q = query(collection(db, ACTIVITIES_COLLECTION));
+    }
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
+      if(filter === 'all') {
+        setAllActivities(activitiesData);
+      }
+      
+      const toClassify = activitiesData.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').sort((a,b) => (a.createdAt as any) - (b.createdAt as any));
+      setActivitiesToClassify(toClassify);
+      
+      setCurrentIndex(0);
+      setShowSummary(false);
+      setIsLoading(false);
+    });
+    return unsubscribe;
+  }
+  
   useEffect(() => {
     if (userLoading) return;
     if (!user) {
@@ -95,22 +131,19 @@ export default function ClassificationPage() {
         return;
     };
     
-    const q = query(collection(db, ACTIVITIES_COLLECTION));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
-      setAllActivities(activitiesData);
-
-      const unclassified = activitiesData.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').sort((a,b) => (a.createdAt as any) - (b.createdAt as any));
-      setUnclassifiedActivities(unclassified);
-      
-      if (unclassified.length === 0 && activitiesData.length > 0) {
-        // All classified, maybe redirect or show a message
-      }
-
-      setIsLoading(false);
+    // Initial fetch for all activities to populate counts
+    const qAll = query(collection(db, ACTIVITIES_COLLECTION));
+    const unsubAll = onSnapshot(qAll, (snapshot) => {
+      const allActivitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
+      setAllActivities(allActivitiesData);
     });
 
-    return () => unsubscribe();
+    const unsubClassify = fetchActivities('all');
+
+    return () => {
+      unsubAll();
+      if(unsubClassify) unsubClassify();
+    };
   }, [db, user, userLoading, router]);
 
   useEffect(() => {
@@ -141,32 +174,51 @@ export default function ClassificationPage() {
   };
 
   const handleSaveAndNext = async (status: 'aguardando_consenso' | 'aprovada' = 'aguardando_consenso') => {
+    if (isSaving) return;
     const data: Partial<Activity> = {
       categoria: currentCategory,
       justificativa: currentJustification,
       responsavel: currentResponsible,
       recorrencia: currentRecurrence,
-      status: status,
+      status: currentActivity?.status === 'aprovada' ? 'aprovada' : status,
     };
-    if (status === 'aprovada') {
+    if (status === 'aprovada' && currentActivity?.status !== 'aprovada') {
       data.dataAprovacao = serverTimestamp();
     }
     await updateActivity(data);
-    toast({
-      title: status === 'aprovada' ? "Atividade Aprovada!" : "Progresso Salvo!",
-      description: `A atividade "${currentActivity?.nome}" foi atualizada.`,
-    });
-    handleNext();
+    
+    // Only show toast on manual save/approve, not on simple next
+    if (status !== 'aguardando_consenso' || (data.categoria || data.justificativa || data.responsavel) ) {
+        toast({
+            title: status === 'aprovada' ? "Atividade Aprovada!" : "Progresso Salvo!",
+            description: `A atividade "${currentActivity?.nome}" foi atualizada.`,
+        });
+    }
+    
+    if (currentIndex < activitiesToClassify.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+    } else {
+      setShowSummary(true);
+    }
   };
 
+  const handleNext = () => {
+     handleSaveAndNext('aguardando_consenso');
+  };
+
+  const handleApprove = () => {
+    handleSaveAndNext('aprovada');
+  }
+
   const handleAddComment = async () => {
-    if (!newComment.trim() || !user?.displayName) return;
+    if (!newComment.trim() || !user?.displayName || !currentActivity) return;
     const comment: ActivityComment = {
       autor: user.displayName,
       texto: newComment.trim(),
       data: new Date(),
     };
-    await updateActivity({
+    const docRef = doc(db, ACTIVITIES_COLLECTION, currentActivity.id);
+    await updateDoc(docRef, {
       comentarios: arrayUnion(comment)
     });
     setNewComment('');
@@ -174,12 +226,6 @@ export default function ClassificationPage() {
 
   const isApproveDisabled = !currentCategory || !currentJustification || !currentResponsible;
   
-  const handleNext = () => {
-    if (currentIndex < unclassifiedActivities.length - 1) {
-      setCurrentIndex(prev => prev + 1);
-    }
-  };
-
   const handlePrev = () => {
     if (currentIndex > 0) {
       setCurrentIndex(prev => prev - 1);
@@ -189,10 +235,12 @@ export default function ClassificationPage() {
   const goToActivity = (index: number) => {
     setCurrentIndex(index);
   }
+  
+  const unclassifiedCount = allActivities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length;
 
   if (userLoading || isLoading) {
     return (
-      <AppLayout unclassifiedCount={allActivities.length - classifiedCount} hasActivities={allActivities.length > 0}>
+      <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
         <div className="flex items-center justify-center min-h-[60vh]">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
         </div>
@@ -200,14 +248,18 @@ export default function ClassificationPage() {
     );
   }
   
-  if (allActivities.length > 0 && unclassifiedActivities.length === 0) {
+  if (showSummary) {
+    return (
+        <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
+            <SummaryScreen stats={summaryStats} onReviewPending={() => fetchActivities('pending')} />
+        </AppLayout>
+    )
+  }
+
+  if (allActivities.length > 0 && activitiesToClassify.length === 0 && !showSummary) {
     return (
       <AppLayout unclassifiedCount={0} hasActivities={allActivities.length > 0}>
-        <div className="text-center py-20">
-          <Check className="h-16 w-16 mx-auto text-green-500" />
-          <h1 className="mt-4 text-3xl font-bold">Parabéns!</h1>
-          <p className="mt-2 text-lg text-muted-foreground">Todas as atividades foram classificadas e aprovadas.</p>
-        </div>
+         <SummaryScreen stats={summaryStats} onReviewPending={() => fetchActivities('pending')} />
       </AppLayout>
     )
   }
@@ -227,7 +279,7 @@ export default function ClassificationPage() {
   }
 
   return (
-    <AppLayout unclassifiedCount={unclassifiedActivities.length} hasActivities={allActivities.length > 0}>
+    <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
       <div className="flex gap-8">
         <Sheet>
           <SheetTrigger asChild>
@@ -235,16 +287,16 @@ export default function ClassificationPage() {
               <ChevronsRight className="h-4 w-4" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[300px]">
-            <SheetHeader>
-              <SheetTitle>Atividades</SheetTitle>
+          <SheetContent side="left" className="w-[300px] p-0">
+            <SheetHeader className="p-4 border-b">
+              <SheetTitle>Atividades para classificar</SheetTitle>
             </SheetHeader>
-            <ActivityList activities={unclassifiedActivities} currentIndex={currentIndex} goToActivity={goToActivity} />
+            <ActivityList activities={activitiesToClassify} currentIndex={currentIndex} goToActivity={goToActivity} />
           </SheetContent>
         </Sheet>
-        <aside className="w-1/4 hidden sm:block">
-            <h2 className="text-lg font-semibold mb-4">Atividades</h2>
-            <ActivityList activities={unclassifiedActivities} currentIndex={currentIndex} goToActivity={goToActivity} />
+        <aside className="w-1/4 hidden sm:block border-r pr-6">
+            <h2 className="text-lg font-semibold mb-4">Atividades para classificar</h2>
+            <ActivityList activities={activitiesToClassify} currentIndex={currentIndex} goToActivity={goToActivity} />
         </aside>
         
         <div className="flex-1">
@@ -256,7 +308,7 @@ export default function ClassificationPage() {
             
             <div className="my-8">
               <div className="flex justify-between mb-1 text-sm text-muted-foreground">
-                <span>Progresso</span>
+                <span>Progresso da Classificação</span>
                 <span>{classifiedCount} de {allActivities.length} atividades classificadas</span>
               </div>
               <Progress value={(classifiedCount / allActivities.length) * 100} />
@@ -271,12 +323,15 @@ export default function ClassificationPage() {
                   transition={{ duration: 0.3 }}
               >
               {currentActivity ? (
-                <Card className="shadow-lg">
+                <Card className="shadow-lg overflow-hidden">
                   <CardContent className="p-6 md:p-8">
                     <div className="flex justify-between items-center mb-6">
-                        <Button variant="ghost" onClick={handlePrev} disabled={currentIndex === 0}><ArrowLeft className="mr-2"/> Anterior</Button>
-                        <span className="text-sm font-medium text-muted-foreground">Atividade {currentIndex + 1} de {unclassifiedActivities.length}</span>
-                        <Button variant="ghost" onClick={handleNext} disabled={currentIndex === unclassifiedActivities.length - 1}>Próxima <ArrowRight className="ml-2"/></Button>
+                        <Button variant="ghost" onClick={handlePrev} disabled={currentIndex === 0}><ArrowLeft className="mr-2 h-4 w-4"/> Anterior</Button>
+                        <span className="text-sm font-medium text-muted-foreground">Atividade {currentIndex + 1} de {activitiesToClassify.length}</span>
+                        <Button variant="ghost" onClick={handleNext}>
+                            {currentIndex === activitiesToClassify.length - 1 ? 'Finalizar Revisão' : 'Próxima'}
+                            {currentIndex !== activitiesToClassify.length - 1 && <ArrowLeft className="ml-2 h-4 w-4 transform rotate-180"/>}
+                        </Button>
                     </div>
 
                     <h2 className="text-3xl font-bold text-center mb-8">{currentActivity.nome}</h2>
@@ -284,10 +339,10 @@ export default function ClassificationPage() {
                     {/* Categoria */}
                     <div className="mb-8">
                       <label className="text-lg font-semibold mb-4 block">1. Categoria</label>
-                      <div className="flex gap-4">
-                        <CategoryButton category="DP" selected={currentCategory === 'DP'} onClick={() => setCurrentCategory('DP')} color="border-purple-500">DP</CategoryButton>
-                        <CategoryButton category="RH" selected={currentCategory === 'RH'} onClick={() => setCurrentCategory('RH')} color="border-green-500">RH</CategoryButton>
-                        <CategoryButton category="Compartilhado" selected={currentCategory === 'Compartilhado'} onClick={() => setCurrentCategory('Compartilhado')} color="border-blue-500">Compartilhado</CategoryButton>
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        <CategoryButton category="DP" selected={currentCategory === 'DP'} onClick={() => setCurrentCategory('DP')} color="purple">DP</CategoryButton>
+                        <CategoryButton category="RH" selected={currentCategory === 'RH'} onClick={() => setCurrentCategory('RH')} color="green">RH</CategoryButton>
+                        <CategoryButton category="Compartilhado" selected={currentCategory === 'Compartilhado'} onClick={() => setCurrentCategory('Compartilhado')} color="blue">Compartilhado</CategoryButton>
                       </div>
                     </div>
 
@@ -337,38 +392,42 @@ export default function ClassificationPage() {
                         <label className="text-lg font-semibold mb-4 block">5. Comentários / Discussão</label>
                         <div className="space-y-4">
                             {currentActivity.comentarios?.length > 0 ? (
-                                <div className="max-h-40 overflow-y-auto space-y-3 pr-2">
-                                {currentActivity.comentarios.map((c, i) => (
-                                    <div key={i} className="text-sm bg-muted/50 p-3 rounded-lg">
+                                <div className="max-h-40 overflow-y-auto space-y-3 pr-2 border rounded-lg p-3 bg-muted/50">
+                                {currentActivity.comentarios.sort((a,b) => (b.data as any) - (a.data as any)).map((c, i) => (
+                                    <div key={i} className="text-sm bg-background p-3 rounded-lg shadow-sm">
                                         <div className="flex justify-between items-baseline">
                                             <span className="font-semibold">{c.autor}</span>
-                                            <span className="text-xs text-muted-foreground">{formatDistanceToNow( (c.data as any).toDate(), { addSuffix: true, locale: ptBR })}</span>
+                                            <span className="text-xs text-muted-foreground">{formatDistanceToNow( (c.data as any).toDate ? (c.data as any).toDate() : new Date(c.data), { addSuffix: true, locale: ptBR })}</span>
                                         </div>
-                                        <p className="mt-1">{c.texto}</p>
+                                        <p className="mt-1 text-muted-foreground">{c.texto}</p>
                                     </div>
                                 ))}
                                 </div>
                             ) : (
-                                <p className="text-sm text-muted-foreground text-center py-4">Nenhum comentário ainda.</p>
+                                <p className="text-sm text-muted-foreground text-center py-4 border-2 border-dashed rounded-lg">Nenhum comentário ainda.</p>
                             )}
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 pt-2">
                                 <Input 
                                     value={newComment}
                                     onChange={(e) => setNewComment(e.target.value)}
                                     placeholder="Adicionar um comentário..."
                                     className="text-base"
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
                                 />
-                                <Button onClick={handleAddComment} disabled={!newComment.trim()}>Adicionar</Button>
+                                <Button onClick={handleAddComment} disabled={!newComment.trim() || isSaving}>Adicionar</Button>
                             </div>
                         </div>
                     </div>
 
 
                     {/* Ações */}
-                    <div className="mt-10 flex flex-col sm:flex-row justify-between gap-4">
-                      <Button variant="secondary" onClick={() => handleSaveAndNext()}>Salvar e Próxima</Button>
-                      <Button onClick={() => handleSaveAndNext('aprovada')} disabled={isApproveDisabled} className="bg-green-600 hover:bg-green-700">
-                        <Check className="mr-2"/>
+                     <div className="mt-10 pt-6 border-t flex flex-col sm:flex-row justify-end gap-4">
+                      <Button variant="secondary" onClick={() => handleSaveAndNext()} disabled={isSaving}>
+                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                        Salvar e Próxima
+                      </Button>
+                      <Button onClick={handleApprove} disabled={isApproveDisabled || isSaving} className="bg-green-600 hover:bg-green-700">
+                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Check className="mr-2 h-4 w-4"/>}
                         Aprovar e Próxima
                       </Button>
                     </div>
@@ -393,22 +452,77 @@ export default function ClassificationPage() {
 
 function ActivityList({ activities, currentIndex, goToActivity }: { activities: Activity[], currentIndex: number, goToActivity: (index: number) => void }) {
   return (
-    <ul className="space-y-2 mt-4">
-      {activities.map((act, index) => (
-        <li key={act.id}>
-          <button
-            onClick={() => goToActivity(index)}
-            className={cn(
-              "w-full text-left p-3 rounded-md transition-colors text-sm flex items-center gap-3",
-              index === currentIndex ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-muted/50'
-            )}
-          >
-            <span title={statusLabels[act.status]}>{statusIcons[act.status]}</span>
-            <span className="flex-1 truncate">{act.nome}</span>
-            <Badge variant={index === currentIndex ? 'default' : 'secondary'} className="hidden sm:inline-flex">{statusLabels[act.status]}</Badge>
-          </button>
-        </li>
-      ))}
-    </ul>
+    <div className="h-full overflow-y-auto p-4">
+      <ul className="space-y-2">
+        {activities.map((act, index) => (
+          <li key={act.id}>
+            <button
+              onClick={() => goToActivity(index)}
+              className={cn(
+                "w-full text-left p-3 rounded-md transition-colors text-sm flex items-center gap-3",
+                index === currentIndex ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-muted'
+              )}
+            >
+              <span title={statusLabels[act.status]}>{statusIcons[act.status as keyof typeof statusIcons]}</span>
+              <span className="flex-1 truncate">{act.nome}</span>
+              <Badge variant={index === currentIndex ? 'default' : 'secondary'} className="hidden lg:inline-flex">{statusLabels[act.status]}</Badge>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function SummaryScreen({ stats, onReviewPending }: { stats: { approved: number, pending: number, unclassified: number }, onReviewPending: () => void }) {
+  const router = useRouter();
+  const total = stats.approved + stats.pending + stats.unclassified;
+  const approvedPercentage = total > 0 ? (stats.approved / total) * 100 : 0;
+
+  const StatCard = ({ title, value, color, icon }: { title: string, value: number, color: string, icon: React.ReactNode }) => (
+    <Card className={cn("border-l-4", color)}>
+      <CardContent className="p-6 flex items-center gap-4">
+        {icon}
+        <div>
+          <p className="text-3xl font-bold">{value}</p>
+          <p className="text-muted-foreground">{title}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <div className="max-w-3xl mx-auto text-center py-12">
+      <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
+        <h1 className="text-5xl font-bold tracking-tight">🎉 Primeira rodada concluída!</h1>
+        <p className="mt-4 text-lg text-muted-foreground">Vocês revisaram todas as atividades. Veja o resumo:</p>
+      
+        <div className="grid md:grid-cols-3 gap-4 my-8 text-left">
+          <StatCard title="Atividades Aprovadas" value={stats.approved} color="border-green-500" icon={<ThumbsUp className="h-8 w-8 text-green-500" />}/>
+          <StatCard title="Aguardando Consenso" value={stats.pending} color="border-yellow-500" icon={<ActivitySquare className="h-8 w-8 text-yellow-500" />}/>
+          <StatCard title="Não Classificadas" value={stats.unclassified} color="border-gray-400" icon={<Square className="h-8 w-8 text-gray-400" />}/>
+        </div>
+
+        <div className="my-8">
+            <div className="flex justify-between mb-1 text-sm text-muted-foreground">
+                <span>Progresso de Aprovação</span>
+                <span>{Math.round(approvedPercentage)}%</span>
+            </div>
+            <Progress value={approvedPercentage} className="h-3 [&>div]:bg-green-500" />
+        </div>
+
+        <div className="mt-10 grid sm:grid-cols-3 gap-4">
+          <Button size="lg" className="h-16 text-lg" onClick={onReviewPending} disabled={stats.pending === 0 && stats.unclassified === 0}>
+              Revisar Pendentes
+          </Button>
+          <Button size="lg" variant="secondary" className="h-16 text-lg" onClick={() => {/* no-op */}}>
+              Ir para o Dashboard
+          </Button>
+          <Button size="lg" variant="outline" className="h-16 text-lg" onClick={() => router.push('/')}>
+              Voltar ao Brainstorm
+          </Button>
+        </div>
+      </motion.div>
+    </div>
   )
 }
