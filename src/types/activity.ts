@@ -18,4 +18,9 @@ export interface Activity {
   dataAprovacao: Timestamp | Date | null;
   ultimaExecucao: Timestamp | Date | null;
   createdAt: Timestamp | Date;
+  statusTransicao: 'a_transferir' | 'em_transicao' | 'concluida';
+  responsavelAnterior: string | null;
+  dataInicioTransicao: Timestamp | Date | null;
+  dataConclusaoTransicao: Timestamp | Date | null;
+  prazoTransicao: Timestamp | Date | null;
 }

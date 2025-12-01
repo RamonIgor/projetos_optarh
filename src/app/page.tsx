@@ -109,6 +109,11 @@ export default function BrainstormPage() {
         dataAprovacao: null,
         ultimaExecucao: null,
         createdAt: serverTimestamp(),
+        statusTransicao: 'a_transferir',
+        responsavelAnterior: null,
+        dataInicioTransicao: null,
+        dataConclusaoTransicao: null,
+        prazoTransicao: null,
       };
 
       const activitiesCollection = collection(db, ACTIVITIES_COLLECTION);

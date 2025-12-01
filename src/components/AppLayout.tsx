@@ -36,7 +36,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
     { href: '/', label: 'Brainstorm', icon: ListTodo },
     { href: '/classificacao', label: 'Classificação', icon: LayoutGrid, count: unclassifiedCount, disabled: !hasActivities },
     { href: '/dashboard', label: 'Dashboard', icon: BarChart3, disabled: !hasActivities },
-    { href: '/transicao', label: 'Transição', icon: Shuffle, disabled: true },
+    { href: '/transicao', label: 'Transição', icon: Shuffle, disabled: !hasActivities },
     { href: '/operacional', label: 'Operacional', icon: PlayCircle, disabled: true },
   ];
 
@@ -66,7 +66,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
               </Link>
             );
 
-            if (item.disabled && item.href !== '/classificacao' && item.href !== '/dashboard') {
+            if (item.disabled && item.href !== '/classificacao' && item.href !== '/dashboard' && item.href !== '/transicao') {
               return (
                 <TooltipProvider key={item.href} delayDuration={100}>
                   <Tooltip>
@@ -81,7 +81,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
               )
             }
             
-             if (item.disabled && (item.href === '/classificacao' || item.href === '/dashboard')) {
+             if (item.disabled && (item.href === '/classificacao' || item.href === '/dashboard' || item.href === '/transicao')) {
               return (
                 <TooltipProvider key={item.href} delayDuration={100}>
                   <Tooltip>

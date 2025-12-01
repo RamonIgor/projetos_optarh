@@ -74,9 +74,33 @@
           "type": "string",
           "format": "date-time",
           "description": "The creation date of the activity."
+        },
+        "statusTransicao": {
+            "type": "string",
+            "enum": ["a_transferir", "em_transicao", "concluida"],
+            "description": "The transition status of the activity."
+        },
+        "responsavelAnterior": {
+            "type": ["string", "null"],
+            "description": "The previous responsible person for the activity."
+        },
+        "dataInicioTransicao": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "The start date of the transition."
+        },
+        "dataConclusaoTransicao": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "The conclusion date of the transition."
+        },
+        "prazoTransicao": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "The deadline for the transition."
         }
       },
-      "required": ["nome", "status", "createdAt"]
+      "required": ["nome", "status", "createdAt", "statusTransicao"]
     }
   },
   "auth": {
