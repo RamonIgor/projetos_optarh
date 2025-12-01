@@ -12,13 +12,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, AlertCircle, CheckCircle2, PlayCircle, Clock, Calendar, Shuffle, BarChart3 } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2, PlayCircle, Clock, Calendar, Shuffle, BarChart3, Edit } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { format, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -59,16 +59,38 @@ function EditTransitionModal({ activity, children }: { activity: Activity, child
 
     const [prazo, setPrazo] = useState<Date | undefined>(activity.prazoTransicao ? (activity.prazoTransicao as any).toDate() : undefined);
     const [responsavelAnterior, setResponsavelAnterior] = useState(activity.responsavelAnterior || '');
+    const [status, setStatus] = useState<Activity['statusTransicao']>(activity.statusTransicao);
+
+    useEffect(() => {
+        if(open) {
+            setPrazo(activity.prazoTransicao ? (activity.prazoTransicao as any).toDate() : undefined);
+            setResponsavelAnterior(activity.responsavelAnterior || '');
+            setStatus(activity.statusTransicao);
+        }
+    }, [open, activity]);
     
     const handleSave = async () => {
         if (!db) return;
         setIsSaving(true);
         try {
             const docRef = doc(db, ACTIVITIES_COLLECTION, activity.id);
-            await updateDoc(docRef, {
+
+            const data: Partial<Activity> = {
                 prazoTransicao: prazo,
                 responsavelAnterior: responsavelAnterior,
-            });
+                statusTransicao: status,
+            };
+
+            if (status !== activity.statusTransicao) {
+                if(status === 'em_transicao') {
+                    data.dataInicioTransicao = serverTimestamp();
+                } else if (status === 'concluida') {
+                    data.dataConclusaoTransicao = serverTimestamp();
+                }
+            }
+            
+            await updateDoc(docRef, data);
+
             toast({ title: "Alterações salvas com sucesso!" });
             setOpen(false);
         } catch (error) {
@@ -82,11 +104,12 @@ function EditTransitionModal({ activity, children }: { activity: Activity, child
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>{children}</DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[480px]">
                 <DialogHeader>
-                    <DialogTitle>Editar Transição: {activity.nome}</DialogTitle>
+                    <DialogTitle>Editar Transição</DialogTitle>
+                    <DialogDescription>{activity.nome}</DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
+                <div className="grid gap-6 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="prev-responsible" className="text-right">
                             Resp. Anterior
@@ -96,6 +119,7 @@ function EditTransitionModal({ activity, children }: { activity: Activity, child
                             value={responsavelAnterior}
                             onChange={(e) => setResponsavelAnterior(e.target.value)}
                             className="col-span-3"
+                            placeholder="Quem realizava a tarefa?"
                         />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
@@ -125,11 +149,27 @@ function EditTransitionModal({ activity, children }: { activity: Activity, child
                             </PopoverContent>
                         </Popover>
                     </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="status" className="text-right">
+                            Status
+                        </Label>
+                         <Select value={status} onValueChange={(value) => setStatus(value as Activity['statusTransicao'])}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Selecione o status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Object.entries(transitionStatusConfig).map(([key, config]) => (
+                                    (key !== 'undefined') && <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
                 <DialogFooter>
+                     <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
                     <Button onClick={handleSave} disabled={isSaving}>
                         {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Salvar
+                        Salvar Alterações
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -163,7 +203,7 @@ export default function TransitionPage() {
         const q = query(collection(db, ACTIVITIES_COLLECTION), where('status', '==', 'aprovada'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
-            const sortedActivities = activitiesData.sort((a, b) => (b.createdAt as any) - (a.createdAt as any));
+            const sortedActivities = activitiesData.sort((a, b) => (a.createdAt as any) - (b.createdAt as any));
             setAllActivities(sortedActivities);
             setIsLoading(false);
         });
@@ -192,21 +232,6 @@ export default function TransitionPage() {
         const progress = total > 0 ? (concluded / total) * 100 : 0;
         return { total, toTransfer, inTransition, concluded, overdue, progress };
     }, [allActivities]);
-
-    const handleUpdateTransition = async (activityId: string, newStatus: Activity['statusTransicao']) => {
-        if(!db) return;
-
-        const docRef = doc(db, ACTIVITIES_COLLECTION, activityId);
-        const data: Partial<Activity> = { statusTransicao: newStatus };
-
-        if(newStatus === 'em_transicao') {
-            data.dataInicioTransicao = serverTimestamp();
-        } else if (newStatus === 'concluida') {
-            data.dataConclusaoTransicao = serverTimestamp();
-        }
-
-        await updateDoc(docRef, data);
-    }
     
     if (userLoading || isLoading) {
         return (
@@ -319,7 +344,7 @@ export default function TransitionPage() {
                                 <TableRow key={activity.id}>
                                     <TableCell className="font-medium">{activity.nome}</TableCell>
                                     <TableCell>
-                                        <Badge variant="outline" className={cn(activity.categoria && categoryStyles[activity.categoria])}>
+                                         <Badge variant="outline" className={cn(activity.categoria ? categoryStyles[activity.categoria] : '')}>
                                             {activity.categoria}
                                         </Badge>
                                     </TableCell>
@@ -340,15 +365,12 @@ export default function TransitionPage() {
                                             {statusConfig.label}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell className="text-right space-x-2">
-                                        {activity.statusTransicao === 'a_transferir' && (
-                                            <Button size="sm" onClick={() => handleUpdateTransition(activity.id, 'em_transicao')}>Iniciar</Button>
-                                        )}
-                                        {activity.statusTransicao === 'em_transicao' && (
-                                            <Button size="sm" variant="secondary" onClick={() => handleUpdateTransition(activity.id, 'concluida')}>Concluir</Button>
-                                        )}
+                                    <TableCell className="text-right">
                                         <EditTransitionModal activity={activity}>
-                                            <Button size="sm" variant="ghost">Editar</Button>
+                                            <Button size="sm" variant="ghost">
+                                                <Edit className="h-4 w-4 mr-2" />
+                                                Editar
+                                            </Button>
                                         </EditTransitionModal>
                                     </TableCell>
                                 </TableRow>
@@ -364,5 +386,6 @@ export default function TransitionPage() {
 
         </AppLayout>
     );
+}
 
     
