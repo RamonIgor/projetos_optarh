@@ -119,7 +119,7 @@ export default function ClassificationPage() {
       
       setActivitiesToClassify(sortedToClassify);
 
-      if (sortedToClassify.length === 0 && filter !== 'approved' && allActivities.length > 0) {
+      if (sortedToClassify.length === 0 && filter === 'pending' && allActivities.length > 0) {
         setShowSummary(true);
       } else {
         setShowSummary(false);
@@ -587,7 +587,7 @@ function SummaryScreen({ stats, onReviewPending, onReviewApproved }: { stats: { 
            <Button size="lg" variant="outline" className="h-16 text-lg" onClick={onReviewApproved} disabled={stats.approved === 0}>
               Revisar Aprovadas
           </Button>
-          <Button size="lg" variant="outline" className="h-16 text-lg" onClick={() => {/* no-op */}}>
+          <Button size="lg" variant="outline" className="h-16 text-lg" onClick={() => router.push('/dashboard')}>
               Ir para o Dashboard
           </Button>
           <Button size="lg" variant="outline" className="h-16 text-lg" onClick={() => router.push('/')}>
