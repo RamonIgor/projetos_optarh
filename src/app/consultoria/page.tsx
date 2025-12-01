@@ -26,7 +26,9 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, Bar, XAxis, YAxis, CartesianGrid, ComposedChart } from 'recharts';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
 
 
 const actionSchema = z.object({
@@ -89,22 +91,39 @@ export default function ConsultancyPage() {
         if (!user) { router.push('/login'); return; }
         if (!db) { setIsLoading(false); return; }
 
-        const q = query(collection(db, ACTIONS_COLLECTION), orderBy("createdAt", "desc"));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const actionsData = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                data_inicio: (doc.data().data_inicio as any).toDate(),
-                data_termino: (doc.data().data_termino as any).toDate(),
-                prazo_realizado: doc.data().prazo_realizado ? (doc.data().prazo_realizado as any).toDate() : null,
-                createdAt: (doc.data().createdAt as any).toDate(),
-            } as ConsultancyAction));
-            setActions(actionsData);
-            setIsLoading(false);
-        });
+        const actionsCollectionRef = collection(db, ACTIONS_COLLECTION);
+        const q = query(actionsCollectionRef, orderBy("createdAt", "desc"));
+        const unsubscribe = onSnapshot(q, 
+            (snapshot) => {
+                const actionsData = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    data_inicio: (doc.data().data_inicio as any).toDate(),
+                    data_termino: (doc.data().data_termino as any).toDate(),
+                    prazo_realizado: doc.data().prazo_realizado ? (doc.data().prazo_realizado as any).toDate() : null,
+                    createdAt: (doc.data().createdAt as any).toDate(),
+                } as ConsultancyAction));
+                setActions(actionsData);
+                setIsLoading(false);
+            },
+            (error) => {
+                console.error("Error fetching consultancy actions:", error);
+                const permissionError = new FirestorePermissionError({
+                    path: actionsCollectionRef.path,
+                    operation: 'list',
+                });
+                errorEmitter.emit('permission-error', permissionError);
+                setIsLoading(false);
+                toast({
+                    title: "Erro de Permissão",
+                    description: "Você não tem permissão para visualizar estas ações.",
+                    variant: "destructive"
+                });
+            }
+        );
 
         return () => unsubscribe();
-    }, [db, user, userLoading, router]);
+    }, [db, user, userLoading, router, toast]);
 
     const onSubmit = (data: ActionFormValues) => {
         if (!db) return;
@@ -424,3 +443,4 @@ export default function ConsultancyPage() {
         </div>
     );
 }
+    
