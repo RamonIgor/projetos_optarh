@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useTransition } from 'react';
-import { collection, onSnapshot, query, where, doc, updateDoc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
@@ -158,10 +158,11 @@ export default function TransitionPage() {
             return;
         }
 
-        const q = query(collection(db, ACTIVITIES_COLLECTION), where('status', '==', 'aprovada'), orderBy('createdAt', 'desc'));
+        const q = query(collection(db, ACTIVITIES_COLLECTION), where('status', '==', 'aprovada'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
-            setAllActivities(activitiesData);
+            const sortedActivities = activitiesData.sort((a, b) => (b.createdAt as any) - (a.createdAt as any));
+            setAllActivities(sortedActivities);
             setIsLoading(false);
         });
 
@@ -355,5 +356,3 @@ export default function TransitionPage() {
         </AppLayout>
     );
 }
-
-    
