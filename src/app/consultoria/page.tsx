@@ -259,10 +259,10 @@ export default function ConsultancyPage() {
                 const actionsData = snapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data(),
-                    data_inicio: (doc.data().data_inicio as any).toDate(),
-                    data_termino: (doc.data().data_termino as any).toDate(),
+                    data_inicio: doc.data().data_inicio ? (doc.data().data_inicio as any).toDate() : new Date(),
+                    data_termino: doc.data().data_termino ? (doc.data().data_termino as any).toDate() : new Date(),
                     prazo_realizado: doc.data().prazo_realizado ? (doc.data().prazo_realizado as any).toDate() : null,
-                    createdAt: (doc.data().createdAt as any).toDate(),
+                    createdAt: doc.data().createdAt ? (doc.data().createdAt as any).toDate() : new Date(),
                 } as ConsultancyAction));
                 setActions(actionsData);
                 setIsLoading(false);
