@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useTransition, FormEvent } from 'react';
-import { db } from '@/lib/firebase';
 import { collection, addDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, doc } from 'firebase/firestore';
 import { type Activity } from '@/types/activity';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { X, Plus, Loader2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useFirestore } from '@/firebase/provider';
 
 const ACTIVITIES_COLLECTION = 'rh-dp-activities';
 
@@ -24,10 +24,11 @@ const isSimilar = (a: string, b: string) => {
 };
 
 export default function BrainstormPage() {
+  const db = useFirestore();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [newActivityName, setNewActivityName] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isAdding, setIsAdding] = useTransition();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAdding, startAddingTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
 
   const [dialogState, setDialogState] = useState<{ open: boolean; similarTo?: string; nameToAdd?: string }>({ open: false });
@@ -35,6 +36,8 @@ export default function BrainstormPage() {
   const { toast } = useToast();
 
   useEffect(() => {
+    if (!db) return;
+    
     setIsLoading(true);
     const q = query(collection(db, ACTIVITIES_COLLECTION), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -55,15 +58,15 @@ export default function BrainstormPage() {
     });
 
     return () => unsubscribe();
-  }, [toast]);
+  }, [db, toast]);
 
   const addActivity = (name: string) => {
     const trimmedName = name.trim();
-    if (!trimmedName) return;
+    if (!trimmedName || !db) return;
 
     setNewActivityName("");
     
-    setIsAdding(async () => {
+    startAddingTransition(async () => {
       try {
         await addDoc(collection(db, ACTIVITIES_COLLECTION), {
           nome: trimmedName,
@@ -111,6 +114,7 @@ export default function BrainstormPage() {
   };
 
   const handleDeleteActivity = (id: string) => {
+    if (!db) return;
     startDeleteTransition(async () => {
       try {
         await deleteDoc(doc(db, ACTIVITIES_COLLECTION, id));
