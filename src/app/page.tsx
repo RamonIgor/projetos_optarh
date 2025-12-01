@@ -27,8 +27,8 @@ export default function BrainstormPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [newActivityName, setNewActivityName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [isAdding, setIsAdding] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isAdding, setIsAdding] = useTransition();
+  const [isDeleting, startDeleteTransition] = useTransition();
 
   const [dialogState, setDialogState] = useState<{ open: boolean; similarTo?: string; nameToAdd?: string }>({ open: false });
   
@@ -42,7 +42,9 @@ export default function BrainstormPage() {
         activitiesData.push({ id: doc.id, ...doc.data() } as Activity);
       });
       setActivities(activitiesData);
-      setIsLoading(false);
+      if (isLoading) {
+        setIsLoading(false);
+      }
     }, (error) => {
       console.error("Error fetching activities: ", error);
       toast({
@@ -54,42 +56,41 @@ export default function BrainstormPage() {
     });
 
     return () => unsubscribe();
-  }, [toast]);
+  }, [toast, isLoading]);
 
-  const addActivity = async (name: string) => {
+  const addActivity = (name: string) => {
     const trimmedName = name.trim();
     if (!trimmedName) return;
 
-    setIsAdding(true);
     setNewActivityName("");
     
-    try {
-      await addDoc(collection(db, ACTIVITIES_COLLECTION), {
-        nome: trimmedName,
-        categoria: null,
-        justificativa: null,
-        responsavel: null,
-        recorrencia: null,
-        status: 'brainstorm',
-        comentarios: [],
-        dataAprovacao: null,
-        ultimaExecucao: null,
-        createdAt: serverTimestamp(),
-      });
-    } catch (error) {
-      console.error("Error adding activity: ", error);
-      setNewActivityName(name); // Restore input on error
-      toast({
-        title: "Erro ao adicionar atividade",
-        description: "Não foi possível salvar a nova atividade. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-        setIsAdding(false);
-    }
+    startTransition(async () => {
+      try {
+        await addDoc(collection(db, ACTIVITIES_COLLECTION), {
+          nome: trimmedName,
+          categoria: null,
+          justificativa: null,
+          responsavel: null,
+          recorrencia: null,
+          status: 'brainstorm',
+          comentarios: [],
+          dataAprovacao: null,
+          ultimaExecucao: null,
+          createdAt: serverTimestamp(),
+        });
+      } catch (error) {
+        console.error("Error adding activity: ", error);
+        setNewActivityName(name); // Restore input on error
+        toast({
+          title: "Erro ao adicionar atividade",
+          description: "Não foi possível salvar a nova atividade. Tente novamente.",
+          variant: "destructive",
+        });
+      }
+    });
   };
 
-  const handleAddSubmit = async (e: FormEvent) => {
+  const handleAddSubmit = (e: FormEvent) => {
     e.preventDefault();
     const trimmedName = newActivityName.trim();
     if (!trimmedName || isAdding) return;
@@ -99,19 +100,19 @@ export default function BrainstormPage() {
     if (similar) {
       setDialogState({ open: true, similarTo: similar.nome, nameToAdd: trimmedName });
     } else {
-      await addActivity(trimmedName);
+      addActivity(trimmedName);
     }
   };
 
-  const handleConfirmAdd = async () => {
+  const handleConfirmAdd = () => {
     if (dialogState.nameToAdd) {
-      await addActivity(dialogState.nameToAdd);
+      addActivity(dialogState.nameToAdd);
     }
     setDialogState({ open: false });
   };
 
   const handleDeleteActivity = (id: string) => {
-    startTransition(async () => {
+    startDeleteTransition(async () => {
       try {
         await deleteDoc(doc(db, ACTIVITIES_COLLECTION, id));
       } catch (error) {
@@ -180,8 +181,8 @@ export default function BrainstormPage() {
                             <span className="font-medium text-foreground">{activity.nome}</span>
                             <div className="flex items-center gap-2 flex-shrink-0">
                               <Badge variant="secondary">Não classificada</Badge>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDeleteActivity(activity.id)} disabled={isPending} aria-label={`Excluir ${activity.nome}`}>
-                                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDeleteActivity(activity.id)} disabled={isDeleting} aria-label={`Excluir ${activity.nome}`}>
+                                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
                               </Button>
                             </div>
                           </motion.li>
