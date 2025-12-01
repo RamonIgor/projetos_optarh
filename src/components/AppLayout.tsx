@@ -59,7 +59,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
         <div className="flex items-center gap-4">
           <Link href="/">
-            <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} className="cursor-pointer"/>
+            <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} className="cursor-pointer" unoptimized/>
           </Link>
           <nav className="p-1.5 rounded-full bg-background/50 backdrop-blur-sm border border-black/5 flex items-center gap-1 shadow-sm">
             {navItems.map((item) => {
