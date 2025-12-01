@@ -4,7 +4,7 @@ import { signOut } from 'firebase/auth';
 import { useAuth } from '@/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { LogOut, LayoutGrid, ListTodo, BarChart3, Shuffle, PlayCircle, Settings } from 'lucide-react';
+import { LogOut, LayoutGrid, ListTodo, BarChart3, Shuffle, PlayCircle, Settings, Rows } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
@@ -89,6 +89,10 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
           })}
         </nav>
         <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={() => router.push('/dashboard')}>
+                <Rows className="mr-2 h-4 w-4" />
+                Painel
+            </Button>
             <RegisterUserDialog>
                 <Button variant="ghost" size="icon">
                     <Settings className="h-5 w-5" />
