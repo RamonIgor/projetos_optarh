@@ -1,28 +1,32 @@
 "use client";
 
-import { useEffect } from 'react';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { useEffect, useState, type FormEvent } from 'react';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  type AuthError
+} from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-
-const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 48 48" {...props}>
-    <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
-    <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z" />
-    <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.223 0-9.64-3.657-11.303-8H6.306C9.656 39.663 16.318 44 24 44z" />
-    <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C42.012 35.196 44 30.023 44 24c0-1.341-.138-2.65-.389-3.917z" />
-  </svg>
-);
+import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
   const auth = useAuth();
   const router = useRouter();
   const { user, loading } = useUser();
+  const { toast } = useToast();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
@@ -30,15 +34,64 @@ export default function LoginPage() {
     }
   }, [user, loading, router]);
 
-  const handleSignIn = async () => {
-    if (!auth) return;
-    const provider = new GoogleAuthProvider();
+  const handleAuthError = (error: AuthError) => {
+    let title = "Erro de Autenticação";
+    let description = "Ocorreu um erro inesperado. Tente novamente.";
+    
+    switch (error.code) {
+        case 'auth/invalid-email':
+            title = "Email Inválido";
+            description = "Por favor, insira um endereço de email válido.";
+            break;
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+             title = "Credenciais Inválidas";
+             description = "Email ou senha incorretos. Verifique e tente novamente.";
+             break;
+        case 'auth/email-already-in-use':
+            title = "Email já cadastrado";
+            description = "Este email já está em uso. Tente fazer login.";
+            break;
+        case 'auth/weak-password':
+            title = "Senha Fraca";
+            description = "A senha deve ter pelo menos 6 caracteres.";
+            break;
+        default:
+            console.error("Authentication error:", error);
+    }
+
+    toast({
+        variant: "destructive",
+        title: title,
+        description: description,
+    });
+  }
+
+  const handleSignIn = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!auth || !email || !password) return;
+    setIsSubmitting(true);
     try {
-      await signInWithPopup(auth, provider);
+      await signInWithEmailAndPassword(auth, email, password);
       router.push('/');
     } catch (error) {
-      console.error("Error signing in with Google", error);
-      // Optionally show a toast to the user
+      handleAuthError(error as AuthError);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSignUp = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!auth || !email || !password) return;
+    setIsSubmitting(true);
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      router.push('/');
+    } catch (error) {
+      handleAuthError(error as AuthError);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -60,17 +113,49 @@ export default function LoginPage() {
         <Card className="w-full max-w-sm shadow-2xl dark:shadow-black/50">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Bem-vindo(a) ao CollabTask</CardTitle>
-            <CardDescription>Entre para começar a gerenciar suas atividades.</CardDescription>
+            <CardDescription>Entre ou crie uma conta para continuar.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button
-              onClick={handleSignIn}
-              className="w-full h-12 text-base"
-              size="lg"
-            >
-              <GoogleIcon className="mr-2 h-6 w-6" />
-              Entrar com Google
-            </Button>
+            <Tabs defaultValue="login">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login">Entrar</TabsTrigger>
+                <TabsTrigger value="signup">Registrar</TabsTrigger>
+              </TabsList>
+              <TabsContent value="login">
+                <form onSubmit={handleSignIn}>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="email-login">Email</Label>
+                      <Input id="email-login" type="email" placeholder="seu@email.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="password-login">Senha</Label>
+                      <Input id="password-login" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+                    </div>
+                    <Button type="submit" className="w-full mt-2 h-11" disabled={isSubmitting}>
+                      {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Entrar"}
+                    </Button>
+                  </div>
+                </form>
+              </TabsContent>
+              <TabsContent value="signup">
+                <form onSubmit={handleSignUp}>
+                   <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="email-signup">Email</Label>
+                      <Input id="email-signup" type="email" placeholder="seu@email.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="password-signup">Senha</Label>
+                      <Input id="password-signup" type="password" placeholder="Mínimo 6 caracteres" required value={password} onChange={(e) => setPassword(e.target.value)} />
+                    </div>
+                    <Button type="submit" className="w-full mt-2 h-11" disabled={isSubmitting}>
+                      {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Criar Conta"}
+                    </Button>
+                  </div>
+                </form>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </motion.div>
