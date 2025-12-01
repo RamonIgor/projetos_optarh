@@ -85,7 +85,7 @@ export default function ClassificationPage() {
     return activitiesToClassify.length > 0 ? activitiesToClassify[currentIndex] : null;
   }, [activitiesToClassify, currentIndex]);
 
-  const classifiedCount = useMemo(() => allActivities.filter(a => a.status !== 'brainstorm').length, [allActivities]);
+  const classifiedCount = useMemo(() => allActivities.filter(a => a.status === 'aprovada').length, [allActivities]);
   
   const summaryStats = useMemo(() => {
     return {
@@ -106,11 +106,15 @@ export default function ClassificationPage() {
     }
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
-      if(filter === 'all') {
-        setAllActivities(activitiesData);
-      }
+      setAllActivities(activitiesData);
       
-      const toClassify = activitiesData.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').sort((a,b) => (a.createdAt as any) - (b.createdAt as any));
+      let toClassify;
+       if (filter === 'pending') {
+        toClassify = activitiesData.filter(a => a.status !== 'aprovada').sort((a,b) => (a.createdAt as any) - (b.createdAt as any));
+      } else {
+        // Show all activities for classification/review
+        toClassify = [...activitiesData].sort((a,b) => (a.createdAt as any) - (b.createdAt as any));
+      }
       setActivitiesToClassify(toClassify);
       
       setCurrentIndex(0);
@@ -130,18 +134,10 @@ export default function ClassificationPage() {
         setIsLoading(false);
         return;
     };
-    
-    // Initial fetch for all activities to populate counts
-    const qAll = query(collection(db, ACTIVITIES_COLLECTION));
-    const unsubAll = onSnapshot(qAll, (snapshot) => {
-      const allActivitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
-      setAllActivities(allActivitiesData);
-    });
 
     const unsubClassify = fetchActivities('all');
 
     return () => {
-      unsubAll();
       if(unsubClassify) unsubClassify();
     };
   }, [db, user, userLoading, router]);
@@ -173,22 +169,42 @@ export default function ClassificationPage() {
     }
   };
 
-  const handleSaveAndNext = async (status: 'aguardando_consenso' | 'aprovada' = 'aguardando_consenso') => {
+  const handleSaveAndNext = async (status?: 'aguardando_consenso' | 'aprovada') => {
     if (isSaving) return;
+    
+    // If any classification data has changed, the status must be at least 'aguardando_consenso'
+    const hasChanged = currentActivity && (
+      currentActivity.categoria !== currentCategory ||
+      currentActivity.justificativa !== currentJustification ||
+      currentActivity.responsavel !== currentResponsible ||
+      currentActivity.recorrencia !== currentRecurrence
+    );
+
+    let newStatus = currentActivity?.status;
+    if (hasChanged && currentActivity?.status === 'aprovada') {
+        newStatus = 'aguardando_consenso';
+    } else if (status) {
+        newStatus = status;
+    } else if (hasChanged && currentActivity?.status === 'brainstorm') {
+        newStatus = 'aguardando_consenso';
+    }
+
+
     const data: Partial<Activity> = {
       categoria: currentCategory,
       justificativa: currentJustification,
       responsavel: currentResponsible,
       recorrencia: currentRecurrence,
-      status: currentActivity?.status === 'aprovada' ? 'aprovada' : status,
+      status: newStatus,
     };
-    if (status === 'aprovada' && currentActivity?.status !== 'aprovada') {
+
+    if (newStatus === 'aprovada' && currentActivity?.status !== 'aprovada') {
       data.dataAprovacao = serverTimestamp();
     }
+    
     await updateActivity(data);
     
-    // Only show toast on manual save/approve, not on simple next
-    if (status !== 'aguardando_consenso' || (data.categoria || data.justificativa || data.responsavel) ) {
+    if (status || hasChanged) {
         toast({
             title: status === 'aprovada' ? "Atividade Aprovada!" : "Progresso Salvo!",
             description: `A atividade "${currentActivity?.nome}" foi atualizada.`,
@@ -202,8 +218,9 @@ export default function ClassificationPage() {
     }
   };
 
+
   const handleNext = () => {
-     handleSaveAndNext('aguardando_consenso');
+     handleSaveAndNext();
   };
 
   const handleApprove = () => {
@@ -234,6 +251,7 @@ export default function ClassificationPage() {
 
   const goToActivity = (index: number) => {
     setCurrentIndex(index);
+    setShowSummary(false);
   }
   
   const unclassifiedCount = allActivities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length;
@@ -289,13 +307,13 @@ export default function ClassificationPage() {
           </SheetTrigger>
           <SheetContent side="left" className="w-[300px] p-0">
             <SheetHeader className="p-4 border-b">
-              <SheetTitle>Atividades para classificar</SheetTitle>
+              <SheetTitle>Revisão de Atividades</SheetTitle>
             </SheetHeader>
             <ActivityList activities={activitiesToClassify} currentIndex={currentIndex} goToActivity={goToActivity} />
           </SheetContent>
         </Sheet>
         <aside className="w-1/4 hidden sm:block border-r pr-6">
-            <h2 className="text-lg font-semibold mb-4">Atividades para classificar</h2>
+            <h2 className="text-lg font-semibold mb-4">Revisão de Atividades</h2>
             <ActivityList activities={activitiesToClassify} currentIndex={currentIndex} goToActivity={goToActivity} />
         </aside>
         
@@ -308,8 +326,8 @@ export default function ClassificationPage() {
             
             <div className="my-8">
               <div className="flex justify-between mb-1 text-sm text-muted-foreground">
-                <span>Progresso da Classificação</span>
-                <span>{classifiedCount} de {allActivities.length} atividades classificadas</span>
+                <span>Progresso da Aprovação</span>
+                <span>{classifiedCount} de {allActivities.length} atividades aprovadas</span>
               </div>
               <Progress value={(classifiedCount / allActivities.length) * 100} />
             </div>
@@ -526,5 +544,3 @@ function SummaryScreen({ stats, onReviewPending }: { stats: { approved: number, 
     </div>
   )
 }
-
-    
