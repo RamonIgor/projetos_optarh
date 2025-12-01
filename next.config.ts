@@ -30,10 +30,13 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // This allows the Next.js dev server to accept requests from any origin.
+  // This is necessary for development inside a secure Google Cloud Workstation.
   experimental: {
-    // This allows the Next.js dev server to accept requests from any origin.
-    // This is necessary for development inside a secure Google Cloud Workstation.
-    allowedDevOrigins: ['*'],
+    serverActions: true,
+  },
+  devIndicators: {
+    buildActivity: false,
   },
 };
 
