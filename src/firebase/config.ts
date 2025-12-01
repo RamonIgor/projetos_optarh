@@ -1,9 +1,10 @@
 // As this file is a client component, we can use env vars
 export const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  "projectId": "studio-2742622294-1eb18",
+  "appId": "1:1099015465632:web:35709a617e32e8467537c5",
+  "apiKey": "AIzaSyBzdlv0_qoOjEBDHdPVS8gUODxkQriKDro",
+  "authDomain": "studio-2742622294-1eb18.firebaseapp.com",
+  "measurementId": "",
+  "storageBucket": "studio-2742622294-1eb18.appspot.com",
+  "messagingSenderId": "1099015465632"
 };
