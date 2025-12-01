@@ -5,18 +5,18 @@ import { collection, addDoc, deleteDoc, onSnapshot, query, orderBy, serverTimest
 import { type Activity } from '@/types/activity';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { X, Plus, Loader2, LogOut } from 'lucide-react';
+import { X, Plus, Loader2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useFirestore, useAuth } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
-import { signOut } from 'firebase/auth';
+import AppLayout from '@/components/AppLayout';
 
 const ACTIVITIES_COLLECTION = 'rh-dp-activities';
 
@@ -29,7 +29,6 @@ const isSimilar = (a: string, b: string) => {
 
 export default function BrainstormPage() {
   const db = useFirestore();
-  const auth = useAuth();
   const { user, loading: userLoading } = useUser();
   const router = useRouter();
 
@@ -164,13 +163,7 @@ export default function BrainstormPage() {
         });
     });
   };
-  
-  const handleLogout = async () => {
-    if (!auth) return;
-    await signOut(auth);
-    router.push('/login');
-  };
-  
+    
   if (userLoading || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -179,96 +172,80 @@ export default function BrainstormPage() {
     );
   }
 
-  return (
-    <>
-      <div className="min-h-screen w-full">
-        <header className="container mx-auto p-4 sm:p-6 md:p-8 flex justify-end">
-          <Button variant="ghost" onClick={handleLogout}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Sair
-          </Button>
-        </header>
-        <main className="container mx-auto p-4 sm:p-6 md:p-8 pt-0">
-          <div className="max-w-4xl mx-auto">
-            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              <h1 className="text-4xl md:text-5xl font-bold text-center text-primary tracking-tight">Brainstorm de Atividades</h1>
-              <p className="mt-4 text-lg text-center text-muted-foreground">Liste todas as atividades que vocês realizam hoje. Não se preocupe com a classificação ainda.</p>
-            </motion.div>
+  const unclassifiedCount = activities.filter(a => a.status === 'brainstorm').length;
 
-            <Card className="mt-8 shadow-lg dark:shadow-black/20">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-xl">Adicionar Nova Atividade</CardTitle>
-                  </div>
-                  <div className="text-sm font-medium text-muted-foreground pt-1">{activities.length} atividades levantadas</div>
+  return (
+    <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0}>
+      <div className="max-w-4xl mx-auto">
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <h1 className="text-4xl md:text-5xl font-bold text-center text-primary tracking-tight">Brainstorm de Atividades</h1>
+          <p className="mt-4 text-lg text-center text-muted-foreground">Liste todas as atividades que vocês realizam hoje. Não se preocupe com a classificação ainda.</p>
+        </motion.div>
+
+        <Card className="mt-8 shadow-lg dark:shadow-black/20">
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle className="text-xl">Adicionar Nova Atividade</CardTitle>
+              </div>
+              <div className="text-sm font-medium text-muted-foreground pt-1">{activities.length} atividades levantadas</div>
+            </div>
+            <form onSubmit={handleAddSubmit} className="flex flex-col sm:flex-row gap-2 pt-4">
+              <Input
+                type="text"
+                placeholder="Ex: Processar folha de pagamento"
+                value={newActivityName}
+                onChange={(e) => setNewActivityName(e.target.value)}
+                className="h-12 text-base"
+                disabled={isAdding}
+                aria-label="Nova atividade"
+              />
+              <Button type="submit" size="lg" className="h-12 w-full sm:w-auto" disabled={isAdding || !newActivityName.trim()}>
+                {isAdding ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
+                <span className="sm:hidden">Adicionar Atividade</span>
+                <span className="hidden sm:inline">Adicionar</span>
+              </Button>
+            </form>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {isLoading ? (
+                 <div className="flex justify-center items-center py-10">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary"/>
+                 </div>
+              ) : activities.length === 0 ? (
+                 <div className="text-center py-10 border-2 border-dashed rounded-lg">
+                  <h3 className="text-lg font-semibold">Tudo limpo por aqui!</h3>
+                  <p className="mt-1 text-muted-foreground">Comece a adicionar as atividades da sua equipe no campo acima.</p>
                 </div>
-                <form onSubmit={handleAddSubmit} className="flex flex-col sm:flex-row gap-2 pt-4">
-                  <Input
-                    type="text"
-                    placeholder="Ex: Processar folha de pagamento"
-                    value={newActivityName}
-                    onChange={(e) => setNewActivityName(e.target.value)}
-                    className="h-12 text-base"
-                    disabled={isAdding}
-                    aria-label="Nova atividade"
-                  />
-                  <Button type="submit" size="lg" className="h-12 w-full sm:w-auto" disabled={isAdding || !newActivityName.trim()}>
-                    {isAdding ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
-                    <span className="sm:hidden">Adicionar Atividade</span>
-                    <span className="hidden sm:inline">Adicionar</span>
-                  </Button>
-                </form>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {!isLoading && activities.length === 0 ? (
-                     <div className="text-center py-10 border-2 border-dashed rounded-lg">
-                      <h3 className="text-lg font-semibold">Tudo limpo por aqui!</h3>
-                      <p className="mt-1 text-muted-foreground">Comece a adicionar as atividades da sua equipe no campo acima.</p>
-                    </div>
-                  ) : (
-                    <ul className="space-y-3">
-                      <AnimatePresence>
-                        {activities.map((activity) => (
-                          <motion.li
-                            key={activity.id}
-                            layout
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, x: -50, transition: { duration: 0.2 } }}
-                            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                            className="flex items-center justify-between p-3 bg-card-foreground/5 dark:bg-card-foreground/10 rounded-lg"
-                          >
-                            <span className="font-medium text-foreground">{activity.nome}</span>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <Badge variant="secondary">Não classificada</Badge>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDeleteActivity(activity.id)} disabled={isDeleting} aria-label={`Excluir ${activity.nome}`}>
-                                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
-                              </Button>
-                            </div>
-                          </motion.li>
-                        ))}
-                      </AnimatePresence>
-                    </ul>
-                  )}
-                   {isLoading && (
-                    <div className="flex justify-center items-center py-10">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary"/>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-              {activities.length > 0 && (
-                <CardFooter>
-                  <Button className="w-full" size="lg">
-                    Finalizar Brainstorm e Iniciar Classificação
-                  </Button>
-                </CardFooter>
+              ) : (
+                <ul className="space-y-3">
+                  <AnimatePresence>
+                    {activities.map((activity) => (
+                      <motion.li
+                        key={activity.id}
+                        layout
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, x: -50, transition: { duration: 0.2 } }}
+                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                        className="flex items-center justify-between p-3 bg-card-foreground/5 dark:bg-card-foreground/10 rounded-lg"
+                      >
+                        <span className="font-medium text-foreground">{activity.nome}</span>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <Badge variant="secondary">Não classificada</Badge>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDeleteActivity(activity.id)} disabled={isDeleting} aria-label={`Excluir ${activity.nome}`}>
+                            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </motion.li>
+                    ))}
+                  </AnimatePresence>
+                </ul>
               )}
-            </Card>
-          </div>
-        </main>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <AlertDialog open={dialogState.open} onOpenChange={(open) => setDialogState({ ...dialogState, open })}>
@@ -285,6 +262,6 @@ export default function BrainstormPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </AppLayout>
   );
 }
