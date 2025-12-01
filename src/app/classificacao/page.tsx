@@ -95,33 +95,44 @@ export default function ClassificationPage() {
     }
   }, [allActivities]);
 
-  const fetchActivities = (filter: 'all' | 'pending' = 'all') => {
+  const fetchActivities = (filter: 'all' | 'pending' = 'pending') => {
     if (!db) return;
     setIsLoading(true);
-    let q;
+    
+    // Listener for all activities to calculate stats
+    const allQuery = query(collection(db, ACTIVITIES_COLLECTION));
+    const unsubAll = onSnapshot(allQuery, (snapshot) => {
+        const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
+        setAllActivities(activitiesData);
+    });
+
+    // Listener for activities to classify
+    let classifyQuery;
     if (filter === 'pending') {
-      q = query(collection(db, ACTIVITIES_COLLECTION), where('status', '!=', 'aprovada'));
+      classifyQuery = query(collection(db, ACTIVITIES_COLLECTION), where('status', '!=', 'aprovada'));
     } else {
-      q = query(collection(db, ACTIVITIES_COLLECTION));
+      classifyQuery = query(collection(db, ACTIVITIES_COLLECTION));
     }
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubClassify = onSnapshot(classifyQuery, (snapshot) => {
       const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
-      setAllActivities(activitiesData);
+      const sortedToClassify = activitiesData.sort((a,b) => (a.createdAt as any) - (b.createdAt as any));
       
-      let toClassify;
-       if (filter === 'pending') {
-        toClassify = activitiesData.filter(a => a.status !== 'aprovada').sort((a,b) => (a.createdAt as any) - (b.createdAt as any));
+      setActivitiesToClassify(sortedToClassify);
+
+      if (sortedToClassify.length === 0 && allActivities.length > 0) {
+        setShowSummary(true);
       } else {
-        // Show all activities for classification/review
-        toClassify = [...activitiesData].sort((a,b) => (a.createdAt as any) - (b.createdAt as any));
+        setShowSummary(false);
       }
-      setActivitiesToClassify(toClassify);
       
       setCurrentIndex(0);
-      setShowSummary(false);
       setIsLoading(false);
     });
-    return unsubscribe;
+
+    return () => {
+        unsubAll();
+        unsubClassify();
+    }
   }
   
   useEffect(() => {
@@ -135,10 +146,10 @@ export default function ClassificationPage() {
         return;
     };
 
-    const unsubClassify = fetchActivities('all');
+    const unsubscribe = fetchActivities('pending');
 
     return () => {
-      if(unsubClassify) unsubClassify();
+      if(unsubscribe) unsubscribe();
     };
   }, [db, user, userLoading, router]);
 
@@ -179,7 +190,6 @@ export default function ClassificationPage() {
       recorrencia: null,
       status: 'brainstorm',
       dataAprovacao: null,
-      comentarios: currentActivity.comentarios || []
     };
     
     await updateActivity(data);
@@ -193,21 +203,19 @@ export default function ClassificationPage() {
   }
 
   const handleSaveAndNext = async (status?: 'aguardando_consenso' | 'aprovada') => {
-    if (isSaving) return;
+    if (isSaving || !currentActivity) return;
     
-    const hasChanged = currentActivity && (
+    const hasChanged = (
       currentActivity.categoria !== currentCategory ||
       currentActivity.justificativa !== currentJustification ||
       currentActivity.responsavel !== currentResponsible ||
       currentActivity.recorrencia !== currentRecurrence
     );
 
-    let newStatus = currentActivity?.status;
-    if (hasChanged && currentActivity?.status === 'aprovada') {
-        newStatus = 'aguardando_consenso';
-    } else if (status) {
+    let newStatus = currentActivity.status;
+    if (status) {
         newStatus = status;
-    } else if (hasChanged && currentActivity?.status === 'brainstorm') {
+    } else if (hasChanged && newStatus !== 'aguardando_consenso') {
         newStatus = 'aguardando_consenso';
     }
 
@@ -220,7 +228,7 @@ export default function ClassificationPage() {
       status: newStatus,
     };
 
-    if (newStatus === 'aprovada' && currentActivity?.status !== 'aprovada') {
+    if (newStatus === 'aprovada' && currentActivity.status !== 'aprovada') {
       data.dataAprovacao = serverTimestamp();
     }
     
@@ -579,3 +587,5 @@ function SummaryScreen({ stats, onReviewPending }: { stats: { approved: number, 
     </div>
   )
 }
+
+    
