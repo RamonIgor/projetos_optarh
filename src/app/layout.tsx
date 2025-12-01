@@ -26,11 +26,16 @@ export default function RootLayout({
       </head>
       <body
         className={cn(
-          'font-body antialiased min-h-screen bg-gradient-to-br from-cyan-50 to-blue-100 dark:from-slate-900 dark:to-blue-950'
+          'font-body antialiased min-h-screen bg-gradient-to-br from-cyan-50 to-blue-100 dark:from-slate-900 dark:to-blue-950 flex flex-col'
         )}
       >
         <FirebaseClientProvider>
-          {children}
+          <div className="flex-grow">
+            {children}
+          </div>
+          <footer className="text-center py-4 text-sm text-muted-foreground">
+            © 2025 Optarh. Todos os direitos reservados.
+          </footer>
         </FirebaseClientProvider>
         <Toaster />
       </body>
