@@ -95,10 +95,10 @@ export default function LoginPage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className="z-10"
+            className="z-10 flex flex-col items-center"
           >
-            <h1 className="text-5xl font-bold text-white">ProcessFlow</h1>
-            <p className="mt-4 text-lg text-white/80">
+            <Image src="/optarh-logo.png" alt="OptaRH Logo" width={240} height={80} />
+            <p className="mt-6 text-lg text-white/80">
               Estruture o fluxo de trabalho do seu time, da ideia à rotina.
             </p>
           </motion.div>

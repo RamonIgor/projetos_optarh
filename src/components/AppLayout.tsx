@@ -15,6 +15,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { RegisterUserDialog } from './RegisterUserDialog';
+import Image from 'next/image';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -56,48 +57,53 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
     <div className="min-h-screen w-full flex flex-col">
        <TooltipProvider delayDuration={100}>
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-        <nav className="p-1.5 rounded-full bg-background/50 backdrop-blur-sm border border-black/5 flex items-center gap-1 shadow-sm">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-            const link = (
-              <Link
-                key={item.href}
-                href={item.disabled ? '#' : item.href}
-                className={cn(
-                  "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
-                  isActive ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground",
-                  item.disabled ? "opacity-50 cursor-not-allowed" : ""
-                )}
-                aria-disabled={item.disabled}
-                onClick={(e) => item.disabled && e.preventDefault()}
-              >
-                <item.icon className="h-4 w-4" />
-                <span>{item.label}</span>
-                {item.count !== undefined && item.count > 0 && (
-                  <Badge variant={isActive ? "default" : "secondary"} className="rounded-full">{item.count}</Badge>
-                )}
-              </Link>
-            );
+        <div className="flex items-center gap-4">
+          <Link href="/">
+            <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} className="cursor-pointer"/>
+          </Link>
+          <nav className="p-1.5 rounded-full bg-background/50 backdrop-blur-sm border border-black/5 flex items-center gap-1 shadow-sm">
+            {navItems.map((item) => {
+              const isActive = pathname === item.href;
+              const link = (
+                <Link
+                  key={item.href}
+                  href={item.disabled ? '#' : item.href}
+                  className={cn(
+                    "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+                    isActive ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground",
+                    item.disabled ? "opacity-50 cursor-not-allowed" : ""
+                  )}
+                  aria-disabled={item.disabled}
+                  onClick={(e) => item.disabled && e.preventDefault()}
+                >
+                  <item.icon className="h-4 w-4" />
+                  <span>{item.label}</span>
+                  {item.count !== undefined && item.count > 0 && (
+                    <Badge variant={isActive ? "default" : "secondary"} className="rounded-full">{item.count}</Badge>
+                  )}
+                </Link>
+              );
 
-            if (item.disabled) {
-               const tooltipText = item.href === '/operacional' || item.href === '/classificacao' || item.href === '/dashboard' || item.href === '/transicao'
-                ? "Adicione atividades no Brainstorm primeiro."
-                : "Funcionalidade em desenvolvimento.";
+              if (item.disabled) {
+                 const tooltipText = item.href === '/operacional' || item.href === '/classificacao' || item.href === '/dashboard' || item.href === '/transicao'
+                  ? "Adicione atividades no Brainstorm primeiro."
+                  : "Funcionalidade em desenvolvimento.";
 
-              return (
-                  <Tooltip key={item.href}>
-                    <TooltipTrigger asChild>
-                      {link}
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{tooltipText}</p>
-                    </TooltipContent>
-                  </Tooltip>
-              )
-            }
-            return link;
-          })}
-        </nav>
+                return (
+                    <Tooltip key={item.href}>
+                      <TooltipTrigger asChild>
+                        {link}
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{tooltipText}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                )
+              }
+              return link;
+            })}
+          </nav>
+        </div>
         <div className="flex items-center gap-2">
             {isConsultancyPanelDisabled ? (
                  <Tooltip>
