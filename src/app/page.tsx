@@ -44,7 +44,9 @@ export default function BrainstormPage() {
     };
     
     setIsLoading(true);
-    const q = query(collection(db, ACTIVITIES_COLLECTION), orderBy("createdAt", "desc"));
+    const activitiesCollectionRef = collection(db, ACTIVITIES_COLLECTION);
+    const q = query(activitiesCollectionRef, orderBy("createdAt", "desc"));
+
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const activitiesData: Activity[] = [];
       querySnapshot.forEach((doc) => {
@@ -55,7 +57,7 @@ export default function BrainstormPage() {
     }, 
     async (error) => {
       const permissionError = new FirestorePermissionError({
-        path: q.path,
+        path: activitiesCollectionRef.path,
         operation: 'list',
       });
       errorEmitter.emit('permission-error', permissionError);
@@ -189,7 +191,10 @@ export default function BrainstormPage() {
               <CardContent>
                 <div className="space-y-3">
                   {isLoading && activities.length === 0 ? (
-                    Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14 w-full" />)
+                     <div className="text-center py-10 border-2 border-dashed rounded-lg">
+                      <h3 className="text-lg font-semibold">Tudo limpo por aqui!</h3>
+                      <p className="mt-1 text-muted-foreground">Comece a adicionar as atividades da sua equipe no campo acima.</p>
+                    </div>
                   ) : activities.length > 0 ? (
                     <ul className="space-y-3">
                       <AnimatePresence>
