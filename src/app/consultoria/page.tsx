@@ -237,6 +237,8 @@ export default function ConsultancyPage() {
     const { user, loading: userLoading } = useUser();
     const router = useRouter();
     const { toast } = useToast();
+    
+    const authorizedConsultants = ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'];
 
     const [actions, setActions] = useState<ConsultancyAction[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -246,11 +248,19 @@ export default function ConsultancyPage() {
     const [editingAction, setEditingAction] = useState<ConsultancyAction | null>(null);
 
     const unclassifiedCount = useMemo(() => actions.filter(a => a.status === 'nao_iniciada').length, [actions]);
-
+    
     useEffect(() => {
         if (userLoading) return;
-        if (!user) { router.push('/login'); return; }
-        if (!db) { setIsLoading(false); return; }
+        
+        if (!user || !user.email || !authorizedConsultants.includes(user.email)) {
+            router.push('/');
+            return;
+        }
+
+        if (!db) { 
+            setIsLoading(false); 
+            return; 
+        }
 
         const actionsCollectionRef = collection(db, ACTIONS_COLLECTION);
         const q = query(actionsCollectionRef, orderBy("createdAt", "desc"));
@@ -344,11 +354,9 @@ export default function ConsultancyPage() {
         })).reverse();
     }, [actions]);
 
-    if (isLoading || userLoading) {
+    if (isLoading || userLoading || !user || !user.email || !authorizedConsultants.includes(user.email)) {
         return (
-            <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={actions.length > 0}>
-                <div className="flex justify-center items-center h-[80vh]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
-            </AppLayout>
+            <div className="flex justify-center items-center h-[80vh]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
         );
     }
 
@@ -483,4 +491,5 @@ export default function ConsultancyPage() {
         </AppLayout>
     );
 }
+    
     
