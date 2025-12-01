@@ -42,6 +42,7 @@ export default function LoginPage() {
             description = "Por favor, insira um endereço de email válido.";
             break;
         case 'auth/user-not-found':
+        case 'auth/invalid-credential':
         case 'auth/wrong-password':
              title = "Credenciais Inválidas";
              description = "Email ou senha incorretos. Verifique e tente novamente.";
