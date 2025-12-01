@@ -29,7 +29,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, Bar, XAxis, YAxis, CartesianGrid, ComposedChart } from 'recharts';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 
@@ -88,14 +88,12 @@ function ActionForm({ action, onFinished }: { action?: ConsultancyAction | null,
 
         startSubmitTransition(async () => {
             try {
-                // The field `percentual_planejado` is removed from the data object.
                 const actionData = {
                     ...data,
                 };
 
                 if (action) {
                     const docRef = doc(db, ACTIONS_COLLECTION, action.id);
-                    // The update operation no longer includes `percentual_planejado`.
                     updateDoc(docRef, actionData)
                     .catch(async (error) => {
                         const permissionError = new FirestorePermissionError({
@@ -110,7 +108,6 @@ function ActionForm({ action, onFinished }: { action?: ConsultancyAction | null,
                 } else {
                      addDoc(collection(db, ACTIONS_COLLECTION), {
                         ...actionData,
-                        percentual_planejado: 0, // Set a default/legacy value
                         createdAt: serverTimestamp(),
                         prazo_realizado: null,
                     }).catch(async (error) => {
@@ -512,4 +509,6 @@ export default function ConsultancyPage() {
     );
 }
     
+    
+
     
