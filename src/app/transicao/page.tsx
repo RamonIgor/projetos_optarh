@@ -310,11 +310,16 @@ export default function TransitionPage() {
                         <TableBody>
                             {filteredActivities.length > 0 ? filteredActivities.map(activity => {
                                 const statusConfig = transitionStatusConfig[activity.statusTransicao] || transitionStatusConfig.undefined;
+                                const categoryStyles = {
+                                    DP: 'bg-purple-100 text-purple-800 border-purple-200',
+                                    RH: 'bg-green-100 text-green-800 border-green-200',
+                                    Compartilhado: 'bg-blue-100 text-blue-800 border-blue-200',
+                                };
                                 return (
                                 <TableRow key={activity.id}>
                                     <TableCell className="font-medium">{activity.nome}</TableCell>
                                     <TableCell>
-                                        <Badge variant={activity.categoria === 'DP' ? 'default' : activity.categoria === 'RH' ? 'secondary' : 'outline'}>
+                                        <Badge variant="outline" className={cn(activity.categoria && categoryStyles[activity.categoria])}>
                                             {activity.categoria}
                                         </Badge>
                                     </TableCell>
