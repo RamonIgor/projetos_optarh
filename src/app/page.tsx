@@ -8,13 +8,15 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from '@/components/ui/alert-dialog';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { X, Plus, Loader2 } from 'lucide-react';
+import { X, Plus, Loader2, LogOut } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useAuth } from '@/firebase';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
+import { useUser } from '@/firebase/auth/use-user';
+import { useRouter } from 'next/navigation';
+import { signOut } from 'firebase/auth';
 
 const ACTIVITIES_COLLECTION = 'rh-dp-activities';
 
@@ -27,6 +29,10 @@ const isSimilar = (a: string, b: string) => {
 
 export default function BrainstormPage() {
   const db = useFirestore();
+  const auth = useAuth();
+  const { user, loading: userLoading } = useUser();
+  const router = useRouter();
+
   const [activities, setActivities] = useState<Activity[]>([]);
   const [newActivityName, setNewActivityName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -38,12 +44,18 @@ export default function BrainstormPage() {
   const { toast } = useToast();
 
   useEffect(() => {
+    if (userLoading) {
+      return; // Wait until user state is resolved
+    }
+    if (!user) {
+      router.push('/login');
+      return;
+    }
     if (!db) {
         setIsLoading(false);
         return;
     };
     
-    setIsLoading(true);
     const activitiesCollectionRef = collection(db, ACTIVITIES_COLLECTION);
     const q = query(activitiesCollectionRef, orderBy("createdAt", "desc"));
 
@@ -71,7 +83,7 @@ export default function BrainstormPage() {
     });
 
     return () => unsubscribe();
-  }, [db, toast]);
+  }, [db, toast, user, userLoading, router]);
 
   const addActivity = (name: string) => {
     const trimmedName = name.trim();
@@ -79,7 +91,7 @@ export default function BrainstormPage() {
 
     setNewActivityName("");
     
-    setIsAdding(async () => {
+    setIsAdding(() => {
       const activityData = {
         nome: trimmedName,
         categoria: null,
@@ -135,7 +147,7 @@ export default function BrainstormPage() {
 
   const handleDeleteActivity = (id: string) => {
     if (!db) return;
-    startDeleteTransition(async () => {
+    startDeleteTransition(() => {
       const docRef = doc(db, ACTIVITIES_COLLECTION, id);
       deleteDoc(docRef)
         .catch(async (error) => {
@@ -152,11 +164,31 @@ export default function BrainstormPage() {
         });
     });
   };
+  
+  const handleLogout = async () => {
+    if (!auth) return;
+    await signOut(auth);
+    router.push('/login');
+  };
+  
+  if (userLoading || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <>
       <div className="min-h-screen w-full">
-        <main className="container mx-auto p-4 sm:p-6 md:p-8">
+        <header className="container mx-auto p-4 sm:p-6 md:p-8 flex justify-end">
+          <Button variant="ghost" onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Sair
+          </Button>
+        </header>
+        <main className="container mx-auto p-4 sm:p-6 md:p-8 pt-0">
           <div className="max-w-4xl mx-auto">
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
               <h1 className="text-4xl md:text-5xl font-bold text-center text-primary tracking-tight">Brainstorm de Atividades</h1>
@@ -190,12 +222,12 @@ export default function BrainstormPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {isLoading && activities.length === 0 ? (
+                  {!isLoading && activities.length === 0 ? (
                      <div className="text-center py-10 border-2 border-dashed rounded-lg">
                       <h3 className="text-lg font-semibold">Tudo limpo por aqui!</h3>
                       <p className="mt-1 text-muted-foreground">Comece a adicionar as atividades da sua equipe no campo acima.</p>
                     </div>
-                  ) : activities.length > 0 ? (
+                  ) : (
                     <ul className="space-y-3">
                       <AnimatePresence>
                         {activities.map((activity) => (
@@ -219,10 +251,10 @@ export default function BrainstormPage() {
                         ))}
                       </AnimatePresence>
                     </ul>
-                  ) : (
-                    <div className="text-center py-10 border-2 border-dashed rounded-lg">
-                      <h3 className="text-lg font-semibold">Tudo limpo por aqui!</h3>
-                      <p className="mt-1 text-muted-foreground">Comece a adicionar as atividades da sua equipe no campo acima.</p>
+                  )}
+                   {isLoading && (
+                    <div className="flex justify-center items-center py-10">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary"/>
                     </div>
                   )}
                 </div>

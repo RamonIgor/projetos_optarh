@@ -80,7 +80,7 @@
     }
   },
   "auth": {
-    "providers": []
+    "providers": ["google.com"]
   },
   "firestore": {
     "/rh-dp-activities/{activityId}": {

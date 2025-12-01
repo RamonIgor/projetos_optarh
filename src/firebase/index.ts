@@ -34,3 +34,4 @@ function initializeFirebase() {
 export { initializeFirebase };
 export { FirebaseClientProvider } from './client-provider';
 export { useFirestore, useAuth, useFirebase, FirebaseProvider } from './provider';
+export { useUser } from './auth/use-user';
