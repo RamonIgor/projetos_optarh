@@ -90,7 +90,7 @@ export default function LoginPage() {
 
   return (
     <div className="w-full lg:grid lg:grid-cols-2">
-       <div className="hidden bg-gradient-to-br from-primary to-purple-600 lg:flex flex-col items-center justify-center p-12 text-center relative overflow-hidden">
+       <div className="hidden bg-gradient-to-br from-primary to-purple-600 lg:flex flex-col items-center justify-center p-12 text-center relative overflow-hidden h-screen">
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -106,7 +106,7 @@ export default function LoginPage() {
              Painel de gerenciamento de tarefas para equipes de DP e RH.
           </div>
       </div>
-      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 h-screen">
         <div className="w-full max-w-md space-y-8">
           <motion.div
              initial={{ opacity: 0, y: 20 }}

@@ -30,9 +30,7 @@ export default function RootLayout({
         )}
       >
         <FirebaseClientProvider>
-          <div className="flex-grow">
-            {children}
-          </div>
+          <div className="flex-grow">{children}</div>
           <footer className="text-center py-4 text-sm text-muted-foreground">
             © 2025 Optarh. Todos os direitos reservados.
           </footer>
