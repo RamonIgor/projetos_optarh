@@ -27,6 +27,7 @@ export default function BrainstormPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [newActivityName, setNewActivityName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdding, setIsAdding] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const [dialogState, setDialogState] = useState<{ open: boolean; similarTo?: string; nameToAdd?: string }>({ open: false });
@@ -59,36 +60,39 @@ export default function BrainstormPage() {
     const trimmedName = name.trim();
     if (!trimmedName) return;
 
-    startTransition(async () => {
-      try {
-        await addDoc(collection(db, ACTIVITIES_COLLECTION), {
-          nome: trimmedName,
-          categoria: null,
-          justificativa: null,
-          responsavel: null,
-          recorrencia: null,
-          status: 'brainstorm',
-          comentarios: [],
-          dataAprovacao: null,
-          ultimaExecucao: null,
-          createdAt: serverTimestamp(),
-        });
-        setNewActivityName("");
-      } catch (error) {
-        console.error("Error adding activity: ", error);
-        toast({
-          title: "Erro ao adicionar atividade",
-          description: "Não foi possível salvar a nova atividade. Tente novamente.",
-          variant: "destructive",
-        });
-      }
-    });
+    setIsAdding(true);
+    setNewActivityName("");
+    
+    try {
+      await addDoc(collection(db, ACTIVITIES_COLLECTION), {
+        nome: trimmedName,
+        categoria: null,
+        justificativa: null,
+        responsavel: null,
+        recorrencia: null,
+        status: 'brainstorm',
+        comentarios: [],
+        dataAprovacao: null,
+        ultimaExecucao: null,
+        createdAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Error adding activity: ", error);
+      setNewActivityName(name); // Restore input on error
+      toast({
+        title: "Erro ao adicionar atividade",
+        description: "Não foi possível salvar a nova atividade. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+        setIsAdding(false);
+    }
   };
 
   const handleAddSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const trimmedName = newActivityName.trim();
-    if (!trimmedName || isPending) return;
+    if (!trimmedName || isAdding) return;
     
     const similar = activities.find(act => isSimilar(act.nome, trimmedName));
 
@@ -146,11 +150,11 @@ export default function BrainstormPage() {
                     value={newActivityName}
                     onChange={(e) => setNewActivityName(e.target.value)}
                     className="h-12 text-base"
-                    disabled={isPending}
+                    disabled={isAdding}
                     aria-label="Nova atividade"
                   />
-                  <Button type="submit" size="lg" className="h-12 w-full sm:w-auto" disabled={isPending || !newActivityName.trim()}>
-                    {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
+                  <Button type="submit" size="lg" className="h-12 w-full sm:w-auto" disabled={isAdding || !newActivityName.trim()}>
+                    {isAdding ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
                     <span className="sm:hidden">Adicionar Atividade</span>
                     <span className="hidden sm:inline">Adicionar</span>
                   </Button>
@@ -177,7 +181,7 @@ export default function BrainstormPage() {
                             <div className="flex items-center gap-2 flex-shrink-0">
                               <Badge variant="secondary">Não classificada</Badge>
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDeleteActivity(activity.id)} disabled={isPending} aria-label={`Excluir ${activity.nome}`}>
-                                <X className="h-4 w-4" />
+                                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
                               </Button>
                             </div>
                           </motion.li>
