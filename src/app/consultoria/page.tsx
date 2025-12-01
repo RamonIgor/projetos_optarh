@@ -29,7 +29,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, Bar, XAxis, YAxis, CartesianGrid, ComposedChart } from 'recharts';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 
@@ -88,20 +88,39 @@ function ActionForm({ action, onFinished }: { action?: ConsultancyAction | null,
 
         startSubmitTransition(async () => {
             try {
+                // The field `percentual_planejado` is removed from the data object.
                 const actionData = {
                     ...data,
-                    percentual_planejado: calculatePlannedProgress(data.data_inicio, data.data_termino),
                 };
 
                 if (action) {
                     const docRef = doc(db, ACTIONS_COLLECTION, action.id);
-                    await updateDoc(docRef, actionData);
+                    // The update operation no longer includes `percentual_planejado`.
+                    updateDoc(docRef, actionData)
+                    .catch(async (error) => {
+                        const permissionError = new FirestorePermissionError({
+                            path: docRef.path,
+                            operation: 'update',
+                            requestResourceData: actionData,
+                        });
+                        errorEmitter.emit('permission-error', permissionError);
+                        toast({ title: "Erro de Permissão ao Atualizar", description: "Você não tem permissão para editar esta ação.", variant: "destructive" });
+                    });
                     toast({ title: "Ação atualizada com sucesso!" });
                 } else {
-                    await addDoc(collection(db, ACTIONS_COLLECTION), {
+                     addDoc(collection(db, ACTIONS_COLLECTION), {
                         ...actionData,
+                        percentual_planejado: 0, // Set a default/legacy value
                         createdAt: serverTimestamp(),
                         prazo_realizado: null,
+                    }).catch(async (error) => {
+                         const permissionError = new FirestorePermissionError({
+                            path: collection(db, ACTIONS_COLLECTION).path,
+                            operation: 'create',
+                            requestResourceData: actionData,
+                        });
+                        errorEmitter.emit('permission-error', permissionError);
+                        toast({ title: "Erro de Permissão ao Adicionar", description: "Você não tem permissão para adicionar novas ações.", variant: "destructive" });
                     });
                     toast({ title: "Nova ação adicionada!" });
                 }
@@ -114,15 +133,6 @@ function ActionForm({ action, onFinished }: { action?: ConsultancyAction | null,
         });
     };
     
-    const calculatePlannedProgress = (start: Date, end: Date) => {
-        const today = new Date();
-        if (today < start) return 0;
-        if (today > end) return 100;
-        const totalDuration = end.getTime() - start.getTime();
-        const elapsedDuration = today.getTime() - start.getTime();
-        return Math.min(100, Math.round((elapsedDuration / totalDuration) * 100));
-    };
-
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -238,7 +248,7 @@ export default function ConsultancyPage() {
     const router = useRouter();
     const { toast } = useToast();
     
-    const authorizedConsultants = ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'];
+    const authorizedConsultants = useMemo(() => ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'], []);
 
     const [actions, setActions] = useState<ConsultancyAction[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -294,13 +304,21 @@ export default function ConsultancyPage() {
         );
 
         return () => unsubscribe();
-    }, [db, user, userLoading, router, toast]);
+    }, [db, user, userLoading, router, toast, authorizedConsultants]);
 
     const handleDelete = (actionId: string) => {
         if (!db) return;
         startDeleteTransition(async () => {
             try {
-                await deleteDoc(doc(db, ACTIONS_COLLECTION, actionId));
+                const docRef = doc(db, ACTIONS_COLLECTION, actionId);
+                await deleteDoc(docRef).catch((error) => {
+                     const permissionError = new FirestorePermissionError({
+                        path: docRef.path,
+                        operation: 'delete',
+                    });
+                    errorEmitter.emit('permission-error', permissionError);
+                    toast({ title: "Erro de Permissão ao Excluir", description: "Você não tem permissão para excluir esta ação.", variant: "destructive" });
+                });
                 toast({ title: "Ação excluída com sucesso!" });
             } catch (error) {
                 console.error("Error deleting action:", error);
@@ -323,15 +341,6 @@ export default function ConsultancyPage() {
         setDialogOpen(false);
         setEditingAction(null);
     }
-    
-    const calculatePlannedProgress = (start: Date, end: Date) => {
-        const today = new Date();
-        if (today < start) return 0;
-        if (today > end) return 100;
-        const totalDuration = end.getTime() - start.getTime();
-        const elapsedDuration = today.getTime() - start.getTime();
-        return Math.min(100, Math.round((elapsedDuration / totalDuration) * 100));
-    };
 
     const chartData = useMemo(() => {
         const statusCounts = actions.reduce((acc, action) => {
@@ -350,13 +359,15 @@ export default function ConsultancyPage() {
         return actions.map(action => ({
             name: action.acao.substring(0, 15) + '...',
             concluido: action.percentual_concluido,
-            planejado: calculatePlannedProgress(action.data_inicio as Date, action.data_termino as Date),
+            meta: 100, // Target is always 100%
         })).reverse();
     }, [actions]);
 
     if (isLoading || userLoading || !user || !user.email || !authorizedConsultants.includes(user.email)) {
         return (
-            <div className="flex justify-center items-center h-[80vh]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
+            <AppLayout unclassifiedCount={0} hasActivities={actions.length > 0}>
+                <div className="flex justify-center items-center h-[80vh]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
+            </AppLayout>
         );
     }
 
@@ -382,17 +393,27 @@ export default function ConsultancyPage() {
                     </Dialog>
                 </div>
             
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <Card>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <Card className="lg:col-span-1">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Status das Ações</CardTitle>
                             <BarChart className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                             {actions.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={200}>
+                            <ResponsiveContainer width="100%" height={250}>
                                 <PieChart>
-                                    <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                                    <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} labelLine={false} label={({ cx, cy, midAngle, innerRadius, outerRadius, value, index }) => {
+                                        const RADIAN = Math.PI / 180;
+                                        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                                        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                                        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                                        return (
+                                            <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+                                                {value}
+                                            </text>
+                                        );
+                                    }}>
                                         {chartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
                                     </Pie>
                                     <Tooltip />
@@ -402,16 +423,16 @@ export default function ConsultancyPage() {
                             ) : <p className="text-sm text-muted-foreground text-center pt-10">Sem dados para exibir.</p>}
                         </CardContent>
                     </Card>
-                    <Card className="lg:col-span-3">
+                    <Card className="lg:col-span-2">
                         <CardHeader className='pb-2'>
                             <CardTitle className="text-sm font-medium flex items-center justify-between">
-                                <span>Análise de Desempenho (% Concluído vs. Planejado)</span>
+                                <span>Análise de Desempenho (% Concluído)</span>
                                 <LineChart className="h-4 w-4 text-muted-foreground" />
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             {actions.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={200}>
+                            <ResponsiveContainer width="100%" height={250}>
                                 <ComposedChart data={performanceData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" />
                                     <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 10 }} />
@@ -419,7 +440,6 @@ export default function ConsultancyPage() {
                                     <Tooltip />
                                     <Legend />
                                     <Bar dataKey="concluido" name="% Concluído" barSize={20} fill="#48BB78" />
-                                    <Bar dataKey="planejado" name="% Planejado" barSize={20} fill="#A0AEC0" />
                                 </ComposedChart>
                             </ResponsiveContainer>
                             ) : <p className="text-sm text-muted-foreground text-center pt-10">Sem dados para exibir.</p>}
