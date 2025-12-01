@@ -2,8 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
   type AuthError
 } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
@@ -11,7 +10,6 @@ import { useAuth } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
@@ -81,20 +79,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleSignUp = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!auth || !email || !password) return;
-    setIsSubmitting(true);
-    try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      router.push('/');
-    } catch (error) {
-      handleAuthError(error as AuthError);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   if (loading || user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-cyan-50 to-blue-100">
@@ -113,49 +97,24 @@ export default function LoginPage() {
         <Card className="w-full max-w-sm shadow-2xl dark:shadow-black/50">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Bem-vindo(a) ao CollabTask</CardTitle>
-            <CardDescription>Entre ou crie uma conta para continuar.</CardDescription>
+            <CardDescription>Acesse sua conta para continuar.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="login">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Entrar</TabsTrigger>
-                <TabsTrigger value="signup">Registrar</TabsTrigger>
-              </TabsList>
-              <TabsContent value="login">
-                <form onSubmit={handleSignIn}>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="email-login">Email</Label>
-                      <Input id="email-login" type="email" placeholder="seu@email.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="password-login">Senha</Label>
-                      <Input id="password-login" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-                    </div>
-                    <Button type="submit" className="w-full mt-2 h-11" disabled={isSubmitting}>
-                      {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Entrar"}
-                    </Button>
-                  </div>
-                </form>
-              </TabsContent>
-              <TabsContent value="signup">
-                <form onSubmit={handleSignUp}>
-                   <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="email-signup">Email</Label>
-                      <Input id="email-signup" type="email" placeholder="seu@email.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="password-signup">Senha</Label>
-                      <Input id="password-signup" type="password" placeholder="Mínimo 6 caracteres" required value={password} onChange={(e) => setPassword(e.target.value)} />
-                    </div>
-                    <Button type="submit" className="w-full mt-2 h-11" disabled={isSubmitting}>
-                      {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Criar Conta"}
-                    </Button>
-                  </div>
-                </form>
-              </TabsContent>
-            </Tabs>
+            <form onSubmit={handleSignIn}>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="email-login">Email</Label>
+                  <Input id="email-login" type="email" placeholder="seu@email.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="password-login">Senha</Label>
+                  <Input id="password-login" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+                </div>
+                <Button type="submit" className="w-full mt-2 h-11" disabled={isSubmitting}>
+                  {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Entrar"}
+                </Button>
+              </div>
+            </form>
           </CardContent>
         </Card>
       </motion.div>
