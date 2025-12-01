@@ -243,14 +243,13 @@ export default function OperationalPage() {
         startUpdateTransition(async () => {
             try {
                 const docRef = doc(db, ACTIVITIES_COLLECTION, activityId);
-                const newExecutionTime = serverTimestamp();
                 
                 const updateData: any = {
-                    ultimaExecucao: isCurrentlyPending ? newExecutionTime : null
+                    ultimaExecucao: isCurrentlyPending ? serverTimestamp() : null
                 };
 
                 if (isCurrentlyPending) {
-                   updateData.historicoExecucoes = arrayUnion(newExecutionTime);
+                   updateData.historicoExecucoes = arrayUnion(new Date());
                 }
                 
                 await updateDoc(docRef, updateData);
