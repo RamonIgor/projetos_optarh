@@ -32,6 +32,7 @@ import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, Bar, XAxis, 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const actionSchema = z.object({
   acao: z.string().min(3, "A ação deve ter pelo menos 3 caracteres."),
@@ -90,6 +91,7 @@ function ActionForm({ action, onFinished }: { action?: ConsultancyAction | null,
             try {
                 const actionData = {
                     ...data,
+                    percentual_planejado: 0, // Deprecated, but keeping for schema compatibility
                 };
 
                 if (action) {
@@ -227,7 +229,7 @@ function ActionForm({ action, onFinished }: { action?: ConsultancyAction | null,
                     </FormItem>
                 )} />
 
-                <DialogFooter>
+                <DialogFooter className="pt-4">
                     <Button type="button" variant="ghost" onClick={onFinished}>Cancelar</Button>
                     <Button type="submit" disabled={isSubmitting}>
                         {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
@@ -276,10 +278,10 @@ export default function ConsultancyPage() {
                 const actionsData = snapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data(),
-                    data_inicio: doc.data().data_inicio ? (doc.data().data_inicio as any).toDate() : new Date(),
-                    data_termino: doc.data().data_termino ? (doc.data().data_termino as any).toDate() : new Date(),
+                    data_inicio: doc.data().data_inicio?.toDate(),
+                    data_termino: doc.data().data_termino?.toDate(),
                     prazo_realizado: doc.data().prazo_realizado ? (doc.data().prazo_realizado as any).toDate() : null,
-                    createdAt: doc.data().createdAt ? (doc.data().createdAt as any).toDate() : new Date(),
+                    createdAt: doc.data().createdAt?.toDate() || new Date(),
                 } as ConsultancyAction));
                 setActions(actionsData);
                 setIsLoading(false);
@@ -380,12 +382,16 @@ export default function ConsultancyPage() {
                                 Adicionar Ação
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-2xl">
+                        <DialogContent className="sm:max-w-2xl max-h-[90vh]">
                              <DialogHeader>
                                 <DialogTitle>{editingAction ? 'Editar Ação' : 'Adicionar Nova Ação'}</DialogTitle>
                                 <DialogDescription>{editingAction ? `Editando a ação: "${editingAction.acao}"` : 'Preencha os detalhes da nova ação do plano.'}</DialogDescription>
                             </DialogHeader>
-                            <ActionForm action={editingAction} onFinished={onFormFinished} />
+                            <ScrollArea className="max-h-[70vh] pr-6 -mr-6">
+                              <div className="pr-1">
+                                <ActionForm action={editingAction} onFinished={onFormFinished} />
+                              </div>
+                            </ScrollArea>
                         </DialogContent>
                     </Dialog>
                 </div>
