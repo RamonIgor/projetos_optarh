@@ -17,6 +17,14 @@ import { ResponsiveContainer, Tooltip, Pie, Cell, Legend } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import dynamic from 'next/dynamic';
+import type { CategoryChartData } from '@/components/CategoryChart';
+
+const CategoryChart = dynamic(() => import('@/components/CategoryChart'), {
+    ssr: false,
+    loading: () => <div className="h-[150px] flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+});
+
 
 const ACTIVITIES_COLLECTION = 'rh-dp-activities';
 
@@ -114,7 +122,7 @@ export default function DashboardPage() {
         return { total, classified, approved, byCategory, byStatus, byResponsible, byRecurrence, pendingDecision, latestApproved };
     }, [filteredActivities, allActivities]);
 
-    const categoryChartData = useMemo(() => [
+    const categoryChartData: CategoryChartData[] = useMemo(() => [
         { name: 'DP', value: stats.byCategory['DP'] || 0, fill: 'hsl(var(--primary))' },
         { name: 'RH', value: stats.byCategory['RH'] || 0, fill: '#16a34a' },
         { name: 'Compartilhado', value: stats.byCategory['Compartilhado'] || 0, fill: '#2563eb' }
@@ -189,15 +197,7 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent>
                         {categoryChartData.length > 0 ? (
-                           <ResponsiveContainer width="100%" height={150}>
-                                <PieChart>
-                                    <Pie data={categoryChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60}>
-                                        {categoryChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
-                                    </Pie>
-                                    <Tooltip />
-                                    <Legend iconSize={10} />
-                                </PieChart>
-                            </ResponsiveContainer>
+                           <CategoryChart data={categoryChartData} />
                         ) : <p className="text-center text-sm text-muted-foreground py-10">Nenhum dado na categoria selecionada</p>}
                     </CardContent>
                 </Card>
