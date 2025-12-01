@@ -1,7 +1,7 @@
 "use client";
 
 import { signOut } from 'firebase/auth';
-import { useAuth } from '@/firebase';
+import { useAuth, useUser } from '@/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { LogOut, LayoutGrid, ListTodo, BarChart3, Shuffle, PlayCircle, Settings, Rows } from 'lucide-react';
@@ -24,6 +24,7 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children, unclassifiedCount, hasActivities }: AppLayoutProps) {
   const auth = useAuth();
+  const { user } = useUser();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -41,8 +42,19 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
     { href: '/operacional', label: 'Operacional', icon: PlayCircle, disabled: !hasActivities },
   ];
 
+  const authorizedConsultants = ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'];
+  const isConsultancyPanelDisabled = !user?.email || !authorizedConsultants.includes(user.email);
+
+  const consultancyButton = (
+     <Button variant="ghost" onClick={() => router.push('/consultoria')} disabled={isConsultancyPanelDisabled}>
+        <Rows className="mr-2 h-4 w-4" />
+        Painel
+    </Button>
+  );
+
   return (
     <div className="min-h-screen w-full flex flex-col">
+       <TooltipProvider delayDuration={100}>
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
         <nav className="p-1.5 rounded-full bg-background/50 backdrop-blur-sm border border-black/5 flex items-center gap-1 shadow-sm">
           {navItems.map((item) => {
@@ -73,8 +85,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
                 : "Funcionalidade em desenvolvimento.";
 
               return (
-                <TooltipProvider key={item.href} delayDuration={100}>
-                  <Tooltip>
+                  <Tooltip key={item.href}>
                     <TooltipTrigger asChild>
                       {link}
                     </TooltipTrigger>
@@ -82,17 +93,23 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
                       <p>{tooltipText}</p>
                     </TooltipContent>
                   </Tooltip>
-                </TooltipProvider>
               )
             }
             return link;
           })}
         </nav>
         <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={() => router.push('/consultoria')}>
-                <Rows className="mr-2 h-4 w-4" />
-                Painel
-            </Button>
+            {isConsultancyPanelDisabled ? (
+                 <Tooltip>
+                    <TooltipTrigger asChild>
+                      {consultancyButton}
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Acesso restrito à consultoria.</p>
+                    </TooltipContent>
+                  </Tooltip>
+            ) : consultancyButton}
+           
             <RegisterUserDialog>
                 <Button variant="ghost" size="icon">
                     <Settings className="h-5 w-5" />
@@ -105,6 +122,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
             </Button>
         </div>
       </header>
+       </TooltipProvider>
       <main className="container mx-auto p-4 sm:p-6 lg:p-8 pt-2 flex-grow">
         {children}
       </main>
