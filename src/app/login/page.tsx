@@ -90,7 +90,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen w-full lg:grid lg:grid-cols-2">
-       <div className="hidden bg-gray-100 lg:flex flex-col items-center justify-center p-12 text-center relative overflow-hidden">
+       <div className="hidden bg-gradient-to-br from-primary to-blue-600 lg:flex flex-col items-center justify-center p-12 text-center relative overflow-hidden">
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -102,16 +102,6 @@ export default function LoginPage() {
               Organize, colabore e execute as atividades do seu time com clareza.
             </p>
           </motion.div>
-          <div className="absolute inset-0 z-0">
-             <Image 
-                src="https://picsum.photos/seed/4/1200/1800"
-                alt="Pessoas colaborando em um escritório"
-                data-ai-hint="collaboration office"
-                fill
-                className="object-cover"
-             />
-             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-          </div>
           <div className="absolute bottom-8 left-8 right-8 z-10 text-white/70 text-sm">
              Painel de gerenciamento de tarefas para equipes de DP e RH.
           </div>
