@@ -97,8 +97,9 @@ export default function LoginPage() {
             transition={{ duration: 0.8, ease: "easeOut" }}
             className="z-10 flex flex-col items-center"
           >
-            <Image src="/optarh-logo.png" alt="OptaRH Logo" width={240} height={80} />
-            <p className="mt-6 text-lg text-white/80">
+            <Image src="https://placehold.co/240x80/FFFFFF/FFFFFF/png" alt="OptaRH Logo" width={240} height={80} />
+            <h1 className="text-4xl font-bold text-white mt-4">ProcessFlow</h1>
+            <p className="mt-2 text-lg text-white/80">
               Estruture o fluxo de trabalho do seu time, da ideia à rotina.
             </p>
           </motion.div>
