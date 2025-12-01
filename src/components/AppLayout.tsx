@@ -37,7 +37,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
     { href: '/classificacao', label: 'Classificação', icon: LayoutGrid, count: unclassifiedCount, disabled: !hasActivities },
     { href: '/dashboard', label: 'Dashboard', icon: BarChart3, disabled: !hasActivities },
     { href: '/transicao', label: 'Transição', icon: Shuffle, disabled: !hasActivities },
-    { href: '/operacional', label: 'Operacional', icon: PlayCircle, disabled: true },
+    { href: '/operacional', label: 'Operacional', icon: PlayCircle, disabled: !hasActivities },
   ];
 
   return (
@@ -66,7 +66,11 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
               </Link>
             );
 
-            if (item.disabled && item.href !== '/classificacao' && item.href !== '/dashboard' && item.href !== '/transicao') {
+            if (item.disabled) {
+               const tooltipText = item.href === '/operacional' || item.href === '/classificacao' || item.href === '/dashboard' || item.href === '/transicao'
+                ? "Adicione atividades no Brainstorm primeiro."
+                : "Funcionalidade em desenvolvimento.";
+
               return (
                 <TooltipProvider key={item.href} delayDuration={100}>
                   <Tooltip>
@@ -74,22 +78,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
                       {link}
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Funcionalidade em desenvolvimento.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )
-            }
-            
-             if (item.disabled && (item.href === '/classificacao' || item.href === '/dashboard' || item.href === '/transicao')) {
-              return (
-                <TooltipProvider key={item.href} delayDuration={100}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      {link}
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Adicione atividades no Brainstorm primeiro.</p>
+                      <p>{tooltipText}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
