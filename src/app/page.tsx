@@ -5,7 +5,7 @@ import { collection, addDoc, deleteDoc, onSnapshot, query, orderBy, serverTimest
 import { type Activity } from '@/types/activity';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,6 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { X, Plus, Loader2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useFirestore } from '@/firebase';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
 
 const ACTIVITIES_COLLECTION = 'rh-dp-activities';
 
@@ -50,11 +52,17 @@ export default function BrainstormPage() {
       });
       setActivities(activitiesData);
       setIsLoading(false);
-    }, (error) => {
-      console.error("Error fetching activities: ", error);
+    }, 
+    async (error) => {
+      const permissionError = new FirestorePermissionError({
+        path: q.path,
+        operation: 'list',
+      });
+      errorEmitter.emit('permission-error', permissionError);
+      
       toast({
         title: "Erro ao carregar atividades",
-        description: "Houve um problema ao buscar os dados. Tente recarregar a página.",
+        description: "Houve um problema ao buscar os dados. Verifique as permissões de leitura.",
         variant: "destructive",
       });
       setIsLoading(false);
@@ -70,28 +78,35 @@ export default function BrainstormPage() {
     setNewActivityName("");
     
     setIsAdding(async () => {
-      try {
-        await addDoc(collection(db, ACTIVITIES_COLLECTION), {
-          nome: trimmedName,
-          categoria: null,
-          justificativa: null,
-          responsavel: null,
-          recorrencia: null,
-          status: 'brainstorm',
-          comentarios: [],
-          dataAprovacao: null,
-          ultimaExecucao: null,
-          createdAt: serverTimestamp(),
+      const activityData = {
+        nome: trimmedName,
+        categoria: null,
+        justificativa: null,
+        responsavel: null,
+        recorrencia: null,
+        status: 'brainstorm',
+        comentarios: [],
+        dataAprovacao: null,
+        ultimaExecucao: null,
+        createdAt: serverTimestamp(),
+      };
+
+      const activitiesCollection = collection(db, ACTIVITIES_COLLECTION);
+      addDoc(activitiesCollection, activityData)
+        .catch(async (error) => {
+          setNewActivityName(name); // Restore input on error
+          const permissionError = new FirestorePermissionError({
+            path: activitiesCollection.path,
+            operation: 'create',
+            requestResourceData: activityData,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+          toast({
+            title: "Erro ao adicionar atividade",
+            description: "Não foi possível salvar a nova atividade. Verifique as permissões.",
+            variant: "destructive",
+          });
         });
-      } catch (error) {
-        console.error("Error adding activity: ", error);
-        setNewActivityName(name); // Restore input on error
-        toast({
-          title: "Erro ao adicionar atividade",
-          description: "Não foi possível salvar a nova atividade. Tente novamente.",
-          variant: "destructive",
-        });
-      }
     });
   };
 
@@ -119,16 +134,20 @@ export default function BrainstormPage() {
   const handleDeleteActivity = (id: string) => {
     if (!db) return;
     startDeleteTransition(async () => {
-      try {
-        await deleteDoc(doc(db, ACTIVITIES_COLLECTION, id));
-      } catch (error) {
-        console.error("Error deleting activity: ", error);
-        toast({
-          title: "Erro ao excluir atividade",
-          description: "Não foi possível excluir a atividade. Tente novamente.",
-          variant: "destructive",
+      const docRef = doc(db, ACTIVITIES_COLLECTION, id);
+      deleteDoc(docRef)
+        .catch(async (error) => {
+          const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'delete',
+          });
+          errorEmitter.emit('permission-error', permissionError);
+          toast({
+            title: "Erro ao excluir atividade",
+            description: "Não foi possível excluir a atividade. Verifique as permissões.",
+            variant: "destructive",
+          });
         });
-      }
     });
   };
 
@@ -169,7 +188,7 @@ export default function BrainstormPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {isLoading ? (
+                  {isLoading && activities.length === 0 ? (
                     Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14 w-full" />)
                   ) : activities.length > 0 ? (
                     <ul className="space-y-3">
