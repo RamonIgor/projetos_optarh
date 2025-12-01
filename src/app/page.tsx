@@ -106,7 +106,7 @@ export default function BrainstormPage() {
     setDialogState({ open: false });
   };
 
-  const handleDeleteActivity = async (id: string) => {
+  const handleDeleteActivity = (id: string) => {
     startTransition(async () => {
       try {
         await deleteDoc(doc(db, ACTIVITIES_COLLECTION, id));
