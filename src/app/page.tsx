@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { X, Plus, Loader2 } from 'lucide-react';
@@ -26,7 +26,7 @@ const isSimilar = (a: string, b: string) => {
 export default function BrainstormPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [newActivityName, setNewActivityName] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isAdding, setIsAdding] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
 
@@ -35,6 +35,7 @@ export default function BrainstormPage() {
   const { toast } = useToast();
 
   useEffect(() => {
+    setIsLoading(true);
     const q = query(collection(db, ACTIVITIES_COLLECTION), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const activitiesData: Activity[] = [];
@@ -42,9 +43,7 @@ export default function BrainstormPage() {
         activitiesData.push({ id: doc.id, ...doc.data() } as Activity);
       });
       setActivities(activitiesData);
-      if (isLoading) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     }, (error) => {
       console.error("Error fetching activities: ", error);
       toast({
@@ -56,7 +55,7 @@ export default function BrainstormPage() {
     });
 
     return () => unsubscribe();
-  }, [toast, isLoading]);
+  }, [toast]);
 
   const addActivity = (name: string) => {
     const trimmedName = name.trim();
@@ -64,7 +63,7 @@ export default function BrainstormPage() {
 
     setNewActivityName("");
     
-    startTransition(async () => {
+    setIsAdding(async () => {
       try {
         await addDoc(collection(db, ACTIVITIES_COLLECTION), {
           nome: trimmedName,
