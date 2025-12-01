@@ -1,0 +1,93 @@
+{
+  "entities": {
+    "ActivityComment": {
+      "title": "Activity Comment",
+      "description": "A comment on an activity.",
+      "type": "object",
+      "properties": {
+        "autor": {
+          "type": "string",
+          "description": "The author of the comment."
+        },
+        "texto": {
+          "type": "string",
+          "description": "The text content of the comment."
+        },
+        "data": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the comment was created."
+        }
+      },
+      "required": ["autor", "texto", "data"]
+    },
+    "Activity": {
+      "title": "Activity",
+      "description": "Represents a task or activity for HR/DP departments.",
+      "type": "object",
+      "properties": {
+        "nome": {
+          "type": "string",
+          "description": "The name of the activity."
+        },
+        "categoria": {
+          "type": ["string", "null"],
+          "enum": ["DP", "RH", "Compartilhado", null],
+          "description": "The category the activity belongs to."
+        },
+        "justificativa": {
+          "type": ["string", "null"],
+          "description": "The justification for the activity."
+        },
+        "responsavel": {
+          "type": ["string", "null"],
+          "description": "The person or department responsible for the activity."
+        },
+        "recorrencia": {
+          "type": ["string", "null"],
+          "enum": ["Diária", "Semanal", "Mensal", "Trimestral", "Anual", "Sob demanda", null],
+          "description": "The recurrence frequency of the activity."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["brainstorm", "aguardando_consenso", "aprovada"],
+          "description": "The current status of the activity."
+        },
+        "comentarios": {
+          "type": "array",
+          "items": {
+            "$ref": "#/entities/ActivityComment"
+          },
+          "description": "A list of comments on the activity."
+        },
+        "dataAprovacao": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "The approval date of the activity."
+        },
+        "ultimaExecucao": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "The last execution date of the activity."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The creation date of the activity."
+        }
+      },
+      "required": ["nome", "status", "createdAt"]
+    }
+  },
+  "auth": {
+    "providers": []
+  },
+  "firestore": {
+    "/rh-dp-activities/{activityId}": {
+      "schema": {
+        "$ref": "#/entities/Activity"
+      },
+      "description": "Stores all the activities created during the brainstorming and classification phases."
+    }
+  }
+}
