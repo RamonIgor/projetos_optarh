@@ -13,7 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ArrowLeft, Check, Square, ChevronsRight, ListTodo, ActivitySquare, ThumbsUp } from 'lucide-react';
+import { Loader2, ArrowLeft, Check, Square, ChevronsRight, ListTodo, ActivitySquare, ThumbsUp, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -169,10 +169,32 @@ export default function ClassificationPage() {
     }
   };
 
+  const handleRevertToBrainstorm = async () => {
+    if (!currentActivity || !db || isSaving) return;
+
+    const data: Partial<Activity> = {
+      categoria: null,
+      justificativa: null,
+      responsavel: null,
+      recorrencia: null,
+      status: 'brainstorm',
+      dataAprovacao: null,
+      comentarios: currentActivity.comentarios || []
+    };
+    
+    await updateActivity(data);
+
+    toast({
+        title: "Atividade Revertida!",
+        description: `A atividade "${currentActivity?.nome}" voltou para o estágio de Brainstorm.`,
+    });
+
+    handleNext(false); // Move to next without saving again
+  }
+
   const handleSaveAndNext = async (status?: 'aguardando_consenso' | 'aprovada') => {
     if (isSaving) return;
     
-    // If any classification data has changed, the status must be at least 'aguardando_consenso'
     const hasChanged = currentActivity && (
       currentActivity.categoria !== currentCategory ||
       currentActivity.justificativa !== currentJustification ||
@@ -211,16 +233,20 @@ export default function ClassificationPage() {
         });
     }
     
-    if (currentIndex < activitiesToClassify.length - 1) {
+    handleNext(false);
+  };
+
+
+  const handleNext = (save = true) => {
+     if (save) {
+        handleSaveAndNext();
+        return;
+     }
+     if (currentIndex < activitiesToClassify.length - 1) {
       setCurrentIndex(prev => prev + 1);
     } else {
       setShowSummary(true);
     }
-  };
-
-
-  const handleNext = () => {
-     handleSaveAndNext();
   };
 
   const handleApprove = () => {
@@ -346,7 +372,7 @@ export default function ClassificationPage() {
                     <div className="flex justify-between items-center mb-6">
                         <Button variant="ghost" onClick={handlePrev} disabled={currentIndex === 0}><ArrowLeft className="mr-2 h-4 w-4"/> Anterior</Button>
                         <span className="text-sm font-medium text-muted-foreground">Atividade {currentIndex + 1} de {activitiesToClassify.length}</span>
-                        <Button variant="ghost" onClick={handleNext}>
+                        <Button variant="ghost" onClick={() => handleNext()}>
                             {currentIndex === activitiesToClassify.length - 1 ? 'Finalizar Revisão' : 'Próxima'}
                             {currentIndex !== activitiesToClassify.length - 1 && <ArrowLeft className="ml-2 h-4 w-4 transform rotate-180"/>}
                         </Button>
@@ -439,15 +465,24 @@ export default function ClassificationPage() {
 
 
                     {/* Ações */}
-                     <div className="mt-10 pt-6 border-t flex flex-col sm:flex-row justify-end gap-4">
-                      <Button variant="secondary" onClick={() => handleSaveAndNext()} disabled={isSaving}>
-                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                        Salvar e Próxima
-                      </Button>
-                      <Button onClick={handleApprove} disabled={isApproveDisabled || isSaving} className="bg-green-600 hover:bg-green-700">
-                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Check className="mr-2 h-4 w-4"/>}
-                        Aprovar e Próxima
-                      </Button>
+                     <div className="mt-10 pt-6 border-t flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div>
+                            {currentActivity.status !== 'brainstorm' && (
+                               <Button variant="destructive" onClick={handleRevertToBrainstorm} disabled={isSaving}>
+                                 <RotateCcw className="mr-2 h-4 w-4"/> Reverter para Brainstorm
+                               </Button>
+                            )}
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-4">
+                          <Button variant="secondary" onClick={() => handleSaveAndNext()} disabled={isSaving}>
+                            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                            Salvar e Próxima
+                          </Button>
+                          <Button onClick={handleApprove} disabled={isApproveDisabled || isSaving} className="bg-green-600 hover:bg-green-700">
+                            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Check className="mr-2 h-4 w-4"/>}
+                            Aprovar e Próxima
+                          </Button>
+                        </div>
                     </div>
 
                   </CardContent>
