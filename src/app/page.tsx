@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { X, Plus, Loader2 } from 'lucide-react';
+import { X, Plus, Loader2, ThumbsUp, ActivitySquare, Square } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useFirestore } from '@/firebase';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -26,6 +26,13 @@ const isSimilar = (a: string, b: string) => {
   const cleanB = b.toLowerCase().trim().replace(/\s+/g, ' ');
   return cleanA === cleanB;
 };
+
+const statusInfo: { [key: string]: { label: string; icon: React.ReactNode; variant: "secondary" | "default" | "destructive" | "outline" | null | undefined, className: string } } = {
+  brainstorm: { label: 'Não classificada', icon: <Square className="h-3 w-3" />, variant: 'secondary', className: '' },
+  aguardando_consenso: { label: 'Aguardando consenso', icon: <ActivitySquare className="h-3 w-3" />, variant: 'secondary', className: 'bg-yellow-100 text-yellow-800' },
+  aprovada: { label: 'Aprovada', icon: <ThumbsUp className="h-3 w-3" />, variant: 'secondary', className: 'bg-green-100 text-green-800' },
+};
+
 
 export default function BrainstormPage() {
   const db = useFirestore();
@@ -220,25 +227,42 @@ export default function BrainstormPage() {
               ) : (
                 <ul className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
                   <AnimatePresence>
-                    {activities.map((activity) => (
-                      <motion.li
-                        key={activity.id}
-                        layout
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, x: -50, transition: { duration: 0.2 } }}
-                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                      >
-                        <span className="font-medium text-foreground">{activity.nome}</span>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <Badge variant="secondary">Não classificada</Badge>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDeleteActivity(activity.id)} disabled={isDeleting} aria-label={`Excluir ${activity.nome}`}>
-                            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
-                          </Button>
-                        </div>
-                      </motion.li>
-                    ))}
+                    {activities.map((activity) => {
+                      const status = statusInfo[activity.status] || statusInfo.brainstorm;
+                      const isDeletable = activity.status === 'brainstorm';
+                      return (
+                        <motion.li
+                          key={activity.id}
+                          layout
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, x: -50, transition: { duration: 0.2 } }}
+                          transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                          className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                        >
+                          <span className="font-medium text-foreground">{activity.nome}</span>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                             <Badge variant={status.variant} className={status.className}>
+                              <div className="flex items-center gap-1.5">
+                                {status.icon}
+                                {status.label}
+                              </div>
+                            </Badge>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed" 
+                              onClick={() => handleDeleteActivity(activity.id)} 
+                              disabled={isDeleting || !isDeletable} 
+                              aria-label={`Excluir ${activity.nome}`}
+                              title={isDeletable ? "Excluir" : "Apenas atividades 'Não classificadas' podem ser excluídas daqui."}
+                            >
+                              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                        </motion.li>
+                      )
+                    })}
                   </AnimatePresence>
                 </ul>
               )}
