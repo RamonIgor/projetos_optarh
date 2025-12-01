@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { collection, onSnapshot, query, doc, updateDoc, arrayUnion, serverTimestamp, where, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc, updateDoc, arrayUnion, serverTimestamp, where, getDocs, Timestamp } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
@@ -61,6 +61,14 @@ function cn(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(' ');
 }
 
+function getCommentDate(comment: ActivityComment): Date | null {
+    if (!comment.data) return null;
+    if (comment.data instanceof Date) return comment.data;
+    if (comment.data instanceof Timestamp) return comment.data.toDate();
+    // Attempt to parse string, but this may fail if format is unexpected
+    const parsedDate = new Date(comment.data);
+    return isNaN(parsedDate.getTime()) ? null : parsedDate;
+}
 
 export default function ClassificationPage() {
   const db = useFirestore();
@@ -453,15 +461,26 @@ export default function ClassificationPage() {
                         <div className="space-y-4">
                             {currentActivity.comentarios?.length > 0 ? (
                                 <div className="max-h-40 overflow-y-auto space-y-3 pr-2 border rounded-lg p-3 bg-muted/50">
-                                {currentActivity.comentarios.sort((a,b) => (b.data as any) - (a.data as any)).map((c, i) => (
-                                    <div key={i} className="text-sm bg-background p-3 rounded-lg shadow-sm">
-                                        <div className="flex justify-between items-baseline">
-                                            <span className="font-semibold">{c.autor}</span>
-                                            <span className="text-xs text-muted-foreground">{c.data ? formatDistanceToNow( (c.data as any).toDate ? (c.data as any).toDate() : new Date(c.data), { addSuffix: true, locale: ptBR }) : ''}</span>
+                                {currentActivity.comentarios.sort((a,b) => {
+                                     const dateA = getCommentDate(a);
+                                     const dateB = getCommentDate(b);
+                                     if (!dateA) return 1;
+                                     if (!dateB) return -1;
+                                     return dateB.getTime() - dateA.getTime();
+                                }).map((c, i) => {
+                                    const commentDate = getCommentDate(c);
+                                    return (
+                                        <div key={i} className="text-sm bg-background p-3 rounded-lg shadow-sm">
+                                            <div className="flex justify-between items-baseline">
+                                                <span className="font-semibold">{c.autor}</span>
+                                                <span className="text-xs text-muted-foreground">
+                                                  {commentDate ? formatDistanceToNow(commentDate, { addSuffix: true, locale: ptBR }) : ''}
+                                                </span>
+                                            </div>
+                                            <p className="mt-1 text-muted-foreground">{c.texto}</p>
                                         </div>
-                                        <p className="mt-1 text-muted-foreground">{c.texto}</p>
-                                    </div>
-                                ))}
+                                    )
+                                })}
                                 </div>
                             ) : (
                                 <p className="text-sm text-muted-foreground text-center py-4 border-2 border-dashed rounded-lg">Nenhum comentário ainda.</p>
