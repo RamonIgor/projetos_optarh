@@ -89,7 +89,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="h-screen w-full lg:grid lg:grid-cols-2">
+    <div className="w-full lg:grid lg:grid-cols-2">
        <div className="hidden bg-gradient-to-br from-primary to-purple-600 lg:flex flex-col items-center justify-center p-12 text-center relative overflow-hidden">
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
