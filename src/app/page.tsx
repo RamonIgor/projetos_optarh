@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { X, Plus, Loader2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useFirestore } from '@/firebase/provider';
+import { useFirestore } from '@/firebase';
 
 const ACTIVITIES_COLLECTION = 'rh-dp-activities';
 
@@ -28,7 +28,7 @@ export default function BrainstormPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [newActivityName, setNewActivityName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [isAdding, startAddingTransition] = useTransition();
+  const [isAdding, setIsAdding] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
 
   const [dialogState, setDialogState] = useState<{ open: boolean; similarTo?: string; nameToAdd?: string }>({ open: false });
@@ -36,7 +36,10 @@ export default function BrainstormPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!db) return;
+    if (!db) {
+        setIsLoading(false);
+        return;
+    };
     
     setIsLoading(true);
     const q = query(collection(db, ACTIVITIES_COLLECTION), orderBy("createdAt", "desc"));
@@ -66,7 +69,7 @@ export default function BrainstormPage() {
 
     setNewActivityName("");
     
-    startAddingTransition(async () => {
+    setIsAdding(async () => {
       try {
         await addDoc(collection(db, ACTIVITIES_COLLECTION), {
           nome: trimmedName,
