@@ -86,7 +86,7 @@ export function getNextExecution(activity: Activity): Date | null {
 
   const referenceDate = activity.ultimaExecucao 
     ? (activity.ultimaExecucao as Timestamp).toDate()
-    p_ : (activity.createdAt as Timestamp).toDate();
+    : (activity.createdAt as Timestamp).toDate();
     
   return getNextExecutionDate(referenceDate, activity.recorrencia);
 }
