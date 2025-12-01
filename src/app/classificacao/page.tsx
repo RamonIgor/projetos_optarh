@@ -457,7 +457,7 @@ export default function ClassificationPage() {
                                     <div key={i} className="text-sm bg-background p-3 rounded-lg shadow-sm">
                                         <div className="flex justify-between items-baseline">
                                             <span className="font-semibold">{c.autor}</span>
-                                            <span className="text-xs text-muted-foreground">{formatDistanceToNow( (c.data as any).toDate ? (c.data as any).toDate() : new Date(c.data), { addSuffix: true, locale: ptBR })}</span>
+                                            <span className="text-xs text-muted-foreground">{c.data ? formatDistanceToNow( (c.data as any).toDate ? (c.data as any).toDate() : new Date(c.data), { addSuffix: true, locale: ptBR }) : ''}</span>
                                         </div>
                                         <p className="mt-1 text-muted-foreground">{c.texto}</p>
                                     </div>
