@@ -64,15 +64,12 @@ function cn(...classes: (string | boolean | undefined)[]) {
 function getCommentDate(comment: ActivityComment): Date | null {
     if (!comment.data) return null;
 
-    // Handle Firestore Timestamp
-    if (typeof (comment.data as any).toDate === 'function') {
+    if ((comment.data as Timestamp)?.toDate) {
         return (comment.data as Timestamp).toDate();
     }
-    // Handle JavaScript Date
     if (comment.data instanceof Date) {
         return comment.data;
     }
-    // Handle ISO string
     if (typeof comment.data === 'string') {
         const parsedDate = new Date(comment.data);
         if (!isNaN(parsedDate.getTime())) {
@@ -119,7 +116,6 @@ export default function ClassificationPage() {
     if (!db) return;
     setIsLoading(true);
     
-    // This listener for all activities can remain to keep global stats up to date.
     const allQuery = query(collection(db, ACTIVITIES_COLLECTION));
     const unsubAll = onSnapshot(allQuery, (snapshot) => {
         const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
@@ -134,13 +130,14 @@ export default function ClassificationPage() {
     } else {
       classifyQuery = query(collection(db, ACTIVITIES_COLLECTION));
     }
+
     const unsubClassify = onSnapshot(classifyQuery, (snapshot) => {
       const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
-      const sortedToClassify = activitiesData.sort((a,b) => (a.createdAt as any) - (b.createdAt as any));
+      const sortedToClassify = activitiesData.sort((a,b) => ((a.createdAt as Timestamp)?.seconds || 0) - ((b.createdAt as Timestamp)?.seconds || 0));
       
       setActivitiesToClassify(sortedToClassify);
 
-      if (sortedToClassify.length === 0 && allActivities.length > 0) {
+      if (sortedToClassify.length === 0) {
         setShowSummary(true);
       } else {
         setShowSummary(false);
