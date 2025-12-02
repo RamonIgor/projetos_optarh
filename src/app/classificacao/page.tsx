@@ -80,6 +80,29 @@ function getCommentDate(comment: ActivityComment): Date | null {
     return date;
 }
 
+function CommentItem({ comment }: { comment: ActivityComment }) {
+    const [dateString, setDateString] = useState('data indisponível');
+
+    useEffect(() => {
+        const commentDate = getCommentDate(comment);
+        if (commentDate) {
+            setDateString(formatDistanceToNow(commentDate, { addSuffix: true, locale: ptBR }));
+        }
+    }, [comment]);
+
+    return (
+        <div className="text-sm bg-background p-3 rounded-lg shadow-sm">
+            <div className="flex justify-between items-baseline">
+                <span className="font-semibold">{comment.autor}</span>
+                <span className="text-xs text-muted-foreground">
+                    {dateString}
+                </span>
+            </div>
+            <p className="mt-1 text-muted-foreground">{comment.texto}</p>
+        </div>
+    );
+}
+
 export default function ClassificationPage() {
   const db = useFirestore();
   const { user, loading: userLoading } = useUser();
@@ -515,30 +538,9 @@ export default function ClassificationPage() {
                                      if (!dateA) return 1;
                                      if (!dateB) return -1;
                                      return dateB.getTime() - dateA.getTime();
-                                }).map((c, i) => {
-                                    const commentDate = getCommentDate(c);
-                                    const [dateString, setDateString] = useState('');
-
-                                    useEffect(() => {
-                                      if (commentDate) {
-                                        setDateString(formatDistanceToNow(commentDate, { addSuffix: true, locale: ptBR }));
-                                      } else {
-                                        setDateString('data indisponível');
-                                      }
-                                    }, [commentDate]);
-
-                                    return (
-                                        <div key={i} className="text-sm bg-background p-3 rounded-lg shadow-sm">
-                                            <div className="flex justify-between items-baseline">
-                                                <span className="font-semibold">{c.autor}</span>
-                                                <span className="text-xs text-muted-foreground">
-                                                  {dateString}
-                                                </span>
-                                            </div>
-                                            <p className="mt-1 text-muted-foreground">{c.texto}</p>
-                                        </div>
-                                    )
-                                })}
+                                }).map((c, i) => (
+                                    <CommentItem key={i} comment={c} />
+                                ))}
                                 </div>
                                 </ScrollArea>
                             ) : (
