@@ -96,7 +96,7 @@ function ActionForm({ action, onFinished }: { action?: ConsultancyAction | null,
 
                 if (action) {
                     const docRef = doc(db, ACTIONS_COLLECTION, action.id);
-                    updateDoc(docRef, actionData)
+                    await updateDoc(docRef, actionData)
                     .catch(async (error) => {
                         const permissionError = new FirestorePermissionError({
                             path: docRef.path,
@@ -108,7 +108,7 @@ function ActionForm({ action, onFinished }: { action?: ConsultancyAction | null,
                     });
                     toast({ title: "Ação atualizada com sucesso!" });
                 } else {
-                     addDoc(collection(db, ACTIONS_COLLECTION), {
+                     await addDoc(collection(db, ACTIONS_COLLECTION), {
                         ...actionData,
                         createdAt: serverTimestamp(),
                         prazo_realizado: null,
@@ -372,7 +372,7 @@ export default function ConsultancyPage() {
 
     return (
         <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={actions.length > 0}>
-            <div className="space-y-8">
+            <div className="space-y-8 max-w-7xl mx-auto w-full">
                 <div className="flex justify-between items-center">
                     <h1 className="text-4xl font-bold text-primary">Painel da Consultoria</h1>
                     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -514,7 +514,3 @@ export default function ConsultancyPage() {
         </AppLayout>
     );
 }
-    
-    
-
-    

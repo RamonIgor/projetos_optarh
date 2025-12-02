@@ -154,6 +154,7 @@ export default function DashboardPage() {
 
     return (
         <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
+          <div className="max-w-7xl mx-auto w-full">
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
                 <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">Visão Geral do Projeto</h1>
             </motion.div>
@@ -273,7 +274,7 @@ export default function DashboardPage() {
                                     <li key={activity.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
                                         <span className="font-medium">{activity.nome}</span>
                                         <span className="text-sm text-muted-foreground">
-                                            {format((activity.dataAprovacao as any).toDate(), "dd/MM/yyyy 'às' HH:mm")}
+                                            {activity.dataAprovacao && format((activity.dataAprovacao as any).toDate(), "dd/MM/yyyy 'às' HH:mm")}
                                         </span>
                                     </li>
                                 ))}
@@ -282,6 +283,7 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
             </div>
+          </div>
         </AppLayout>
     );
 }

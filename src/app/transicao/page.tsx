@@ -259,6 +259,7 @@ export default function TransitionPage() {
 
     return (
         <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
+          <div className="max-w-7xl mx-auto w-full">
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
                 <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">Plano de Transição</h1>
                 <p className="mt-4 text-lg text-muted-foreground">Acompanhe a transferência de responsabilidades das atividades aprovadas.</p>
@@ -376,11 +377,7 @@ export default function TransitionPage() {
                     </Table>
                 </CardContent>
             </Card>
-
+          </div>
         </AppLayout>
     );
 }
-
-    
-
-    

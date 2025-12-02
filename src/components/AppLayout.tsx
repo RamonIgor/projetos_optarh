@@ -177,7 +177,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
         </div>
       </header>
        </TooltipProvider>
-      <main className="container mx-auto p-4 sm:p-6 lg:p-8 pt-2 flex-grow">
+      <main className="container mx-auto p-4 sm:p-6 lg:p-8 pt-2 flex-grow flex">
         {children}
       </main>
     </div>

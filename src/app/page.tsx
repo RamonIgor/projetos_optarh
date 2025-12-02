@@ -188,7 +188,7 @@ export default function BrainstormPage() {
 
   return (
     <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0}>
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto w-full">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <h1 className="text-4xl md:text-5xl font-bold text-center text-primary tracking-tight">Brainstorm de Atividades</h1>
           <p className="mt-4 text-lg text-center text-muted-foreground">Liste todas as atividades que vocês realizam hoje. Não se preocupe com a classificação ainda.</p>

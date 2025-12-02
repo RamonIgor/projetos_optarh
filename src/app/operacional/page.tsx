@@ -174,7 +174,7 @@ function RecurrenceGroup({ title, activities, onToggle }: { title: Recurrence, a
         <Card className="overflow-hidden">
             <Collapsible open={isOpen} onOpenChange={setIsOpen}>
                 <CollapsibleTrigger asChild>
-                    <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-muted/50">
+                    <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-muted/50 p-4">
                         <div className="flex items-center gap-4">
                             <h2 className="text-xl font-bold">{title}</h2>
                             <Badge variant="secondary">{activities.length} atividades</Badge>
@@ -331,6 +331,7 @@ export default function OperationalPage() {
 
     return (
         <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
+          <div className="max-w-7xl mx-auto w-full">
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
                 <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">Checklist Operacional</h1>
                 <p className="mt-4 text-lg text-muted-foreground">Acompanhe a execução das atividades recorrentes da equipe.</p>
@@ -399,6 +400,7 @@ export default function OperationalPage() {
                      )}
                  </div>
             </Tabs>
+          </div>
         </AppLayout>
     );
 }

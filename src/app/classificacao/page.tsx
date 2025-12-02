@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { collection, onSnapshot, query, doc, updateDoc, arrayUnion, serverTimestamp, where, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc, updateDoc, arrayUnion, serverTimestamp, where, Timestamp } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
@@ -13,7 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ArrowLeft, Check, Square, ChevronsRight, ListTodo, ActivitySquare, ThumbsUp, RotateCcw } from 'lucide-react';
+import { Loader2, ArrowLeft, Check, Square, ChevronsRight, ListTodo, ActivitySquare, ThumbsUp, RotateCcw, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -36,7 +36,7 @@ const CategoryButton = ({ category, selected, onClick, color, children }: any) =
   <Button
     variant={selected ? "default" : "outline"}
     className={cn(
-      "h-20 text-lg flex-1 transition-all duration-200",
+      "h-24 text-lg w-full transition-all duration-200",
       selected && `border-4 shadow-lg transform scale-105 ${color}`,
       selected ? 'bg-primary' : ''
     )}
@@ -65,19 +65,19 @@ function cn(...classes: (string | boolean | undefined)[]) {
 
 function getCommentDate(comment: ActivityComment): Date | null {
     if (!comment.data) return null;
-
-    let date: Date | null = null;
     if ((comment.data as Timestamp)?.toDate) {
-        date = (comment.data as Timestamp).toDate();
-    } else if (comment.data instanceof Date) {
-        date = comment.data;
-    } else if (typeof comment.data === 'string') {
+        return (comment.data as Timestamp).toDate();
+    }
+    if (comment.data instanceof Date) {
+        return comment.data;
+    }
+    if (typeof comment.data === 'string') {
         const parsedDate = new Date(comment.data);
         if (!isNaN(parsedDate.getTime())) {
-            date = parsedDate;
+            return parsedDate;
         }
     }
-    return date;
+    return null;
 }
 
 function CommentItem({ comment }: { comment: ActivityComment }) {
@@ -182,6 +182,8 @@ export default function ClassificationPage() {
             
             setCurrentIndex(0);
             setIsLoading(false);
+        }, () => {
+          setIsLoading(false);
         });
 
         return unsubClassify;
@@ -257,7 +259,6 @@ export default function ClassificationPage() {
         newStatus = 'aguardando_consenso';
     }
 
-
     const data: Partial<Activity> = {
       categoria: currentCategory,
       justificativa: currentJustification,
@@ -328,9 +329,9 @@ export default function ClassificationPage() {
     setShowSummary(false);
   }
   
-  const unclassifiedCount = allActivities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length;
+  const unclassifiedCount = useMemo(() => allActivities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [allActivities]);
 
-  if (userLoading || (isLoading && activitiesToClassify.length === 0 && !showSummary)) {
+  if (userLoading || (isLoading && allActivities.length === 0)) {
     return (
       <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -352,41 +353,6 @@ export default function ClassificationPage() {
     )
   }
 
-  if (allActivities.length > 0 && activitiesToClassify.length === 0 && !isLoading && !showSummary) {
-    let message = 'Nenhuma atividade nesta visualização.';
-    if(view === 'pending') message = 'Todas as atividades já foram aprovadas! ✨'
-    if(view === 'approved') message = 'Nenhuma atividade foi aprovada ainda.'
-
-    return (
-      <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
-        <div className="flex gap-8">
-            <aside className="w-1/4 hidden sm:block border-r pr-6">
-                <h2 className="text-lg font-semibold mb-4">Revisão de Atividades</h2>
-                 <Tabs value={view} onValueChange={(v) => setView(v as 'pending' | 'approved')}>
-                  <TabsList className="grid w-full grid-cols-2 mb-4">
-                    <TabsTrigger value="pending">Pendentes</TabsTrigger>
-                    <TabsTrigger value="approved">Aprovadas</TabsTrigger>
-                  </TabsList>
-                 </Tabs>
-                <div className="text-center py-10 border-2 border-dashed rounded-lg">
-                    <p className="text-muted-foreground">{message}</p>
-                </div>
-            </aside>
-            <div className="flex-1">
-                <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                    <h1 className="text-4xl md:text-5xl font-bold text-center text-primary tracking-tight">Classificação de Atividades</h1>
-                    <p className="mt-4 text-lg text-center text-muted-foreground">Vamos definir cada atividade em DP, RH ou Compartilhado</p>
-                </motion.div>
-                <div className="text-center py-20 mt-8">
-                    <h2 className="text-2xl font-bold">{message}</h2>
-                    <p className="text-muted-foreground mt-2">Selecione outra visualização para continuar.</p>
-                </div>
-            </div>
-        </div>
-      </AppLayout>
-    )
-  }
-
   if (allActivities.length === 0) {
     return (
        <AppLayout unclassifiedCount={0} hasActivities={false}>
@@ -403,7 +369,7 @@ export default function ClassificationPage() {
 
   return (
     <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
-      <div className="flex gap-8">
+      <div className="flex gap-8 h-[calc(100vh-200px)]">
         <Sheet>
           <SheetTrigger asChild>
             <Button variant="outline" className="fixed bottom-4 left-4 z-10 sm:hidden">
@@ -437,19 +403,18 @@ export default function ClassificationPage() {
             <ActivityList activities={activitiesToClassify} currentIndex={currentIndex} goToActivity={goToActivity} />
         </aside>
         
-        <div className="flex-1">
-          <div className="max-w-4xl mx-auto">
+        <div className="flex-1 flex flex-col">
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              <h1 className="text-4xl md:text-5xl font-bold text-center text-primary tracking-tight">Classificação de Atividades</h1>
-              <p className="mt-4 text-lg text-center text-muted-foreground">Vamos definir cada atividade em DP, RH ou Compartilhado</p>
+              <h1 className="text-3xl md:text-4xl font-bold text-primary tracking-tight">Classificação de Atividades</h1>
+              <p className="mt-2 text-md text-muted-foreground">Vamos definir cada atividade em DP, RH ou Compartilhado</p>
             </motion.div>
             
-            <div className="my-8">
+            <div className="my-4">
               <div className="flex justify-between mb-1 text-sm text-muted-foreground">
                 <span>Progresso da Aprovação</span>
                 <span>{classifiedCount} de {allActivities.length} atividades aprovadas</span>
               </div>
-              <Progress value={(classifiedCount / allActivities.length) * 100} />
+              <Progress value={(classifiedCount / (allActivities.length || 1)) * 100} />
             </div>
 
             <AnimatePresence mode="wait">
@@ -459,113 +424,92 @@ export default function ClassificationPage() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -50 }}
                   transition={{ duration: 0.3 }}
+                  className="flex-1 flex flex-col"
               >
               {currentActivity ? (
-                <Card className="shadow-lg overflow-hidden">
-                  <CardContent className="p-6 md:p-8">
+                <Card className="shadow-lg overflow-hidden flex-1 flex flex-col">
+                  <CardContent className="p-6 md:p-8 flex-1 flex flex-col">
                     <div className="flex justify-between items-center mb-6">
                         <Button variant="ghost" onClick={handlePrev} disabled={currentIndex === 0}><ArrowLeft className="mr-2 h-4 w-4"/> Anterior</Button>
-                        <span className="text-sm font-medium text-muted-foreground">Atividade {currentIndex + 1} de {activitiesToClassify.length}</span>
+                        <span className="text-sm font-medium text-muted-foreground text-center">Atividade {currentIndex + 1} de {activitiesToClassify.length}</span>
                         <Button variant="ghost" onClick={() => handleNext()}>
                             {currentIndex === activitiesToClassify.length - 1 ? 'Finalizar Revisão' : 'Próxima'}
                             {currentIndex !== activitiesToClassify.length - 1 && <ArrowLeft className="ml-2 h-4 w-4 transform rotate-180"/>}
                         </Button>
                     </div>
 
-                    <h2 className="text-3xl font-bold text-center mb-8">{currentActivity.nome}</h2>
-
-                    {/* Categoria */}
-                    <div className="mb-8">
-                      <label className="text-lg font-semibold mb-4 block">1. Categoria</label>
-                      <div className="flex flex-col sm:flex-row gap-4">
-                        <CategoryButton category="DP" selected={currentCategory === 'DP'} onClick={() => setCurrentCategory('DP')} color="purple">DP</CategoryButton>
-                        <CategoryButton category="RH" selected={currentCategory === 'RH'} onClick={() => setCurrentCategory('RH')} color="green">RH</CategoryButton>
-                        <CategoryButton category="Compartilhado" selected={currentCategory === 'Compartilhado'} onClick={() => setCurrentCategory('Compartilhado')} color="blue">Compartilhado</CategoryButton>
+                    <div className="grid md:grid-cols-2 gap-8 flex-1">
+                      {/* Coluna da Esquerda */}
+                      <div className="flex flex-col space-y-6">
+                          <h2 className="text-3xl font-bold mb-2">{currentActivity.nome}</h2>
+                          <div>
+                              <label className="text-lg font-semibold mb-4 block">1. Categoria</label>
+                              <div className="flex flex-col gap-4">
+                                <CategoryButton category="DP" selected={currentCategory === 'DP'} onClick={() => setCurrentCategory('DP')} color="purple">DP</CategoryButton>
+                                <CategoryButton category="RH" selected={currentCategory === 'RH'} onClick={() => setCurrentCategory('RH')} color="green">RH</CategoryButton>
+                                <CategoryButton category="Compartilhado" selected={currentCategory === 'Compartilhado'} onClick={() => setCurrentCategory('Compartilhado')} color="blue">Compartilhado</CategoryButton>
+                              </div>
+                          </div>
                       </div>
-                    </div>
 
-                    {/* Justificativa */}
-                    <div className="mb-8">
-                       <label className="text-lg font-semibold mb-2 block" htmlFor="justification">2. Por que essa atividade pertence a essa categoria?</label>
-                       <Textarea 
-                          id="justification"
-                          value={currentJustification}
-                          onChange={(e) => setCurrentJustification(e.target.value)}
-                          placeholder="Ex: Atividade operacional relacionada a cálculos trabalhistas..." 
-                          className="min-h-[120px] text-base"
-                       />
-                    </div>
-
-                    {/* Detalhes */}
-                    <div className="mb-8 grid md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="text-lg font-semibold mb-2 block" htmlFor="responsible">3. Responsável</label>
-                        <Input 
-                          id="responsible" 
-                          value={currentResponsible}
-                          onChange={(e) => setCurrentResponsible(e.target.value)}
-                          placeholder="Nome do colaborador" 
-                          className="text-base h-12" />
-                      </div>
-                      <div>
-                        <label className="text-lg font-semibold mb-2 block" htmlFor="recurrence">4. Recorrência</label>
-                        <Select value={currentRecurrence || ''} onValueChange={(value) => setCurrentRecurrence(value as any)}>
-                          <SelectTrigger className="text-base h-12" id="recurrence">
-                            <SelectValue placeholder="Selecione a frequência" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Diária">Diária</SelectItem>
-                            <SelectItem value="Semanal">Semanal</SelectItem>
-                            <SelectItem value="Mensal">Mensal</SelectItem>
-                            <SelectItem value="Trimestral">Trimestral</SelectItem>
-                            <SelectItem value="Anual">Anual</SelectItem>
-                            <SelectItem value="Sob demanda">Sob demanda</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                     {/* Comentários */}
-                    <div className="mb-8">
-                        <label className="text-lg font-semibold mb-4 block">5. Comentários / Discussão</label>
-                        <div className="space-y-4">
-                            {currentActivity.comentarios?.length > 0 ? (
-                                <ScrollArea className="max-h-40 pr-2">
-                                <div className="space-y-3">
-                                {currentActivity.comentarios.sort((a,b) => {
-                                     const dateA = getCommentDate(a);
-                                     const dateB = getCommentDate(b);
-                                     if (!dateA) return 1;
-                                     if (!dateB) return -1;
-                                     return dateB.getTime() - dateA.getTime();
-                                }).map((c, i) => (
-                                    <CommentItem key={i} comment={c} />
-                                ))}
-                                </div>
-                                </ScrollArea>
-                            ) : (
-                                <p className="text-sm text-muted-foreground text-center py-4 border-2 border-dashed rounded-lg">Nenhum comentário ainda.</p>
-                            )}
-                            <div className="flex gap-2 pt-2">
+                      {/* Coluna da Direita */}
+                      <div className="flex flex-col space-y-4">
+                          <div>
+                              <label className="text-lg font-semibold mb-2 block" htmlFor="justification">2. Justificativa</label>
+                              <Textarea 
+                                id="justification"
+                                value={currentJustification}
+                                onChange={(e) => setCurrentJustification(e.target.value)}
+                                placeholder="Ex: Atividade operacional relacionada a cálculos trabalhistas..." 
+                                className="min-h-[100px] text-base"
+                              />
+                          </div>
+                           <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-lg font-semibold mb-2 block" htmlFor="responsible">3. Responsável</label>
                                 <Input 
-                                    value={newComment}
-                                    onChange={(e) => setNewComment(e.target.value)}
-                                    placeholder="Adicionar um comentário..."
-                                    className="text-base"
-                                    onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
+                                  id="responsible" 
+                                  value={currentResponsible}
+                                  onChange={(e) => setCurrentResponsible(e.target.value)}
+                                  placeholder="Nome" 
+                                  className="text-base h-11" />
+                              </div>
+                              <div>
+                                <label className="text-lg font-semibold mb-2 block" htmlFor="recurrence">4. Recorrência</label>
+                                <Select value={currentRecurrence || ''} onValueChange={(value) => setCurrentRecurrence(value as any)}>
+                                  <SelectTrigger className="text-base h-11" id="recurrence">
+                                    <SelectValue placeholder="Frequência" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Diária">Diária</SelectItem>
+                                    <SelectItem value="Semanal">Semanal</SelectItem>
+                                    <SelectItem value="Mensal">Mensal</SelectItem>
+                                    <SelectItem value="Trimestral">Trimestral</SelectItem>
+                                    <SelectItem value="Anual">Anual</SelectItem>
+                                    <SelectItem value="Sob demanda">Sob demanda</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                           </div>
+
+                           <div className="pt-2">
+                                <CommentSheet 
+                                    activity={currentActivity}
+                                    newComment={newComment}
+                                    setNewComment={setNewComment}
+                                    onAddComment={handleAddComment}
+                                    isSaving={isSaving}
                                 />
-                                <Button onClick={handleAddComment} disabled={!newComment.trim() || isSaving}>Adicionar</Button>
-                            </div>
-                        </div>
+                           </div>
+                      </div>
                     </div>
 
 
-                    {/* Ações */}
                      <div className="mt-10 pt-6 border-t flex flex-col sm:flex-row justify-between items-center gap-4">
                         <div>
                             {currentActivity.status !== 'brainstorm' && (
-                               <Button variant="destructive" onClick={handleRevertToBrainstorm} disabled={isSaving}>
-                                 <RotateCcw className="mr-2 h-4 w-4"/> Reverter para Brainstorm
+                               <Button variant="outline" onClick={handleRevertToBrainstorm} disabled={isSaving}>
+                                 <RotateCcw className="mr-2 h-4 w-4"/> Reverter
                                </Button>
                             )}
                         </div>
@@ -584,14 +528,22 @@ export default function ClassificationPage() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="text-center py-20">
-                  <h2 className="text-2xl font-bold">Carregando atividade...</h2>
-                  <p className="text-muted-foreground mt-2">Um momento, por favor.</p>
+                <div className="text-center py-20 flex-1 flex flex-col items-center justify-center">
+                    {activitiesToClassify.length === 0 && !isLoading ? (
+                        <>
+                          <h2 className="text-2xl font-bold">Nenhuma atividade nesta lista.</h2>
+                          <p className="text-muted-foreground mt-2">Selecione outra aba ou adicione novas atividades.</p>
+                        </>
+                    ) : (
+                        <>
+                            <h2 className="text-2xl font-bold">Carregando atividades...</h2>
+                            <Loader2 className="h-8 w-8 animate-spin text-primary mt-4"/>
+                        </>
+                    )}
                 </div>
               )}
               </motion.div>
             </AnimatePresence>
-          </div>
         </div>
       </div>
     </AppLayout>
@@ -600,8 +552,11 @@ export default function ClassificationPage() {
 
 
 function ActivityList({ activities, currentIndex, goToActivity }: { activities: Activity[], currentIndex: number, goToActivity: (index: number) => void }) {
+  if (!activities || activities.length === 0) {
+      return <div className="text-center text-sm text-muted-foreground p-10">Nenhuma atividade encontrada nesta lista.</div>
+  }
   return (
-    <ScrollArea className="h-[calc(100vh-200px)] px-4 sm:px-0">
+    <ScrollArea className="h-[calc(100vh-280px)] px-4 sm:px-0">
       <ul className="space-y-2 pr-4">
         {activities.map((act, index) => (
           <li key={act.id}>
@@ -621,6 +576,55 @@ function ActivityList({ activities, currentIndex, goToActivity }: { activities: 
       </ul>
     </ScrollArea>
   )
+}
+
+function CommentSheet({activity, newComment, setNewComment, onAddComment, isSaving} : {activity: Activity, newComment: string, setNewComment: (val: string) => void, onAddComment: () => void, isSaving: boolean}) {
+    return (
+        <Sheet>
+            <SheetTrigger asChild>
+                <Button variant="outline" className="w-full">
+                    <MessageSquare className="mr-2 h-4 w-4"/>
+                    Ver / Adicionar Comentários ({activity.comentarios?.length || 0})
+                </Button>
+            </SheetTrigger>
+            <SheetContent>
+                <SheetHeader>
+                <SheetTitle>Comentários sobre: {activity.nome}</SheetTitle>
+                </SheetHeader>
+                <div className="py-4 flex flex-col h-[calc(100%-80px)]">
+                    <ScrollArea className="flex-1 pr-4 -mr-6">
+                        <div className="space-y-4 ">
+                            {activity.comentarios?.length > 0 ? (
+                                activity.comentarios.sort((a,b) => {
+                                     const dateA = getCommentDate(a);
+                                     const dateB = getCommentDate(b);
+                                     if (!dateA) return 1;
+                                     if (!dateB) return -1;
+                                     return dateB.getTime() - dateA.getTime();
+                                }).map((c, i) => (
+                                    <CommentItem key={i} comment={c} />
+                                ))
+                            ) : (
+                                <p className="text-sm text-muted-foreground text-center py-4 border-2 border-dashed rounded-lg">Nenhum comentário ainda.</p>
+                            )}
+                        </div>
+                    </ScrollArea>
+                    <div className="mt-4 pt-4 border-t">
+                        <div className="flex gap-2">
+                            <Input 
+                                value={newComment}
+                                onChange={(e) => setNewComment(e.target.value)}
+                                placeholder="Adicionar um comentário..."
+                                className="text-base"
+                                onKeyDown={(e) => e.key === 'Enter' && onAddComment()}
+                            />
+                            <Button onClick={onAddComment} disabled={!newComment.trim() || isSaving}>Adicionar</Button>
+                        </div>
+                    </div>
+                </div>
+            </SheetContent>
+        </Sheet>
+    )
 }
 
 function SummaryScreen({ stats, onReviewPending, onReviewApproved }: { stats: { approved: number, pending: number, unclassified: number }, onReviewPending: () => void, onReviewApproved: () => void }) {
