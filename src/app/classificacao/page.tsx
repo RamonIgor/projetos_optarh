@@ -63,11 +63,23 @@ function cn(...classes: (string | boolean | undefined)[]) {
 
 function getCommentDate(comment: ActivityComment): Date | null {
     if (!comment.data) return null;
-    if (comment.data instanceof Date) return comment.data;
-    if (comment.data instanceof Timestamp) return comment.data.toDate();
-    // Attempt to parse string, but this may fail if format is unexpected
-    const parsedDate = new Date(comment.data);
-    return isNaN(parsedDate.getTime()) ? null : parsedDate;
+
+    // Handle Firestore Timestamp
+    if (typeof (comment.data as any).toDate === 'function') {
+        return (comment.data as Timestamp).toDate();
+    }
+    // Handle JavaScript Date
+    if (comment.data instanceof Date) {
+        return comment.data;
+    }
+    // Handle ISO string
+    if (typeof comment.data === 'string') {
+        const parsedDate = new Date(comment.data);
+        if (!isNaN(parsedDate.getTime())) {
+            return parsedDate;
+        }
+    }
+    return null;
 }
 
 export default function ClassificationPage() {
@@ -107,6 +119,7 @@ export default function ClassificationPage() {
     if (!db) return;
     setIsLoading(true);
     
+    // This listener for all activities can remain to keep global stats up to date.
     const allQuery = query(collection(db, ACTIVITIES_COLLECTION));
     const unsubAll = onSnapshot(allQuery, (snapshot) => {
         const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
