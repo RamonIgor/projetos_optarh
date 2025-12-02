@@ -90,7 +90,7 @@ export default function ClassificationPage() {
   const [activitiesToClassify, setActivitiesToClassify] = useState<Activity[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(isSaving);
+  const [isSaving, setIsSaving] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [view, setView] = useState<'pending' | 'approved'>('pending');
   
@@ -151,7 +151,7 @@ export default function ClassificationPage() {
             
             setActivitiesToClassify(sortedToClassify);
 
-            if (view === 'pending' && sortedToClassify.length === 0) {
+            if (view === 'pending' && sortedToClassify.length === 0 && allActivities.length > 0) {
                 setShowSummary(true);
             } else {
                 setShowSummary(false);
@@ -170,7 +170,7 @@ export default function ClassificationPage() {
         unsubAll();
         unsubscribe();
     }
-  }, [db, user, userLoading, router, view]);
+  }, [db, user, userLoading, router, view, allActivities.length]);
 
   useEffect(() => {
     if (currentActivity) {
@@ -522,6 +522,8 @@ export default function ClassificationPage() {
                                     useEffect(() => {
                                       if (commentDate) {
                                         setDateString(formatDistanceToNow(commentDate, { addSuffix: true, locale: ptBR }));
+                                      } else {
+                                        setDateString('data indisponível');
                                       }
                                     }, [commentDate]);
 
