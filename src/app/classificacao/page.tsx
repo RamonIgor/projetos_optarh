@@ -454,6 +454,7 @@ export default function ClassificationPage() {
 
                       {/* Coluna da Direita */}
                       <div className="flex flex-col space-y-4">
+                          <div className="h-[52px] mb-2"></div> {/* Spacer to align with h2 */}
                           <div>
                               <label className="text-lg font-semibold mb-2 block" htmlFor="justification">2. Justificativa</label>
                               <Textarea 
