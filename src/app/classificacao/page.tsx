@@ -27,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 const ACTIVITIES_COLLECTION = 'rh-dp-activities';
@@ -65,19 +66,18 @@ function cn(...classes: (string | boolean | undefined)[]) {
 function getCommentDate(comment: ActivityComment): Date | null {
     if (!comment.data) return null;
 
+    let date: Date | null = null;
     if ((comment.data as Timestamp)?.toDate) {
-        return (comment.data as Timestamp).toDate();
-    }
-    if (comment.data instanceof Date) {
-        return comment.data;
-    }
-    if (typeof comment.data === 'string') {
+        date = (comment.data as Timestamp).toDate();
+    } else if (comment.data instanceof Date) {
+        date = comment.data;
+    } else if (typeof comment.data === 'string') {
         const parsedDate = new Date(comment.data);
         if (!isNaN(parsedDate.getTime())) {
-            return parsedDate;
+            date = parsedDate;
         }
     }
-    return null;
+    return date;
 }
 
 export default function ClassificationPage() {
@@ -90,7 +90,7 @@ export default function ClassificationPage() {
   const [activitiesToClassify, setActivitiesToClassify] = useState<Activity[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSaving, setIsSaving] = useState(isSaving);
   const [showSummary, setShowSummary] = useState(false);
   const [view, setView] = useState<'pending' | 'approved'>('pending');
   
@@ -127,39 +127,48 @@ export default function ClassificationPage() {
 
     setIsLoading(true);
     
-    // Subscribe to all activities to keep global stats up to date
     const allQuery = query(collection(db, ACTIVITIES_COLLECTION));
     const unsubAll = onSnapshot(allQuery, (snapshot) => {
         const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
         setAllActivities(activitiesData);
     });
-    
-    let classifyQuery;
-    if (view === 'pending') {
-      classifyQuery = query(collection(db, ACTIVITIES_COLLECTION), where('status', '!=', 'aprovada'));
-    } else { // 'approved'
-      classifyQuery = query(collection(db, ACTIVITIES_COLLECTION), where('status', '==', 'aprovada'));
+
+    const fetchActivities = () => {
+        let classifyQuery;
+        if (view === 'pending') {
+            classifyQuery = query(collection(db, ACTIVITIES_COLLECTION), where('status', '!=', 'aprovada'));
+        } else { // 'approved'
+            classifyQuery = query(collection(db, ACTIVITIES_COLLECTION), where('status', '==', 'aprovada'));
+        }
+
+        const unsubClassify = onSnapshot(classifyQuery, (snapshot) => {
+            const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
+            const sortedToClassify = activitiesData.sort((a,b) => {
+              const timeA = (a.createdAt as Timestamp)?.seconds || 0;
+              const timeB = (b.createdAt as Timestamp)?.seconds || 0;
+              return timeA - timeB;
+            });
+            
+            setActivitiesToClassify(sortedToClassify);
+
+            if (view === 'pending' && sortedToClassify.length === 0) {
+                setShowSummary(true);
+            } else {
+                setShowSummary(false);
+            }
+            
+            setCurrentIndex(0);
+            setIsLoading(false);
+        });
+
+        return unsubClassify;
     }
-
-    const unsubClassify = onSnapshot(classifyQuery, (snapshot) => {
-      const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
-      const sortedToClassify = activitiesData.sort((a,b) => ((a.createdAt as Timestamp)?.seconds || 0) - ((b.createdAt as Timestamp)?.seconds || 0));
-      
-      setActivitiesToClassify(sortedToClassify);
-
-      if (sortedToClassify.length === 0) {
-          setShowSummary(true);
-      } else {
-          setShowSummary(false);
-      }
-      
-      setCurrentIndex(0);
-      setIsLoading(false);
-    });
+    
+    const unsubscribe = fetchActivities();
 
     return () => {
         unsubAll();
-        unsubClassify();
+        unsubscribe();
     }
   }, [db, user, userLoading, router, view]);
 
@@ -258,8 +267,10 @@ export default function ClassificationPage() {
      }
      if (currentIndex < activitiesToClassify.length - 1) {
       setCurrentIndex(prev => prev + 1);
-    } else {
+    } else if (view === 'pending') {
       setShowSummary(true);
+    } else {
+      toast({ title: 'Fim da lista!', description: 'Você revisou todas as atividades aprovadas.' });
     }
   };
 
@@ -296,7 +307,7 @@ export default function ClassificationPage() {
   
   const unclassifiedCount = allActivities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length;
 
-  if (userLoading || (isLoading && activitiesToClassify.length === 0)) {
+  if (userLoading || (isLoading && activitiesToClassify.length === 0 && !showSummary)) {
     return (
       <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -311,14 +322,14 @@ export default function ClassificationPage() {
         <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
             <SummaryScreen 
               stats={summaryStats} 
-              onReviewPending={() => setView('pending')}
-              onReviewApproved={() => setView('approved')}
+              onReviewPending={() => { setView('pending'); setShowSummary(false); }}
+              onReviewApproved={() => { setView('approved'); setShowSummary(false); }}
             />
         </AppLayout>
     )
   }
 
-  if (allActivities.length > 0 && activitiesToClassify.length === 0 && !showSummary) {
+  if (allActivities.length > 0 && activitiesToClassify.length === 0 && !isLoading && !showSummary) {
     let message = 'Nenhuma atividade nesta visualização.';
     if(view === 'pending') message = 'Todas as atividades já foram aprovadas! ✨'
     if(view === 'approved') message = 'Nenhuma atividade foi aprovada ainda.'
@@ -496,7 +507,8 @@ export default function ClassificationPage() {
                         <label className="text-lg font-semibold mb-4 block">5. Comentários / Discussão</label>
                         <div className="space-y-4">
                             {currentActivity.comentarios?.length > 0 ? (
-                                <div className="max-h-40 overflow-y-auto space-y-3 pr-2 border rounded-lg p-3 bg-muted/50">
+                                <ScrollArea className="max-h-40 pr-2">
+                                <div className="space-y-3">
                                 {currentActivity.comentarios.sort((a,b) => {
                                      const dateA = getCommentDate(a);
                                      const dateB = getCommentDate(b);
@@ -505,12 +517,20 @@ export default function ClassificationPage() {
                                      return dateB.getTime() - dateA.getTime();
                                 }).map((c, i) => {
                                     const commentDate = getCommentDate(c);
+                                    const [dateString, setDateString] = useState('');
+
+                                    useEffect(() => {
+                                      if (commentDate) {
+                                        setDateString(formatDistanceToNow(commentDate, { addSuffix: true, locale: ptBR }));
+                                      }
+                                    }, [commentDate]);
+
                                     return (
                                         <div key={i} className="text-sm bg-background p-3 rounded-lg shadow-sm">
                                             <div className="flex justify-between items-baseline">
                                                 <span className="font-semibold">{c.autor}</span>
                                                 <span className="text-xs text-muted-foreground">
-                                                  {commentDate ? formatDistanceToNow(commentDate, { addSuffix: true, locale: ptBR }) : ''}
+                                                  {dateString}
                                                 </span>
                                             </div>
                                             <p className="mt-1 text-muted-foreground">{c.texto}</p>
@@ -518,6 +538,7 @@ export default function ClassificationPage() {
                                     )
                                 })}
                                 </div>
+                                </ScrollArea>
                             ) : (
                                 <p className="text-sm text-muted-foreground text-center py-4 border-2 border-dashed rounded-lg">Nenhum comentário ainda.</p>
                             )}
@@ -576,8 +597,8 @@ export default function ClassificationPage() {
 
 function ActivityList({ activities, currentIndex, goToActivity }: { activities: Activity[], currentIndex: number, goToActivity: (index: number) => void }) {
   return (
-    <div className="h-full overflow-y-auto px-4 sm:px-0">
-      <ul className="space-y-2">
+    <ScrollArea className="h-[calc(100vh-200px)] px-4 sm:px-0">
+      <ul className="space-y-2 pr-4">
         {activities.map((act, index) => (
           <li key={act.id}>
             <button
@@ -594,7 +615,7 @@ function ActivityList({ activities, currentIndex, goToActivity }: { activities: 
           </li>
         ))}
       </ul>
-    </div>
+    </ScrollArea>
   )
 }
 
