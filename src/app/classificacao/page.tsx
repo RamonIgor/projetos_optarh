@@ -23,6 +23,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -91,6 +92,7 @@ export default function ClassificationPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [view, setView] = useState<'pending' | 'approved'>('pending');
   
   const [currentCategory, setCurrentCategory] = useState<'DP' | 'RH' | 'Compartilhado' | null>(null);
   const [currentJustification, setCurrentJustification] = useState('');
@@ -111,47 +113,6 @@ export default function ClassificationPage() {
       unclassified: allActivities.filter(a => a.status === 'brainstorm').length,
     }
   }, [allActivities]);
-
-  const fetchActivities = (filter: 'all' | 'pending' | 'approved' = 'pending') => {
-    if (!db) return;
-    setIsLoading(true);
-    
-    const allQuery = query(collection(db, ACTIVITIES_COLLECTION));
-    const unsubAll = onSnapshot(allQuery, (snapshot) => {
-        const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
-        setAllActivities(activitiesData);
-    });
-
-    let classifyQuery;
-    if (filter === 'pending') {
-      classifyQuery = query(collection(db, ACTIVITIES_COLLECTION), where('status', '!=', 'aprovada'));
-    } else if (filter === 'approved') {
-      classifyQuery = query(collection(db, ACTIVITIES_COLLECTION), where('status', '==', 'aprovada'));
-    } else {
-      classifyQuery = query(collection(db, ACTIVITIES_COLLECTION));
-    }
-
-    const unsubClassify = onSnapshot(classifyQuery, (snapshot) => {
-      const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
-      const sortedToClassify = activitiesData.sort((a,b) => ((a.createdAt as Timestamp)?.seconds || 0) - ((b.createdAt as Timestamp)?.seconds || 0));
-      
-      setActivitiesToClassify(sortedToClassify);
-
-      if (sortedToClassify.length === 0) {
-        setShowSummary(true);
-      } else {
-        setShowSummary(false);
-      }
-      
-      setCurrentIndex(0);
-      setIsLoading(false);
-    });
-
-    return () => {
-        unsubAll();
-        unsubClassify();
-    }
-  }
   
   useEffect(() => {
     if (userLoading) return;
@@ -164,12 +125,43 @@ export default function ClassificationPage() {
         return;
     };
 
-    const unsubscribe = fetchActivities('pending');
+    setIsLoading(true);
+    
+    // Subscribe to all activities to keep global stats up to date
+    const allQuery = query(collection(db, ACTIVITIES_COLLECTION));
+    const unsubAll = onSnapshot(allQuery, (snapshot) => {
+        const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
+        setAllActivities(activitiesData);
+    });
+    
+    let classifyQuery;
+    if (view === 'pending') {
+      classifyQuery = query(collection(db, ACTIVITIES_COLLECTION), where('status', '!=', 'aprovada'));
+    } else { // 'approved'
+      classifyQuery = query(collection(db, ACTIVITIES_COLLECTION), where('status', '==', 'aprovada'));
+    }
+
+    const unsubClassify = onSnapshot(classifyQuery, (snapshot) => {
+      const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
+      const sortedToClassify = activitiesData.sort((a,b) => ((a.createdAt as Timestamp)?.seconds || 0) - ((b.createdAt as Timestamp)?.seconds || 0));
+      
+      setActivitiesToClassify(sortedToClassify);
+
+      if (sortedToClassify.length === 0) {
+          setShowSummary(true);
+      } else {
+          setShowSummary(false);
+      }
+      
+      setCurrentIndex(0);
+      setIsLoading(false);
+    });
 
     return () => {
-      if(unsubscribe) unsubscribe();
-    };
-  }, [db, user, userLoading, router]);
+        unsubAll();
+        unsubClassify();
+    }
+  }, [db, user, userLoading, router, view]);
 
   useEffect(() => {
     if (currentActivity) {
@@ -202,10 +194,6 @@ export default function ClassificationPage() {
     if (!currentActivity || !db || isSaving) return;
 
     const data: Partial<Activity> = {
-      categoria: null,
-      justificativa: null,
-      responsavel: null,
-      recorrencia: null,
       status: 'brainstorm',
       dataAprovacao: null,
     };
@@ -308,7 +296,7 @@ export default function ClassificationPage() {
   
   const unclassifiedCount = allActivities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length;
 
-  if (userLoading || isLoading) {
+  if (userLoading || (isLoading && activitiesToClassify.length === 0)) {
     return (
       <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -318,26 +306,49 @@ export default function ClassificationPage() {
     );
   }
   
-  if (showSummary) {
+  if (showSummary && view === 'pending') {
     return (
         <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
             <SummaryScreen 
               stats={summaryStats} 
-              onReviewPending={() => fetchActivities('pending')}
-              onReviewApproved={() => fetchActivities('approved')}
+              onReviewPending={() => setView('pending')}
+              onReviewApproved={() => setView('approved')}
             />
         </AppLayout>
     )
   }
 
   if (allActivities.length > 0 && activitiesToClassify.length === 0 && !showSummary) {
+    let message = 'Nenhuma atividade nesta visualização.';
+    if(view === 'pending') message = 'Todas as atividades já foram aprovadas! ✨'
+    if(view === 'approved') message = 'Nenhuma atividade foi aprovada ainda.'
+
     return (
       <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
-         <SummaryScreen 
-            stats={summaryStats} 
-            onReviewPending={() => fetchActivities('pending')} 
-            onReviewApproved={() => fetchActivities('approved')}
-         />
+        <div className="flex gap-8">
+            <aside className="w-1/4 hidden sm:block border-r pr-6">
+                <h2 className="text-lg font-semibold mb-4">Revisão de Atividades</h2>
+                 <Tabs value={view} onValueChange={(v) => setView(v as 'pending' | 'approved')}>
+                  <TabsList className="grid w-full grid-cols-2 mb-4">
+                    <TabsTrigger value="pending">Pendentes</TabsTrigger>
+                    <TabsTrigger value="approved">Aprovadas</TabsTrigger>
+                  </TabsList>
+                 </Tabs>
+                <div className="text-center py-10 border-2 border-dashed rounded-lg">
+                    <p className="text-muted-foreground">{message}</p>
+                </div>
+            </aside>
+            <div className="flex-1">
+                <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+                    <h1 className="text-4xl md:text-5xl font-bold text-center text-primary tracking-tight">Classificação de Atividades</h1>
+                    <p className="mt-4 text-lg text-center text-muted-foreground">Vamos definir cada atividade em DP, RH ou Compartilhado</p>
+                </motion.div>
+                <div className="text-center py-20 mt-8">
+                    <h2 className="text-2xl font-bold">{message}</h2>
+                    <p className="text-muted-foreground mt-2">Selecione outra visualização para continuar.</p>
+                </div>
+            </div>
+        </div>
       </AppLayout>
     )
   }
@@ -369,11 +380,26 @@ export default function ClassificationPage() {
             <SheetHeader className="p-4 border-b">
               <SheetTitle>Revisão de Atividades</SheetTitle>
             </SheetHeader>
+            <div className="p-4">
+              <Tabs value={view} onValueChange={(v) => setView(v as 'pending' | 'approved')}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="pending">Pendentes</TabsTrigger>
+                  <TabsTrigger value="approved">Aprovadas</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
             <ActivityList activities={activitiesToClassify} currentIndex={currentIndex} goToActivity={goToActivity} />
           </SheetContent>
         </Sheet>
+
         <aside className="w-1/4 hidden sm:block border-r pr-6">
             <h2 className="text-lg font-semibold mb-4">Revisão de Atividades</h2>
+             <Tabs value={view} onValueChange={(v) => setView(v as 'pending' | 'approved')}>
+              <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsTrigger value="pending">Pendentes</TabsTrigger>
+                <TabsTrigger value="approved">Aprovadas</TabsTrigger>
+              </TabsList>
+             </Tabs>
             <ActivityList activities={activitiesToClassify} currentIndex={currentIndex} goToActivity={goToActivity} />
         </aside>
         
@@ -550,7 +576,7 @@ export default function ClassificationPage() {
 
 function ActivityList({ activities, currentIndex, goToActivity }: { activities: Activity[], currentIndex: number, goToActivity: (index: number) => void }) {
   return (
-    <div className="h-full overflow-y-auto p-4">
+    <div className="h-full overflow-y-auto px-4 sm:px-0">
       <ul className="space-y-2">
         {activities.map((act, index) => (
           <li key={act.id}>
