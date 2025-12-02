@@ -127,7 +127,7 @@ export default function ClassificationPage() {
       
       setActivitiesToClassify(sortedToClassify);
 
-      if (sortedToClassify.length === 0 && filter === 'pending' && allActivities.length > 0) {
+      if (sortedToClassify.length === 0 && allActivities.length > 0) {
         setShowSummary(true);
       } else {
         setShowSummary(false);
