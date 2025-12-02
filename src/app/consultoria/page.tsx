@@ -272,7 +272,7 @@ export default function ConsultancyPage() {
         }
 
         const actionsCollectionRef = collection(db, ACTIONS_COLLECTION);
-        const q = query(actionsCollectionRef, orderBy("createdAt", "desc"));
+        const q = query(actionsCollectionRef, orderBy("createdAt", "asc"));
         const unsubscribe = onSnapshot(q, 
             (snapshot) => {
                 const actionsData = snapshot.docs.map(doc => ({
@@ -359,7 +359,7 @@ export default function ConsultancyPage() {
             name: action.acao.substring(0, 15) + '...',
             concluido: action.percentual_concluido,
             meta: 100, // Target is always 100%
-        })).reverse();
+        }));
     }, [actions]);
 
     if (isLoading || userLoading || !user || !user.email || !authorizedConsultants.includes(user.email)) {
