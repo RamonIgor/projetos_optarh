@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { Loader2, UserPlus, Link2 } from 'lucide-react';
+import { Loader2, UserPlus } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, setDoc, doc, collection, getDocs, orderBy, query } from 'firebase/firestore';
@@ -15,7 +15,6 @@ import { firebaseConfig } from '@/firebase/config';
 import { useFirestore as useDb } from '@/firebase';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { type Client } from '@/types/activity';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // This function creates a secondary, temporary Firebase app instance
 // to handle user creation without affecting the current user's session.
@@ -49,11 +48,12 @@ function CreateUserForm({ onFinished, clients, isLoadingClients }: { onFinished:
         startTransition(async () => {
             const secondaryAuth = createSecondaryAuth();
             try {
-                // 1. Create user in Auth
+                // 1. Create user in Auth using the secondary instance
                 const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
                 const newUser = userCredential.user;
 
                 // 2. Create user profile in Firestore using the primary, authenticated instance
+                // This ensures the write operation is performed by the logged-in consultant
                 await setDoc(doc(db, "users", newUser.uid), {
                     clientId: selectedClientId,
                     role: 'client_user'
@@ -129,91 +129,6 @@ function CreateUserForm({ onFinished, clients, isLoadingClients }: { onFinished:
     );
 }
 
-function AssociateUserForm({ onFinished, clients, isLoadingClients }: { onFinished: () => void, clients: Client[], isLoadingClients: boolean }) {
-    const { toast } = useToast();
-    const db = useDb();
-    const [uid, setUid] = useState('');
-    const [selectedClientId, setSelectedClientId] = useState('');
-    const [role, setRole] = useState<'client_user' | 'consultant'>('client_user');
-    const [isSubmitting, startTransition] = useTransition();
-
-    const handleAssociate = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!uid || !selectedClientId) {
-            toast({ title: "Preencha UID e Cliente", variant: "destructive"});
-            return;
-        }
-
-        startTransition(async () => {
-            try {
-                await setDoc(doc(db, "users", uid), {
-                    clientId: selectedClientId,
-                    role: role
-                }, { merge: true });
-
-                toast({
-                    title: "Usuário Associado!",
-                    description: `O usuário foi vinculado ao cliente selecionado.`,
-                });
-                
-                onFinished();
-            } catch (error: any) {
-                console.error("Association error:", error);
-                toast({
-                    variant: "destructive",
-                    title: "Erro ao Associar",
-                    description: "Não foi possível salvar a associação. Verifique o UID e suas permissões.",
-                });
-            }
-        });
-    };
-
-    return (
-        <form onSubmit={handleAssociate} className="py-4 space-y-4">
-            <div className="grid gap-2">
-                <Label htmlFor="uid-associate">UID do Usuário</Label>
-                <Input id="uid-associate" type="text" placeholder="UID do Firebase Auth" value={uid} onChange={(e) => setUid(e.target.value)} required />
-                 <p className="text-xs text-muted-foreground">Você pode encontrar o UID na aba 'Authentication' do seu console do Firebase.</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                    <Label htmlFor="client-select-associate">Cliente</Label>
-                    <Select value={selectedClientId} onValueChange={setSelectedClientId} required>
-                        <SelectTrigger id="client-select-associate" disabled={isLoadingClients}>
-                            <SelectValue placeholder={isLoadingClients ? "Carregando..." : "Selecione"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                             {clients.map(client => (
-                                <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                 <div className="grid gap-2">
-                    <Label htmlFor="role-select-associate">Cargo</Label>
-                    <Select value={role} onValueChange={(v) => setRole(v as any)} required>
-                        <SelectTrigger id="role-select-associate">
-                            <SelectValue placeholder="Selecione o cargo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                           <SelectItem value="client_user">Usuário de Cliente</SelectItem>
-                           <SelectItem value="consultant">Consultor(a)</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
-            <DialogFooter className="!mt-6">
-                <Button type="button" variant="outline" onClick={onFinished}>Fechar</Button>
-                <Button type="submit" disabled={isSubmitting || !uid || !selectedClientId}>
-                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
-                    Salvar Associação
-                </Button>
-            </DialogFooter>
-        </form>
-    );
-}
-
-
 export function UserManagementDialog({ children }: { children: React.ReactNode }) {
     const [open, setOpen] = useState(false);
     const db = useDb();
@@ -249,26 +164,13 @@ export function UserManagementDialog({ children }: { children: React.ReactNode }
                 <DialogHeader>
                     <DialogTitle>Gerenciar Colaboradores</DialogTitle>
                     <DialogDescription>
-                        Crie novas contas ou associe usuários existentes a um cliente.
+                        Crie novas contas para colaboradores e vincule-as a um cliente.
                     </DialogDescription>
                 </DialogHeader>
 
-                <Tabs defaultValue="create" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="create">Cadastrar Novo</TabsTrigger>
-                        <TabsTrigger value="associate">Associar Existente</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="create">
-                        <CreateUserForm onFinished={() => setOpen(false)} clients={clients} isLoadingClients={isLoadingClients} />
-                    </TabsContent>
-                    <TabsContent value="associate">
-                        <AssociateUserForm onFinished={() => setOpen(false)} clients={clients} isLoadingClients={isLoadingClients} />
-                    </TabsContent>
-                </Tabs>
+                <CreateUserForm onFinished={() => setOpen(false)} clients={clients} isLoadingClients={isLoadingClients} />
 
             </DialogContent>
         </Dialog>
     );
 }
-
-    
