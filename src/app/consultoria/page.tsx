@@ -434,10 +434,10 @@ export default function ConsultancyPage() {
     
     // Data fetching for the selected client
     useEffect(() => {
-        if (!selectedClientId || !db) {
+        if (!selectedClientId || !db || !user) {
             setActions([]);
             setActivities([]);
-            setIsLoadingData(false);
+            if(user) setIsLoadingData(false);
             return;
         }
 
@@ -497,7 +497,7 @@ export default function ConsultancyPage() {
           unsubActions();
           unsubActivities();
         }
-    }, [db, selectedClientId, toast]);
+    }, [db, selectedClientId, toast, user]);
 
     const handleDelete = (actionId: string) => {
         if (!db || !selectedClientId) return;
@@ -633,22 +633,24 @@ export default function ConsultancyPage() {
                 </div>
             
                 {!selectedClientId && isConsultant ? (
-                     <Card>
+                     <Card className="mt-8">
                         <CardHeader>
-                          <CardTitle className="flex items-center gap-2 text-2xl">
-                              <Wrench />
-                              Ferramentas do Sistema
-                          </CardTitle>
-                           <CardDescription>
-                               Use estas ferramentas para configurar e migrar dados para um cliente.
-                           </CardDescription>
+                            <CardTitle className="flex items-center gap-3 text-2xl">
+                                <Building className="h-8 w-8 text-muted-foreground" />
+                                Selecione um cliente
+                            </CardTitle>
+                            <CardDescription>
+                                Escolha um cliente na lista acima para ver o painel de ações e o resumo das atividades.
+                            </CardDescription>
                         </CardHeader>
-                        <CardContent className="p-12 text-center">
-                           <SystemToolsDialog isAuthorized={isConsultant}>
-                               <Button size="lg">Abrir Ferramentas</Button>
-                           </SystemToolsDialog>
+                        <CardContent>
+                            {isLoadingClients ? <Loader2 className="h-6 w-6 animate-spin" /> : (
+                                allClients.length === 0 && (
+                                    <p className="text-muted-foreground">Nenhum cliente cadastrado. Adicione o primeiro para começar.</p>
+                                )
+                            )}
                         </CardContent>
-                    </Card>
+                     </Card>
                 ) : isLoadingData ? (
                     <div className="flex justify-center items-center h-[50vh]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
                 ) : (
@@ -836,7 +838,5 @@ export default function ConsultancyPage() {
         </AppLayout>
     );
 }
-
-    
 
     
