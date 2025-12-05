@@ -59,7 +59,11 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
             if (doc.exists()) {
                 const profile = doc.data() as UserProfile;
                 setUserProfile(profile);
-                setUserNativeClientId(profile.clientId);
+                if (profile.role !== 'consultant') {
+                    setUserNativeClientId(profile.clientId);
+                } else {
+                    setUserNativeClientId(null); // Consultants don't have a native client
+                }
             } else {
                 console.warn(`User profile not found for uid: ${user.uid}`);
                 setUserProfile(null);

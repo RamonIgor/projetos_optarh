@@ -303,12 +303,15 @@ export default function ConsultancyPage() {
     const unclassifiedCount = useMemo(() => activities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [activities]);
     
     useEffect(() => {
+        if (!userLoading && !user) {
+            router.push('/login');
+        }
+    }, [user, userLoading, router]);
+
+    useEffect(() => {
         if (userLoading || isClientLoading) return;
         
-        if (!user) {
-            if (!userLoading) router.push('/');
-            return;
-        }
+        if (!user) return;
         
         if (!isConsultant) {
             router.push('/');
@@ -327,7 +330,7 @@ export default function ConsultancyPage() {
             if (!selectedClientId && clientsData.length > 0) {
                 setSelectedClientId(clientsData[0].id);
             }
-        });
+        }, () => setIsLoading(false));
         
         return () => unsubClients();
     }, [db, user, userLoading, isConsultant, isClientLoading, router, selectedClientId, setSelectedClientId]);
@@ -483,7 +486,7 @@ export default function ConsultancyPage() {
         { name: 'Compartilhado', value: clientStats.byCategory['Compartilhado'] || 0, fill: '#2563eb' }
     ].filter(item => item.value > 0), [clientStats.byCategory]);
 
-    if (isLoading || userLoading || isClientLoading) {
+    if (userLoading || isClientLoading) {
         return (
             <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0 || actions.length > 0}>
                 <div className="flex justify-center items-center h-[80vh]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
@@ -538,8 +541,14 @@ export default function ConsultancyPage() {
                 {!selectedClientId ? (
                      <Card>
                         <CardContent className="p-12 text-center">
-                            <h2 className="text-2xl font-semibold">Selecione um Cliente</h2>
-                            <p className="mt-2 text-muted-foreground">Escolha um cliente na lista acima para ver seus dados e plano de ação.</p>
+                            {isLoading ? (
+                                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                            ) : (
+                                <>
+                                    <h2 className="text-2xl font-semibold">Selecione um Cliente</h2>
+                                    <p className="mt-2 text-muted-foreground">Escolha um cliente na lista acima para ver seus dados e plano de ação.</p>
+                                </>
+                            )}
                         </CardContent>
                     </Card>
                 ) : (

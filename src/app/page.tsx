@@ -155,7 +155,7 @@ function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddS
 export default function BrainstormPage() {
   const db = useFirestore();
   const { user, loading: userLoading } = useUser();
-  const { clientId, isClientLoading } = useClient();
+  const { clientId, isClientLoading, isConsultant } = useClient();
   const router = useRouter();
 
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -167,28 +167,22 @@ export default function BrainstormPage() {
   
   const { toast } = useToast();
 
+    useEffect(() => {
+        if (!userLoading && !user) {
+            router.push('/login');
+        }
+    }, [user, userLoading, router]);
+
   useEffect(() => {
     const pageIsLoading = userLoading || isClientLoading;
     if (pageIsLoading) return;
     
-    if (!user) {
-        if (!userLoading) {
-            router.push('/login');
-        }
+    if (!db) {
+        setIsLoading(false);
         return;
     }
-
-    if (!db) return;
     
     if (!clientId) {
-        if (!isClientLoading) {
-            console.warn("Nenhum ID de cliente encontrado para este usuário.");
-            toast({
-                title: "Cliente não encontrado",
-                description: "Sua conta não está associada a nenhum cliente.",
-                variant: "destructive",
-            });
-        }
         setActivities([]);
         setIsLoading(false);
         return;
@@ -329,7 +323,7 @@ export default function BrainstormPage() {
     });
   };
     
-  if (userLoading || isClientLoading) {
+  if (userLoading || (isClientLoading && !isConsultant)) {
     return (
       <AppLayout unclassifiedCount={0} hasActivities={false}>
         <div className="flex items-center justify-center min-h-screen w-full">
@@ -344,6 +338,8 @@ export default function BrainstormPage() {
   }
 
   const unclassifiedCount = activities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length;
+  
+  const showConsultantPrompt = isConsultant && !clientId;
 
   return (
     <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0}>
@@ -376,8 +372,11 @@ export default function BrainstormPage() {
                 <span className="hidden sm:inline">Adicionar</span>
               </Button>
             </form>
-             {!clientId && !isClientLoading && (
-                <p className="text-sm text-destructive mt-2">Você não está associado a um cliente. Não é possível adicionar atividades.</p>
+             {showConsultantPrompt && (
+                <p className="text-sm text-yellow-600 mt-2">Como consultor(a), por favor, selecione um cliente no Painel de Consultoria para começar a adicionar atividades.</p>
+             )}
+             {!clientId && !isConsultant && !isClientLoading && (
+                 <p className="text-sm text-destructive mt-2">Sua conta não está associada a um cliente. Não é possível adicionar atividades.</p>
              )}
           </CardHeader>
           <CardContent>
@@ -389,7 +388,11 @@ export default function BrainstormPage() {
               ) : activityTree.length === 0 ? (
                  <div className="text-center py-10 border-2 border-dashed rounded-lg">
                   <h3 className="text-lg font-semibold">Tudo limpo por aqui!</h3>
-                  <p className="mt-1 text-muted-foreground">Comece a adicionar as atividades da sua equipe no campo acima.</p>
+                  <p className="mt-1 text-muted-foreground">
+                    {showConsultantPrompt
+                        ? "Selecione um cliente para ver as atividades."
+                        : "Comece a adicionar as atividades da sua equipe no campo acima."}
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
