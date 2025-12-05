@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useClient } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
 import { type Activity } from '@/types/activity';
@@ -26,8 +26,6 @@ const CategoryChart = dynamic(() => import('@/components/CategoryChart'), {
 });
 
 
-const ACTIVITIES_COLLECTION = 'rh-dp-activities';
-
 function cn(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(' ');
 }
@@ -48,6 +46,7 @@ const StatCard = ({ title, value, icon, color, children, className }: { title: s
 export default function DashboardPage() {
     const db = useFirestore();
     const { user, loading: userLoading } = useUser();
+    const { clientId, isClientLoading } = useClient();
     const router = useRouter();
 
     const [allActivities, setAllActivities] = useState<Activity[]>([]);
@@ -57,25 +56,26 @@ export default function DashboardPage() {
     const [statusFilter, setStatusFilter] = useState('all');
 
     useEffect(() => {
-        if (userLoading) return;
+        if (userLoading || isClientLoading) return;
         if (!user) {
             router.push('/login');
             return;
         }
-        if (!db) {
+        if (!db || !clientId) {
+            setAllActivities([]);
             setIsLoading(false);
             return;
         }
 
-        const q = query(collection(db, ACTIVITIES_COLLECTION), orderBy('createdAt', 'desc'));
+        const q = query(collection(db, 'clients', clientId, 'activities'), orderBy('createdAt', 'desc'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
             setAllActivities(activitiesData);
             setIsLoading(false);
-        });
+        }, () => setIsLoading(false));
 
         return () => unsubscribe();
-    }, [db, user, userLoading, router]);
+    }, [db, user, userLoading, router, clientId, isClientLoading]);
 
     const filteredActivities = useMemo(() => {
         return allActivities.filter(activity => {
@@ -147,7 +147,7 @@ export default function DashboardPage() {
         );
     }
     
-    if (allActivities.length === 0) {
+    if (allActivities.length === 0 && !isClientLoading) {
         return (
            <AppLayout unclassifiedCount={0} hasActivities={false}>
             <div className="text-center py-20">
@@ -296,3 +296,5 @@ export default function DashboardPage() {
         </AppLayout>
     );
 }
+
+    

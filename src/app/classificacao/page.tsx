@@ -183,7 +183,6 @@ export default function ClassificationPage() {
             
             setFilteredActivities(sortedActivities);
 
-            // If there's no current activity selected, select the first one.
             if (!currentActivityId && sortedActivities.length > 0) {
               setCurrentActivityId(sortedActivities[0].id);
             } else if (sortedActivities.length === 0) {
@@ -213,7 +212,6 @@ export default function ClassificationPage() {
       setCurrentResponsible(currentActivity.responsavel || '');
       setCurrentRecurrence(currentActivity.recorrencia || null);
     } else {
-      // Clear form if no activity is selected
       setCurrentCategory(null);
       setCurrentJustification('');
       setCurrentResponsible('');
@@ -277,13 +275,11 @@ export default function ClassificationPage() {
         });
     }
     
-    // Select the next activity in the list
     const currentIndex = filteredActivities.findIndex(a => a.id === currentActivity.id);
     const nextActivity = filteredActivities[currentIndex + 1];
     if (nextActivity) {
       setCurrentActivityId(nextActivity.id);
     } else {
-      // Last item was just classified, so there's nothing to select.
       setCurrentActivityId(null);
     }
   };
@@ -340,7 +336,7 @@ export default function ClassificationPage() {
     );
   }
 
-  if (allActivities.length === 0) {
+  if (allActivities.length === 0 && !isClientLoading) {
     return (
        <AppLayout unclassifiedCount={0} hasActivities={false}>
         <div className="text-center py-20">
@@ -672,3 +668,5 @@ function SummaryScreen({ stats, onReviewPending, onReviewApproved }: { stats: { 
     </div>
   )
 }
+
+    

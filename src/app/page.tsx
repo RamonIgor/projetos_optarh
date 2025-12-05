@@ -169,7 +169,6 @@ export default function BrainstormPage() {
 
   useEffect(() => {
     const pageIsLoading = userLoading || isClientLoading;
-    setIsLoading(pageIsLoading);
     
     if (pageIsLoading) return;
     if (!user) {
@@ -181,7 +180,6 @@ export default function BrainstormPage() {
     if (!clientId) {
         if (!isClientLoading) {
             console.warn("Nenhum ID de cliente encontrado para este usuário.");
-            // Potentially show an error message to the user
             toast({
                 title: "Cliente não encontrado",
                 description: "Sua conta não está associada a nenhum cliente.",
@@ -189,9 +187,11 @@ export default function BrainstormPage() {
             });
         }
         setActivities([]);
+        setIsLoading(false);
         return;
     }
     
+    setIsLoading(true);
     const activitiesCollectionRef = collection(db, 'clients', clientId, 'activities');
     const q = query(activitiesCollectionRef, orderBy("createdAt", "desc"));
 
@@ -219,7 +219,6 @@ export default function BrainstormPage() {
     const childrenOf: Record<string, Activity[]> = {};
     const activityMap = new Map(activities.map(a => [a.id, a]));
 
-    // First pass: group children under their parents
     activities.forEach(activity => {
         if (activity.parentId && activityMap.has(activity.parentId)) {
             if (!childrenOf[activity.parentId]) {
@@ -229,20 +228,17 @@ export default function BrainstormPage() {
         }
     });
     
-    // Second pass: build the tree with only top-level items
     activities.forEach(activity => {
         if (!activity.parentId) {
-            const children = (childrenOf[activity.id] || []).sort((a,b) => (a.createdAt as any) - (b.createdAt as any));
+            const children = (childrenOf[activity.id] || []).sort((a,b) => ((a.createdAt as any)?.seconds || 0) - ((b.createdAt as any)?.seconds || 0));
             tree.push({ ...activity, children });
         } else if (!activityMap.has(activity.parentId)) {
-            // It's an orphan, treat it as a top-level item.
-            const children = (childrenOf[activity.id] || []).sort((a,b) => (a.createdAt as any) - (b.createdAt as any));
+            const children = (childrenOf[activity.id] || []).sort((a,b) => ((a.createdAt as any)?.seconds || 0) - ((b.createdAt as any)?.seconds || 0));
             tree.push({ ...activity, children });
         }
     });
     
-    // Sort top-level items by creation date (newest first)
-    tree.sort((a,b) => (b.createdAt as any) - (a.createdAt as any));
+    tree.sort((a,b) => ((b.createdAt as any)?.seconds || 0) - ((a.createdAt as any)?.seconds || 0));
 
     return tree;
   }, [activities]);
@@ -330,12 +326,19 @@ export default function BrainstormPage() {
     });
   };
     
-  if (userLoading || isClientLoading || !user) {
+  if (userLoading || isClientLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      </div>
+      <AppLayout unclassifiedCount={0} hasActivities={false}>
+        <div className="flex items-center justify-center min-h-screen w-full">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        </div>
+      </AppLayout>
     );
+  }
+  
+  if (!user) {
+    router.push('/login');
+    return null;
   }
 
   const unclassifiedCount = activities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length;
@@ -363,7 +366,7 @@ export default function BrainstormPage() {
                 value={newActivityName}
                 onChange={(e) => setNewActivityName(e.target.value)}
                 className="h-12 text-base"
-                disabled={isAdding}
+                disabled={isAdding || !clientId}
                 aria-label="Nova atividade principal"
               />
               <Button type="submit" size="lg" className="h-12 w-full sm:w-auto" disabled={isAdding || !newActivityName.trim() || !clientId}>
@@ -371,6 +374,9 @@ export default function BrainstormPage() {
                 <span className="hidden sm:inline">Adicionar</span>
               </Button>
             </form>
+             {!clientId && !isClientLoading && (
+                <p className="text-sm text-destructive mt-2">Você não está associado a um cliente. Não é possível adicionar atividades.</p>
+             )}
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -434,3 +440,5 @@ export default function BrainstormPage() {
     </AppLayout>
   );
 }
+
+    

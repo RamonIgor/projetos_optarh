@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useTransition } from 'react';
 import { collection, onSnapshot, query, where, doc, updateDoc, serverTimestamp, Timestamp, arrayUnion } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useClient } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
 import { type Activity } from '@/types/activity';
@@ -25,8 +25,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 
-const ACTIVITIES_COLLECTION = 'rh-dp-activities';
-
 function cn(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(' ');
 }
@@ -45,7 +43,7 @@ const StatCard = ({ title, value, icon, className }: { title: string, value: str
 
 const recurrenceOrder: Recurrence[] = ['Diária', 'Semanal', 'Mensal', 'Trimestral', 'Anual', 'Sob demanda'];
 
-const categoryStyles: Record<Activity['categoria'] & {}, string> = {
+const categoryStyles: Record<string, string> = {
     DP: 'bg-purple-100 text-purple-800 border-purple-200',
     RH: 'bg-green-100 text-green-800 border-green-200',
     Compartilhado: 'bg-blue-100 text-blue-800 border-blue-200',
@@ -60,8 +58,6 @@ function ActivityItem({ activity, name, onToggle }: { activity: Activity, name: 
     const handleToggle = () => {
         setIsUpdating(true);
         onToggle(activity.id, isPending);
-        // Optimistic update, but we re-enable it after a short delay
-        // The parent component's state update will re-render this anyway
         setTimeout(() => setIsUpdating(false), 1000);
     }
 
@@ -162,7 +158,7 @@ function HistoryModal({ activity, name }: { activity: Activity, name: string }) 
 }
 
 
-function RecurrenceGroup({ title, activities, onToggle, getActivityName, allActivities }: { title: Recurrence, activities: Activity[], onToggle: (id: string, isPending: boolean) => void, getActivityName: (act: Activity) => string, allActivities: Activity[] }) {
+function RecurrenceGroup({ title, activities, onToggle, getActivityName }: { title: Recurrence, activities: Activity[], onToggle: (id: string, isPending: boolean) => void, getActivityName: (act: Activity) => string }) {
     const [isOpen, setIsOpen] = useState(true);
     const completed = activities.filter(a => !isActivityPending(a)).length;
     const total = activities.length;
@@ -205,6 +201,7 @@ function RecurrenceGroup({ title, activities, onToggle, getActivityName, allActi
 export default function OperationalPage() {
     const db = useFirestore();
     const { user, loading: userLoading } = useUser();
+    const { clientId, isClientLoading } = useClient();
     const router = useRouter();
     const { toast } = useToast();
 
@@ -212,37 +209,38 @@ export default function OperationalPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isUpdating, startUpdateTransition] = useTransition();
 
-    const [categoryFilter, setCategoryFilter] = useState<Activity['categoria'] | 'Todas'>('Todas');
+    const [categoryFilter, setCategoryFilter] = useState<string>('Todas');
     const [recurrenceFilter, setRecurrenceFilter] = useState('all');
     const [responsibleFilter, setResponsibleFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('pending'); // 'all', 'pending'
 
     useEffect(() => {
-        if (userLoading) return;
+        if (userLoading || isClientLoading) return;
         if (!user) {
             router.push('/login');
             return;
         }
-        if (!db) {
+        if (!db || !clientId) {
+            setAllActivities([]);
             setIsLoading(false);
             return;
         }
 
-        const q = query(collection(db, ACTIVITIES_COLLECTION), where('status', '==', 'aprovada'));
+        const q = query(collection(db, 'clients', clientId, 'activities'), where('status', '==', 'aprovada'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
             setAllActivities(activitiesData);
             setIsLoading(false);
-        });
+        }, () => setIsLoading(false));
 
         return () => unsubscribe();
-    }, [db, user, userLoading, router]);
+    }, [db, user, userLoading, router, clientId, isClientLoading]);
 
     const handleToggleActivity = (activityId: string, isCurrentlyPending: boolean) => {
-        if (!db) return;
+        if (!db || !clientId) return;
         startUpdateTransition(async () => {
             try {
-                const docRef = doc(db, ACTIVITIES_COLLECTION, activityId);
+                const docRef = doc(db, 'clients', clientId, 'activities', activityId);
                 
                 const updateData: any = {
                     ultimaExecucao: isCurrentlyPending ? serverTimestamp() : null
@@ -323,7 +321,7 @@ export default function OperationalPage() {
         );
     }
     
-    if (allActivities.length === 0) {
+    if (allActivities.length === 0 && !isClientLoading) {
         return (
            <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={false}>
             <div className="text-center py-20">
@@ -368,7 +366,7 @@ export default function OperationalPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Todas Recorrências</SelectItem>
-                                {allRecurrences.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                                {allRecurrences.map(r => <SelectItem key={r} value={r!}>{r}</SelectItem>)}
                             </SelectContent>
                         </Select>
                         <Select value={responsibleFilter} onValueChange={setResponsibleFilter}>
@@ -377,11 +375,11 @@ export default function OperationalPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Todos Responsáveis</SelectItem>
-                                {allResponsibles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                                {allResponsibles.map(r => <SelectItem key={r} value={r!}>{r}</SelectItem>)}
                             </SelectContent>
                         </Select>
                         <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="w-full sm-w-[180px]">
+                            <SelectTrigger className="w-full sm:w-[180px]">
                                 <SelectValue placeholder="Filtrar por status" />
                             </SelectTrigger>
                             <SelectContent>
@@ -399,7 +397,6 @@ export default function OperationalPage() {
                              activities={groupedActivities[recurrence] || []}
                              onToggle={handleToggleActivity}
                              getActivityName={(act) => getActivityName(act)}
-                             allActivities={allActivities}
                          />
                      ))}
                      {filteredActivities.length === 0 && !isLoading && (
@@ -414,3 +411,5 @@ export default function OperationalPage() {
         </AppLayout>
     );
 }
+
+    

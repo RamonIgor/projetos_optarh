@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useTransition } from 'react';
 import { collection, onSnapshot, query, where, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useClient } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
 import { type Activity } from '@/types/activity';
@@ -28,8 +28,6 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
 
-const ACTIVITIES_COLLECTION = 'rh-dp-activities';
-
 const transitionStatusConfig: Record<Activity['statusTransicao'] | 'undefined', { label: string; color: string; icon: React.ReactNode }> = {
     a_transferir: { label: 'Aguardando', color: 'bg-gray-200 text-gray-800', icon: <Clock className="h-4 w-4 text-gray-500" /> },
     em_transicao: { label: 'Em Transição', color: 'bg-yellow-200 text-yellow-800', icon: <PlayCircle className="h-4 w-4 text-yellow-600" /> },
@@ -53,6 +51,7 @@ const StatCard = ({ title, value, icon, className }: { title: string, value: str
 
 function EditTransitionModal({ activity, children }: { activity: Activity, children: React.ReactNode }) {
     const db = useFirestore();
+    const { clientId } = useClient();
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
     const [open, setOpen] = useState(false);
@@ -70,10 +69,10 @@ function EditTransitionModal({ activity, children }: { activity: Activity, child
     }, [open, activity]);
     
     const handleSave = async () => {
-        if (!db) return;
+        if (!db || !clientId) return;
         setIsSaving(true);
         try {
-            const docRef = doc(db, ACTIVITIES_COLLECTION, activity.id);
+            const docRef = doc(db, 'clients', clientId, 'activities', activity.id);
 
             const data: Partial<Activity> = {
                 prazoTransicao: prazo,
@@ -180,6 +179,7 @@ function EditTransitionModal({ activity, children }: { activity: Activity, child
 export default function TransitionPage() {
     const db = useFirestore();
     const { user, loading: userLoading } = useUser();
+    const { clientId, isClientLoading } = useClient();
     const router = useRouter();
 
     const [allActivities, setAllActivities] = useState<Activity[]>([]);
@@ -190,26 +190,27 @@ export default function TransitionPage() {
     const [responsibleFilter, setResponsibleFilter] = useState('all');
 
     useEffect(() => {
-        if (userLoading) return;
+        if (userLoading || isClientLoading) return;
         if (!user) {
             router.push('/login');
             return;
         }
-        if (!db) {
+        if (!db || !clientId) {
             setIsLoading(false);
+            setAllActivities([]);
             return;
         }
 
-        const q = query(collection(db, ACTIVITIES_COLLECTION), where('status', '==', 'aprovada'));
+        const q = query(collection(db, 'clients', clientId, 'activities'), where('status', '==', 'aprovada'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
-            const sortedActivities = activitiesData.sort((a, b) => (a.createdAt as any) - (b.createdAt as any));
+            const sortedActivities = activitiesData.sort((a, b) => ((a.createdAt as any)?.seconds || 0) - ((b.createdAt as any)?.seconds || 0));
             setAllActivities(sortedActivities);
             setIsLoading(false);
-        });
+        }, () => setIsLoading(false));
 
         return () => unsubscribe();
-    }, [db, user, userLoading, router]);
+    }, [db, user, userLoading, router, clientId, isClientLoading]);
     
     const getActivityName = (activity: Activity, all: Activity[]) => {
         if (activity.parentId) {
@@ -251,7 +252,7 @@ export default function TransitionPage() {
         );
     }
     
-    if (allActivities.length === 0) {
+    if (allActivities.length === 0 && !isClientLoading) {
         return (
            <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={false}>
             <div className="text-center py-20">
@@ -346,7 +347,7 @@ export default function TransitionPage() {
                                 <TableRow key={activity.id}>
                                     <TableCell className="font-medium">{getActivityName(activity, allActivities)}</TableCell>
                                     <TableCell>
-                                         <Badge variant="outline" className={cn(activity.categoria ? categoryStyles[activity.categoria] : '')}>
+                                         <Badge variant="outline" className={cn(activity.categoria ? categoryStyles[activity.categoria as keyof typeof categoryStyles] : '')}>
                                             {activity.categoria}
                                         </Badge>
                                     </TableCell>
@@ -389,3 +390,5 @@ export default function TransitionPage() {
         </AppLayout>
     );
 }
+
+    
