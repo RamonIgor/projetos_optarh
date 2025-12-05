@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CreateUserForm, AssociateUserForm } from './UserManagementDialog';
 import { KeyRound, Loader2, DatabaseZap } from 'lucide-react';
 import { collection, writeBatch, doc, getDocs, query } from 'firebase/firestore';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useRouter } from 'next/navigation';
 
 export const SystemToolsDialog: React.FC<{ children: React.ReactNode, isAuthorized: boolean }> = ({ children, isAuthorized }) => {
