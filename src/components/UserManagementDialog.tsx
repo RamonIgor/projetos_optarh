@@ -7,10 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { Loader2, UserPlus, Link2 } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal } from 'lucide-react';
+import { Loader2, UserPlus } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, setDoc, doc, collection, getDocs, orderBy, query } from 'firebase/firestore';
@@ -25,23 +22,17 @@ const createSecondaryAuth = () => {
     const appName = `secondary-auth-app-${Date.now()}`;
     try {
         const secondaryApp = initializeApp(firebaseConfig, appName);
-        return {
-            auth: getAuth(secondaryApp),
-            db: getFirestore(secondaryApp)
-        };
+        return getAuth(secondaryApp);
     } catch(e) {
         // Fallback for strict mode double-invoking this
         const secondaryApp = initializeApp(firebaseConfig, `${appName}-fallback`);
-         return {
-            auth: getAuth(secondaryApp),
-            db: getFirestore(secondaryApp)
-        };
+         return getAuth(secondaryApp);
     }
 };
 
 export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
     const { toast } = useToast();
-    const db = useDb();
+    const db = useDb(); // The primary, authenticated Firestore instance
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [selectedClientId, setSelectedClientId] = useState('');
@@ -76,14 +67,14 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
         }
 
         startTransition(async () => {
-            const { auth: secondaryAuth, db: secondaryDb } = createSecondaryAuth();
+            const secondaryAuth = createSecondaryAuth();
             try {
-                // 1. Create the user in Firebase Auth
+                // 1. Create the user in Firebase Auth using the secondary instance (keeps consultant logged in)
                 const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
                 const newUser = userCredential.user;
 
-                // 2. Create the user profile document in Firestore
-                await setDoc(doc(secondaryDb, "users", newUser.uid), {
+                // 2. Create the user profile document in Firestore using the primary, authenticated instance
+                await setDoc(doc(db, "users", newUser.uid), {
                     clientId: selectedClientId,
                     role: 'client_user'
                 });
@@ -151,12 +142,14 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
                             <SelectValue placeholder={isLoadingClients ? "Carregando clientes..." : "Selecione um cliente"} />
                         </SelectTrigger>
                         <SelectContent>
-                            {clients.length > 0 ? (
+                            {isLoadingClients ? (
+                                <div className="px-2 py-1.5 text-sm text-muted-foreground">Carregando...</div>
+                            ) : clients.length > 0 ? (
                                 clients.map(client => (
                                     <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
                                 ))
                             ) : (
-                                <div className="px-2 py-1.5 text-sm text-muted-foreground">Nenhum cliente encontrado.</div>
+                                <div className="px-2 py-1.5 text-sm text-muted-foreground">Nenhum cliente cadastrado.</div>
                             )}
                         </SelectContent>
                     </Select>
