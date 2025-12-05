@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo, useTransition } from 'react';
+import { useState, useEffect, useMemo, useTransition, useCallback } from 'react';
 import { collection, onSnapshot, query, orderBy, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { useFirestore, useClient } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
@@ -378,7 +378,7 @@ export default function ConsultancyPage() {
         }
     }, [user, userLoading, router]);
 
-    // Effect to fetch the list of clients
+    // Effect to fetch the list of clients for consultants
     useEffect(() => {
         if (!isConsultant || !db) {
             setIsLoadingClients(false);
@@ -399,13 +399,7 @@ export default function ConsultancyPage() {
         return () => unsubClients();
     }, [db, isConsultant]);
 
-    // Effect to auto-select the first client if none is selected
-    useEffect(() => {
-        if (!selectedClientId && allClients.length > 0) {
-            setSelectedClientId(allClients[0].id);
-        }
-    }, [allClients, selectedClientId, setSelectedClientId]);
-
+    // Data fetching for the selected client
     useEffect(() => {
         if (!selectedClientId || !db) {
             setActions([]);
@@ -604,7 +598,7 @@ export default function ConsultancyPage() {
                     <div>
                         <h1 className="text-4xl font-bold text-primary">Painel da Consultoria</h1>
                         <div className="mt-4">
-                           {renderClientSelector()}
+                           {isConsultant && renderClientSelector()}
                         </div>
                     </div>
                      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -825,5 +819,3 @@ export default function ConsultancyPage() {
         </AppLayout>
     );
 }
-
-    

@@ -29,12 +29,11 @@ const ClientContext = createContext<ClientContextValue>({
 export const ClientProvider = ({ children }: { children: ReactNode }) => {
     const { user, loading: userLoading } = useUser();
     const db = useFirestore();
-    const pathname = usePathname();
 
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [isClientLoading, setClientLoading] = useState(true);
     
-    // This state holds the client ID for the logged-in user
+    // This state holds the client ID for the logged-in user if they are a 'client_user'
     const [userNativeClientId, setUserNativeClientId] = useState<string | null>(null);
     
     // This state holds the client ID selected by a consultant in the /consultoria page
@@ -49,8 +48,8 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
         }
         if (!user || !db) {
             setClientLoading(false);
-            setUserNativeClientId(null);
             setUserProfile(null);
+            setUserNativeClientId(null);
             return;
         }
 
@@ -59,14 +58,20 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
             if (doc.exists()) {
                 const profile = doc.data() as UserProfile;
                 setUserProfile(profile);
-                if (profile.role !== 'consultant') {
-                    setUserNativeClientId(profile.clientId);
+                if (profile.role === 'consultant') {
+                    setUserNativeClientId(null);
                 } else {
-                    setUserNativeClientId(null); // Consultants don't have a native client
+                    setUserNativeClientId(profile.clientId);
                 }
             } else {
-                console.warn(`User profile not found for uid: ${user.uid}`);
-                setUserProfile(null);
+                // If the user profile doesn't exist, check if they are a hardcoded consultant
+                const authorizedConsultants = ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'];
+                if (user.email && authorizedConsultants.includes(user.email)) {
+                    setUserProfile({ role: 'consultant', clientId: '' }); // Mock profile for consultant
+                } else {
+                    console.warn(`User profile not found for uid: ${user.uid}`);
+                    setUserProfile(null);
+                }
                 setUserNativeClientId(null);
             }
             setClientLoading(false);
@@ -84,18 +89,9 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
         }
     }, [isConsultant]);
 
-    // If the user is a consultant, the active clientId is the one they selected.
-    // Otherwise, it's their native clientId.
+    // The active clientId depends on the user's role.
+    // A consultant's context is what they select. A client_user's context is always their own company.
     const activeClientId = isConsultant ? consultantSelectedClientId : userNativeClientId;
-    
-    // If a consultant navigates away from the consultoria page, we should probably clear
-    // the selected client ID so other pages default to their native one (if any) or show a message.
-    useEffect(() => {
-        if (isConsultant && pathname !== '/consultoria') {
-           // setConsultantSelectedClientId(null);
-        }
-    }, [pathname, isConsultant]);
-
 
     return (
         <ClientContext.Provider value={{ 
@@ -118,5 +114,3 @@ export const useClient = () => {
     }
     return context;
 };
-
-    
