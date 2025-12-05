@@ -363,7 +363,7 @@ export default function ConsultancyPage() {
     
     const [actions, setActions] = useState<ConsultancyAction[]>([]);
     const [activities, setActivities] = useState<Activity[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoadingData, setIsLoadingData] = useState(true);
     const [isLoadingClients, setIsLoadingClients] = useState(true);
     const [isDeleting, startDeleteTransition] = useTransition();
     
@@ -373,15 +373,15 @@ export default function ConsultancyPage() {
     const unclassifiedCount = useMemo(() => activities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [activities]);
     
     useEffect(() => {
-      if (!userLoading && !user) {
-        router.push('/login');
-      }
+        if (!userLoading && !user) {
+            router.push('/login');
+        }
     }, [user, userLoading, router]);
 
     useEffect(() => {
-        if (!isConsultant || !db) { 
-            setIsLoadingClients(false); 
-            return; 
+        if (!isConsultant || !db) {
+            setIsLoadingClients(false);
+            return;
         }
 
         setIsLoadingClients(true);
@@ -389,29 +389,35 @@ export default function ConsultancyPage() {
         const unsubClients = onSnapshot(clientsQuery, (snapshot) => {
             const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Client));
             setAllClients(clientsData);
-            
-            if (!selectedClientId && clientsData.length > 0) {
-                setSelectedClientId(clientsData[0].id);
-            }
             setIsLoadingClients(false);
-        }, () => setIsLoadingClients(false));
-        
+        }, (err) => {
+            console.error("Error fetching clients:", err);
+            setIsLoadingClients(false);
+        });
+
         return () => unsubClients();
-    }, [db, isConsultant, selectedClientId, setSelectedClientId]);
+    }, [db, isConsultant]);
+
+    // Effect to select the first client if none is selected
+    useEffect(() => {
+        if (!selectedClientId && allClients.length > 0) {
+            setSelectedClientId(allClients[0].id);
+        }
+    }, [allClients, selectedClientId, setSelectedClientId]);
 
     useEffect(() => {
         if (!selectedClientId || !db) {
             setActions([]);
             setActivities([]);
-            setIsLoading(false);
+            setIsLoadingData(false);
             return;
         }
 
-        setIsLoading(true);
+        setIsLoadingData(true);
         let activeSubscriptions = 2;
         const onSubscriptionLoaded = () => {
             activeSubscriptions--;
-            if(activeSubscriptions === 0) setIsLoading(false);
+            if(activeSubscriptions === 0) setIsLoadingData(false);
         }
 
         const actionsCollectionRef = collection(db, 'clients', selectedClientId, 'actions');
@@ -554,10 +560,10 @@ export default function ConsultancyPage() {
         if (isLoadingClients) {
             return <Loader2 className="h-6 w-6 animate-spin text-primary" />;
         }
-
+    
         if (allClients.length === 0) {
             return (
-                 <AddClientDialog onClientAdded={(id) => setSelectedClientId(id)}>
+                <AddClientDialog onClientAdded={(id) => setSelectedClientId(id)}>
                     <Button>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Adicionar Primeiro Cliente
@@ -565,7 +571,7 @@ export default function ConsultancyPage() {
                 </AddClientDialog>
             );
         }
-
+    
         return (
             <Select value={selectedClientId || ''} onValueChange={setSelectedClientId}>
                 <SelectTrigger className="w-[280px]">
@@ -578,9 +584,11 @@ export default function ConsultancyPage() {
                 </SelectContent>
             </Select>
         );
-    }
+    };
 
-    if (userLoading || isClientLoading) {
+    const isLoadingPage = userLoading || isClientLoading;
+
+    if (isLoadingPage) {
         return (
             <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0 || allClients.length > 0}>
                 <div className="flex justify-center items-center h-[80vh] w-full"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
@@ -629,7 +637,7 @@ export default function ConsultancyPage() {
                             </div>
                         </CardContent>
                     </Card>
-                ) : isLoading ? (
+                ) : isLoadingData ? (
                     <div className="flex justify-center items-center h-[50vh]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
                 ) : (
                 <>
@@ -816,5 +824,3 @@ export default function ConsultancyPage() {
         </AppLayout>
     );
 }
-
-    
