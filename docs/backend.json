@@ -106,6 +106,10 @@
             "format": "date-time"
           },
           "description": "A history of the last execution dates of the activity."
+        },
+        "parentId": {
+          "type": ["string", "null"],
+          "description": "The ID of the parent activity, if this is a sub-task."
         }
       },
       "required": ["nome", "status", "createdAt", "statusTransicao"]

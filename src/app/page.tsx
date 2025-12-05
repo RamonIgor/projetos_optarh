@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition, FormEvent } from 'react';
+import { useState, useEffect, useTransition, FormEvent, useMemo } from 'react';
 import { collection, addDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, doc } from 'firebase/firestore';
 import { type Activity } from '@/types/activity';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { X, Plus, Loader2, ThumbsUp, ActivitySquare, Square } from 'lucide-react';
+import { X, Plus, Loader2, ThumbsUp, ActivitySquare, Square, GitBranchPlus } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useFirestore } from '@/firebase';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -17,6 +17,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
 import AppLayout from '@/components/AppLayout';
+import { cn } from '@/lib/utils';
 
 const ACTIVITIES_COLLECTION = 'rh-dp-activities';
 
@@ -34,6 +35,98 @@ const statusInfo: { [key: string]: { label: string; icon: React.ReactNode; varia
 };
 
 
+function ActivityItem({ activity, isSubItem = false, onAddSubActivity, onDeleteActivity }: { activity: Activity, isSubItem?: boolean, onAddSubActivity: (parentId: string, name: string) => void, onDeleteActivity: (id: string) => void }) {
+    const [showAddSub, setShowAddSub] = useState(false);
+    const [subActivityName, setSubActivityName] = useState("");
+    const [isAdding, startAdding] = useTransition();
+    const [isDeleting, startDeleting] = useTransition();
+
+    const status = statusInfo[activity.status] || statusInfo.brainstorm;
+    const isDeletable = activity.status === 'brainstorm';
+
+    const handleAddSubmit = (e: FormEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if(!subActivityName.trim()) return;
+
+        startAdding(() => {
+            onAddSubActivity(activity.id, subActivityName);
+            setSubActivityName("");
+            setShowAddSub(false);
+        });
+    }
+
+    const handleDelete = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        startDeleting(() => {
+            onDeleteActivity(activity.id);
+        })
+    }
+
+    return (
+        <motion.div
+            layout
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, x: -50, transition: { duration: 0.2 } }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className={cn("p-3 bg-muted/50 rounded-lg", isSubItem && "ml-8")}
+        >
+             <div className="flex items-center justify-between">
+                <span className="font-medium text-foreground">{activity.nome}</span>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                    <Badge variant={status.variant} className={status.className}>
+                    <div className="flex items-center gap-1.5">
+                        {status.icon}
+                        {status.label}
+                    </div>
+                    </Badge>
+                     {!isSubItem && (
+                        <Button
+                            variant="ghost" size="icon" className="h-8 w-8"
+                            onClick={(e) => { e.stopPropagation(); setShowAddSub(!showAddSub); }}
+                            aria-label="Adicionar micro-processo"
+                            title="Adicionar micro-processo"
+                        >
+                            <GitBranchPlus className="h-4 w-4"/>
+                        </Button>
+                    )}
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed" 
+                        onClick={handleDelete} 
+                        disabled={isDeleting || !isDeletable} 
+                        aria-label={`Excluir ${activity.nome}`}
+                        title={isDeletable ? "Excluir" : "Apenas atividades 'Não classificadas' podem ser excluídas daqui."}
+                    >
+                        {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                    </Button>
+                </div>
+            </div>
+            {showAddSub && (
+                <motion.div initial={{opacity: 0, height: 0}} animate={{opacity: 1, height: 'auto'}} className="mt-2">
+                    <form onSubmit={handleAddSubmit} className="flex gap-2 ml-6">
+                         <Input
+                            type="text"
+                            placeholder="Nome do micro-processo"
+                            value={subActivityName}
+                            onChange={(e) => setSubActivityName(e.target.value)}
+                            className="h-9"
+                            disabled={isAdding}
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label="Novo micro-processo"
+                        />
+                        <Button type="submit" size="sm" className="h-9" disabled={isAdding || !subActivityName.trim()}>
+                           {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                        </Button>
+                    </form>
+                </motion.div>
+            )}
+        </motion.div>
+    )
+}
+
 export default function BrainstormPage() {
   const db = useFirestore();
   const { user, loading: userLoading } = useUser();
@@ -42,17 +135,14 @@ export default function BrainstormPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [newActivityName, setNewActivityName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [isAdding, setIsAdding] = useTransition();
-  const [isDeleting, startDeleteTransition] = useTransition();
+  const [isAdding, startMainAddTransition] = useTransition();
 
   const [dialogState, setDialogState] = useState<{ open: boolean; similarTo?: string; nameToAdd?: string }>({ open: false });
   
   const { toast } = useToast();
 
   useEffect(() => {
-    if (userLoading) {
-      return; // Wait until user state is resolved
-    }
+    if (userLoading) return;
     if (!user) {
       router.push('/login');
       return;
@@ -66,20 +156,13 @@ export default function BrainstormPage() {
     const q = query(activitiesCollectionRef, orderBy("createdAt", "desc"));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const activitiesData: Activity[] = [];
-      querySnapshot.forEach((doc) => {
-        activitiesData.push({ id: doc.id, ...doc.data() } as Activity);
-      });
+      const activitiesData: Activity[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
       setActivities(activitiesData);
       setIsLoading(false);
     }, 
     async (error) => {
-      const permissionError = new FirestorePermissionError({
-        path: activitiesCollectionRef.path,
-        operation: 'list',
-      });
+      const permissionError = new FirestorePermissionError({ path: activitiesCollectionRef.path, operation: 'list' });
       errorEmitter.emit('permission-error', permissionError);
-      
       toast({
         title: "Erro ao carregar atividades",
         description: "Houve um problema ao buscar os dados. Verifique as permissões de leitura.",
@@ -90,16 +173,39 @@ export default function BrainstormPage() {
 
     return () => unsubscribe();
   }, [db, toast, user, userLoading, router]);
+  
+  const activityTree = useMemo(() => {
+    const tree: (Activity & { children: Activity[] })[] = [];
+    const childrenOf: Record<string, Activity[]> = {};
 
-  const addActivity = (name: string) => {
+    for (const activity of activities) {
+        if (activity.parentId) {
+            if (!childrenOf[activity.parentId]) {
+                childrenOf[activity.parentId] = [];
+            }
+            childrenOf[activity.parentId].push(activity);
+        } else {
+            tree.push({ ...activity, children: [] });
+        }
+    }
+
+    for (const item of tree) {
+        item.children = childrenOf[item.id] || [];
+    }
+
+    return tree;
+  }, [activities]);
+
+
+  const addActivity = (name: string, parentId: string | null = null) => {
     const trimmedName = name.trim();
     if (!trimmedName || !db) return;
-
+    
     setNewActivityName("");
     
-    setIsAdding(() => {
-      const activityData = {
+    const activityData: Omit<Activity, 'id' | 'createdAt'> & { createdAt: any } = {
         nome: trimmedName,
+        parentId: parentId,
         categoria: null,
         justificativa: null,
         responsavel: null,
@@ -119,7 +225,7 @@ export default function BrainstormPage() {
       const activitiesCollection = collection(db, ACTIVITIES_COLLECTION);
       addDoc(activitiesCollection, activityData)
         .catch(async (error) => {
-          setNewActivityName(name); // Restore input on error
+          if (!parentId) setNewActivityName(name); // Restore input on error for main activity
           const permissionError = new FirestorePermissionError({
             path: activitiesCollection.path,
             operation: 'create',
@@ -132,7 +238,6 @@ export default function BrainstormPage() {
             variant: "destructive",
           });
         });
-    });
   };
 
   const handleAddSubmit = (e: FormEvent) => {
@@ -140,13 +245,14 @@ export default function BrainstormPage() {
     const trimmedName = newActivityName.trim();
     if (!trimmedName || isAdding) return;
     
-    const similar = activities.find(act => isSimilar(act.nome, trimmedName));
-
-    if (similar) {
-      setDialogState({ open: true, similarTo: similar.nome, nameToAdd: trimmedName });
-    } else {
-      addActivity(trimmedName);
-    }
+    startMainAddTransition(() => {
+        const similar = activities.find(act => !act.parentId && isSimilar(act.nome, trimmedName));
+        if (similar) {
+          setDialogState({ open: true, similarTo: similar.nome, nameToAdd: trimmedName });
+        } else {
+          addActivity(trimmedName);
+        }
+    });
   };
 
   const handleConfirmAdd = () => {
@@ -158,20 +264,16 @@ export default function BrainstormPage() {
 
   const handleDeleteActivity = (id: string) => {
     if (!db) return;
-    startDeleteTransition(() => {
-      const docRef = doc(db, ACTIVITIES_COLLECTION, id);
-      deleteDoc(docRef)
-        .catch(async (error) => {
-          const permissionError = new FirestorePermissionError({
-            path: docRef.path,
-            operation: 'delete',
-          });
-          errorEmitter.emit('permission-error', permissionError);
-          toast({
-            title: "Erro ao excluir atividade",
-            description: "Não foi possível excluir a atividade. Verifique as permissões.",
-            variant: "destructive",
-          });
+    
+    const docRef = doc(db, ACTIVITIES_COLLECTION, id);
+    deleteDoc(docRef)
+    .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({ path: docRef.path, operation: 'delete' });
+        errorEmitter.emit('permission-error', permissionError);
+        toast({
+        title: "Erro ao excluir atividade",
+        description: "Não foi possível excluir a atividade. Verifique as permissões.",
+        variant: "destructive",
         });
     });
   };
@@ -191,14 +293,14 @@ export default function BrainstormPage() {
       <div className="max-w-4xl mx-auto w-full">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <h1 className="text-4xl md:text-5xl font-bold text-center text-primary tracking-tight">Brainstorm de Atividades</h1>
-          <p className="mt-4 text-lg text-center text-muted-foreground">Liste todas as atividades que vocês realizam hoje. Não se preocupe com a classificação ainda.</p>
+          <p className="mt-4 text-lg text-center text-muted-foreground">Liste todas as atividades e seus micro-processos. Não se preocupe com a classificação ainda.</p>
         </motion.div>
 
         <Card className="mt-8 shadow-lg dark:shadow-black/20">
           <CardHeader>
             <div className="flex justify-between items-start">
               <div>
-                <CardTitle className="text-xl">Adicionar Nova Atividade</CardTitle>
+                <CardTitle className="text-xl">Adicionar Nova Atividade Principal</CardTitle>
               </div>
               <div className="text-sm font-medium text-muted-foreground pt-1">{activities.length} atividades levantadas</div>
             </div>
@@ -210,7 +312,7 @@ export default function BrainstormPage() {
                 onChange={(e) => setNewActivityName(e.target.value)}
                 className="h-12 text-base"
                 disabled={isAdding}
-                aria-label="Nova atividade"
+                aria-label="Nova atividade principal"
               />
               <Button type="submit" size="lg" className="h-12 w-full sm:w-auto" disabled={isAdding || !newActivityName.trim()}>
                 {isAdding ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5 sm:mr-2" />}
@@ -224,52 +326,38 @@ export default function BrainstormPage() {
                  <div className="flex justify-center items-center py-10">
                     <Loader2 className="h-8 w-8 animate-spin text-primary"/>
                  </div>
-              ) : activities.length === 0 ? (
+              ) : activityTree.length === 0 ? (
                  <div className="text-center py-10 border-2 border-dashed rounded-lg">
                   <h3 className="text-lg font-semibold">Tudo limpo por aqui!</h3>
                   <p className="mt-1 text-muted-foreground">Comece a adicionar as atividades da sua equipe no campo acima.</p>
                 </div>
               ) : (
-                <ul className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
+                <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
                   <AnimatePresence>
-                    {activities.map((activity) => {
-                      const status = statusInfo[activity.status] || statusInfo.brainstorm;
-                      const isDeletable = activity.status === 'brainstorm';
-                      return (
-                        <motion.li
-                          key={activity.id}
-                          layout
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, x: -50, transition: { duration: 0.2 } }}
-                          transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                          className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                        >
-                          <span className="font-medium text-foreground">{activity.nome}</span>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                             <Badge variant={status.variant} className={status.className}>
-                              <div className="flex items-center gap-1.5">
-                                {status.icon}
-                                {status.label}
-                              </div>
-                            </Badge>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed" 
-                              onClick={() => handleDeleteActivity(activity.id)} 
-                              disabled={isDeleting || !isDeletable} 
-                              aria-label={`Excluir ${activity.nome}`}
-                              title={isDeletable ? "Excluir" : "Apenas atividades 'Não classificadas' podem ser excluídas daqui."}
-                            >
-                              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
-                            </Button>
-                          </div>
-                        </motion.li>
-                      )
-                    })}
+                    {activityTree.map((activity) => (
+                        <div key={activity.id}>
+                            <ActivityItem 
+                                activity={activity} 
+                                onAddSubActivity={addActivity}
+                                onDeleteActivity={handleDeleteActivity}
+                            />
+                             {activity.children.length > 0 && (
+                                <div className="space-y-2 mt-2">
+                                    {activity.children.map(child => (
+                                         <ActivityItem 
+                                            key={child.id}
+                                            activity={child}
+                                            isSubItem={true}
+                                            onAddSubActivity={addActivity}
+                                            onDeleteActivity={handleDeleteActivity}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ))}
                   </AnimatePresence>
-                </ul>
+                </div>
               )}
             </div>
           </CardContent>

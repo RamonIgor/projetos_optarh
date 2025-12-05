@@ -24,6 +24,7 @@ export interface Activity {
   dataConclusaoTransicao: Timestamp | Date | null;
   prazoTransicao: Timestamp | Date | null;
   historicoExecucoes?: (Timestamp | Date)[];
+  parentId: string | null;
 }
 
 export interface ConsultancyAction {
