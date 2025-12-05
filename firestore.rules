@@ -2,11 +2,40 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /rh-dp-activities/{activityId} {
-      allow read, write: if request.auth != null;
+    // Helper function to check if a user is a consultant
+    function isConsultant() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'consultant';
     }
-    match /consultancy-actions/{actionId} {
-      allow read, write: if request.auth != null;
+
+    // Helper function to check if a user belongs to a specific client
+    function isClientMember(clientId) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.clientId == clientId;
+    }
+
+    // Rules for the 'users' collection
+    match /users/{userId} {
+      // Only authenticated users can read their own user data
+      // Consultants can read any user's data
+      allow read: if request.auth != null && (request.auth.uid == userId || isConsultant());
+      // Only consultants can create or update user roles/client associations
+      allow write: if request.auth != null && isConsultant();
+    }
+
+    // Rules for the 'clients' collection and its subcollections
+    match /clients/{clientId} {
+      // Allow read/write access to client data only for members of that client or consultants
+      allow read, write: if request.auth != null && (isClientMember(clientId) || isConsultant());
+
+      match /activities/{activityId} {
+        // Inherits parent read/write rules. Members of the client or consultants can access.
+        allow read, write: if request.auth != null && (isClientMember(clientId) || isConsultant());
+      }
+      
+      match /actions/{actionId} {
+         // Only consultants should be able to write to consultancy actions
+        allow read: if request.auth != null && (isClientMember(clientId) || isConsultant());
+        allow write: if request.auth != null && isConsultant();
+      }
     }
   }
 }

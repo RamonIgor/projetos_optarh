@@ -1,5 +1,45 @@
 {
   "entities": {
+    "Client": {
+      "title": "Client",
+      "description": "Represents a client company.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the client company."
+        },
+        "logoUrl": {
+          "type": ["string", "null"],
+          "description": "URL for the client's logo."
+        },
+        "userIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of Firebase Auth user IDs associated with this client."
+        }
+      },
+      "required": ["name"]
+    },
+    "User": {
+        "title": "User",
+        "description": "Maps a Firebase Auth user to a client.",
+        "type": "object",
+        "properties": {
+            "clientId": {
+                "type": "string",
+                "description": "The ID of the client this user belongs to."
+            },
+            "role": {
+                "type": "string",
+                "enum": ["client_user", "consultant"],
+                "description": "The role of the user."
+            }
+        },
+        "required": ["clientId", "role"]
+    },
     "ActivityComment": {
       "title": "Activity Comment",
       "description": "A comment on an activity.",
@@ -176,17 +216,33 @@
     "providers": ["password"]
   },
   "firestore": {
-    "/rh-dp-activities/{activityId}": {
-      "schema": {
-        "$ref": "#/entities/Activity"
-      },
-      "description": "Stores all the activities created during the brainstorming and classification phases."
-    },
-    "/consultancy-actions/{actionId}": {
+    "/clients/{clientId}": {
         "schema": {
-            "$ref": "#/entities/ConsultancyAction"
+            "$ref": "#/entities/Client"
         },
-        "description": "Stores all action items from the consultancy dashboard."
+        "description": "Stores information about each client company.",
+        "subcollections": {
+            "activities": {
+                "path": "/clients/{clientId}/activities/{activityId}",
+                "schema": {
+                    "$ref": "#/entities/Activity"
+                },
+                "description": "Stores all activities for a specific client."
+            },
+            "actions": {
+                "path": "/clients/{clientId}/actions/{actionId}",
+                "schema": {
+                    "$ref": "#/entities/ConsultancyAction"
+                },
+                "description": "Stores all consultancy action items for a specific client."
+            }
+        }
+    },
+    "/users/{userId}": {
+        "schema": {
+            "$ref": "#/entities/User"
+        },
+        "description": "Maps Firebase Auth UIDs to client IDs and roles."
     }
   }
 }
