@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -203,7 +204,7 @@ export default function ClassificationPage() {
         unsubAll();
         unsubscribe();
     }
-  }, [db, user, userLoading, router, view, clientId, isClientLoading]);
+  }, [db, user, userLoading, router, view, clientId, isClientLoading, currentActivityId]);
 
   useEffect(() => {
     if (currentActivity) {
@@ -668,5 +669,3 @@ function SummaryScreen({ stats, onReviewPending, onReviewApproved }: { stats: { 
     </div>
   )
 }
-
-    
