@@ -3,7 +3,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { 
   signInWithEmailAndPassword,
-  type AuthError
+  type AuthError,
+  type User
 } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/firebase';
@@ -15,6 +16,18 @@ import { Loader2, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
+
+const isFirstLogin = (user: User) => {
+    const { creationTime, lastSignInTime } = user.metadata;
+    if (!creationTime || !lastSignInTime) return false;
+
+    const creation = new Date(creationTime).getTime();
+    const lastSignIn = new Date(lastSignInTime).getTime();
+    
+    // Consider it the first login if the difference is less than a few seconds
+    return Math.abs(creation - lastSignIn) < 5000; 
+}
+
 
 export default function LoginPage() {
   const auth = useAuth();
@@ -28,7 +41,11 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.push('/');
+        if(isFirstLogin(user)) {
+            router.push('/change-password');
+        } else {
+            router.push('/');
+        }
     }
   }, [user, loading, router]);
 
@@ -71,8 +88,12 @@ export default function LoginPage() {
     if (!auth || !email || !password) return;
     setIsSubmitting(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.push('/');
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      if (isFirstLogin(userCredential.user)) {
+          router.push('/change-password');
+      } else {
+          router.push('/');
+      }
     } catch (error) {
       handleAuthError(error as AuthError);
     } finally {
