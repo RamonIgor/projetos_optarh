@@ -220,6 +220,7 @@ export default function BrainstormPage() {
         dataInicioTransicao: null,
         dataConclusaoTransicao: null,
         prazoTransicao: null,
+        historicoExecucoes: [],
       };
 
       const activitiesCollection = collection(db, ACTIVITIES_COLLECTION);

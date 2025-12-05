@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -366,7 +365,7 @@ export default function ClassificationPage() {
                 </TabsList>
               </Tabs>
             </div>
-            <ActivityList activities={filteredActivities} currentActivityId={currentActivityId} goToActivity={goToActivity} />
+            <ActivityList allActivities={allActivities} activities={filteredActivities} currentActivityId={currentActivityId} goToActivity={goToActivity} />
           </SheetContent>
         </Sheet>
 
@@ -378,7 +377,7 @@ export default function ClassificationPage() {
                 <TabsTrigger value="approved">Aprovadas</TabsTrigger>
               </TabsList>
              </Tabs>
-            <ActivityList activities={filteredActivities} currentActivityId={currentActivityId} goToActivity={goToActivity} />
+            <ActivityList allActivities={allActivities} activities={filteredActivities} currentActivityId={currentActivityId} goToActivity={goToActivity} />
         </aside>
         
         <div className="flex-1 flex flex-col">
@@ -521,10 +520,21 @@ export default function ClassificationPage() {
 }
 
 
-function ActivityList({ activities, currentActivityId, goToActivity }: { activities: Activity[], currentActivityId: string | null, goToActivity: (id: string) => void }) {
+function ActivityList({ allActivities, activities, currentActivityId, goToActivity }: { allActivities: Activity[], activities: Activity[], currentActivityId: string | null, goToActivity: (id: string) => void }) {
   if (!activities || activities.length === 0) {
       return <div className="text-center text-sm text-muted-foreground p-10">Nenhuma atividade encontrada nesta lista.</div>
   }
+  
+  const getName = (activity: Activity) => {
+    if (activity.parentId) {
+      const parent = allActivities.find(a => a.id === activity.parentId);
+      if (parent) {
+        return `${parent.nome} » ${activity.nome}`;
+      }
+    }
+    return activity.nome;
+  }
+  
   return (
     <ScrollArea className="h-[calc(100vh-280px)] px-4 sm:px-0">
       <ul className="space-y-2 pr-4">
@@ -538,7 +548,7 @@ function ActivityList({ activities, currentActivityId, goToActivity }: { activit
               )}
             >
               <span title={statusLabels[act.status]}>{statusIcons[act.status as keyof typeof statusIcons]}</span>
-              <span className="flex-1 truncate">{act.nome}</span>
+              <span className="flex-1 truncate">{getName(act)}</span>
               <Badge variant={act.id === currentActivityId ? 'default' : 'secondary'} className="hidden lg:inline-flex">{statusLabels[act.status]}</Badge>
             </button>
           </li>
@@ -652,5 +662,3 @@ function SummaryScreen({ stats, onReviewPending, onReviewApproved }: { stats: { 
     </div>
   )
 }
-
-    
