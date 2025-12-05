@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { doc, setDoc } from 'firebase/firestore';
 import { useFirestore, useClient, useAuth } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -20,16 +20,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { getApp, initializeApp } from 'firebase/app';
+import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { firebaseConfig } from '@/firebase/config';
+import { type Client } from '@/types/activity';
+import { collection, onSnapshot } from 'firebase/firestore';
+
 
 // This function creates a secondary, temporary Firebase app instance
 // to handle user creation without affecting the current user's session.
 const createSecondaryAuth = () => {
     const appName = `secondary-auth-app-${Date.now()}`;
-    const secondaryApp = initializeApp(firebaseConfig, appName);
-    return getAuth(secondaryApp);
+    try {
+        return getAuth(initializeApp(firebaseConfig, appName));
+    } catch(e) {
+        // Fallback for strict mode double-invoking this
+        return getAuth(initializeApp(firebaseConfig, `${appName}-fallback`));
+    }
 };
 
 
@@ -100,7 +107,7 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
                     />
                 </div>
                  <p className="text-sm text-muted-foreground">
-                    Isto criará o login no sistema de autenticação. A associação ao cliente deve ser feita manualmente no Firebase Console por enquanto.
+                    Isto criará um login. O usuário deverá alterar a senha no primeiro acesso. O próximo passo é associá-lo a um cliente.
                 </p>
             </div>
             <DialogFooter className="mt-6">
@@ -119,19 +126,108 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
 }
 
 export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
+    const db = useFirestore();
+    const { toast } = useToast();
+    const [uid, setUid] = useState('');
+    const [role, setRole] = useState<'client_user' | 'consultant'>('client_user');
+    const [selectedClient, setSelectedClient] = useState('');
+    const [clients, setClients] = useState<Client[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, startTransition] = useTransition();
+
+    useEffect(() => {
+        if (!db) return;
+        setIsLoading(true);
+        const clientsQuery = collection(db, 'clients');
+        const unsubscribe = onSnapshot(clientsQuery, (snapshot) => {
+            const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Client));
+            setClients(clientsData);
+            setIsLoading(false);
+        });
+        return () => unsubscribe();
+    }, [db]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!db || !uid || !role || (role === 'client_user' && !selectedClient)) {
+            toast({ variant: 'destructive', title: 'Campos obrigatórios', description: 'Preencha todos os campos para associar o usuário.' });
+            return;
+        }
+
+        startTransition(async () => {
+            try {
+                const userDocRef = doc(db, 'users', uid);
+                await setDoc(userDocRef, {
+                    clientId: role === 'consultant' ? '' : selectedClient,
+                    role: role
+                });
+
+                toast({ title: 'Usuário associado com sucesso!' });
+                setUid('');
+                setRole('client_user');
+                setSelectedClient('');
+                onFinished();
+            } catch (error) {
+                console.error("Error associating user:", error);
+                toast({ variant: 'destructive', title: 'Erro ao associar', description: 'Não foi possível salvar a associação.' });
+            }
+        });
+    }
+
     return (
-        <div className="py-4 space-y-4">
+        <form onSubmit={handleSubmit} className="py-4 space-y-4">
             <Alert>
                 <Terminal className="h-4 w-4" />
-                <AlertTitle>Associação Manual Necessária</AlertTitle>
+                <AlertTitle>Como encontrar o UID?</AlertTitle>
                 <AlertDescription>
-                    A associação de um usuário existente a um cargo precisa ser feita diretamente no console do Firebase para garantir a segurança.
+                    Para associar um usuário, você precisa do UID (User ID) dele. Vá para o <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="underline font-bold">Firebase Console</a>, navegue até a seção 'Authentication', encontre o usuário e copie o UID.
                 </AlertDescription>
             </Alert>
-             <DialogFooter className="mt-6">
-                <Button type="button" variant="outline" onClick={onFinished}>Fechar</Button>
+            <div className="grid gap-2">
+                <Label htmlFor="uid">UID do Usuário</Label>
+                <Input
+                    id="uid"
+                    placeholder="Cole o UID do usuário aqui"
+                    value={uid}
+                    onChange={(e) => setUid(e.target.value)}
+                    required
+                />
+            </div>
+            <div className="grid gap-2">
+                <Label htmlFor="role">Cargo</Label>
+                <Select value={role} onValueChange={(value) => setRole(value as any)}>
+                    <SelectTrigger id="role">
+                        <SelectValue placeholder="Selecione o cargo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="client_user">Usuário do Cliente</SelectItem>
+                        <SelectItem value="consultant">Consultor(a)</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+
+            {role === 'client_user' && (
+                <div className="grid gap-2">
+                    <Label htmlFor="client">Cliente</Label>
+                    <Select value={selectedClient} onValueChange={setSelectedClient} disabled={isLoading}>
+                        <SelectTrigger id="client">
+                            <SelectValue placeholder={isLoading ? 'Carregando clientes...' : 'Selecione o cliente'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+            )}
+
+            <DialogFooter className="mt-6">
+                <Button type="button" variant="outline" onClick={onFinished}>Cancelar</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
+                    Associar Usuário
+                </Button>
             </DialogFooter>
-        </div>
+        </form>
     );
 }
 
