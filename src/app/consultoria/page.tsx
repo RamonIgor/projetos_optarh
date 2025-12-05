@@ -379,6 +379,7 @@ export default function ConsultancyPage() {
         if (userLoading || isClientLoading) return;
         if (!user) {
             router.push('/login');
+            return;
         }
     }, [user, userLoading, isClientLoading, router]);
 
@@ -562,8 +563,11 @@ export default function ConsultancyPage() {
         );
     }
     
-    const CurrentClientSelect = () => (
-       allClients.length > 0 ? (
+    const CurrentClientSelect = () => {
+       if (allClients.length === 0) {
+           return <AddClientDialog onClientAdded={(id) => setSelectedClientId(id)} />;
+       }
+       return (
         <Select value={selectedClientId || ''} onValueChange={setSelectedClientId}>
             <SelectTrigger className="w-[280px]">
                 <SelectValue placeholder="Selecione um cliente" />
@@ -574,15 +578,13 @@ export default function ConsultancyPage() {
                 ))}
             </SelectContent>
         </Select>
-       ) : (
-            <AddClientDialog onClientAdded={(id) => setSelectedClientId(id)} />
-       )
-    );
+       );
+    };
 
     return (
         <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0 || allClients.length > 0}>
             <div className="space-y-8 max-w-7xl mx-auto w-full">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-start">
                     <div>
                         <h1 className="text-4xl font-bold text-primary">Painel da Consultoria</h1>
                         <div className="mt-4">
@@ -617,7 +619,6 @@ export default function ConsultancyPage() {
                                 <Building className="h-16 w-16 text-muted-foreground" />
                                 <h2 className="text-2xl font-semibold">Nenhum Cliente Cadastrado ou Selecionado</h2>
                                 <p className="mt-2 text-muted-foreground max-w-md">Para começar, adicione seu primeiro cliente ou selecione um cliente existente na lista acima.</p>
-                                {allClients.length === 0 && <AddClientDialog onClientAdded={(id) => setSelectedClientId(id)} />}
                             </div>
                         </CardContent>
                     </Card>
