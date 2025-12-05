@@ -149,9 +149,13 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
                             <SelectValue placeholder={isLoadingClients ? "Carregando clientes..." : "Selecione um cliente"} />
                         </SelectTrigger>
                         <SelectContent>
-                            {clients.length > 0 ? clients.map(client => (
-                                <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                            )) : <SelectItem value="" disabled>Nenhum cliente encontrado</SelectItem>}
+                            {clients.length > 0 ? (
+                                clients.map(client => (
+                                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                                ))
+                            ) : (
+                                <div className="px-2 py-1.5 text-sm text-muted-foreground">Nenhum cliente encontrado.</div>
+                            )}
                         </SelectContent>
                     </Select>
                 </div>
