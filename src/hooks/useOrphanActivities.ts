@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { type Activity } from '@/types/activity';
 import { useClient } from '@/firebase';
@@ -29,12 +29,16 @@ export function useOrphanActivities(): UseOrphanActivitiesReturn {
       return;
     }
     
-    // This assumes orphan activities are in a root collection named 'activities'
-    // and they lack the 'clientId' field.
-    const q = query(collection(db, 'activities'), where('clientId', '==', null));
+    // Query for all documents in the root 'activities' collection.
+    // We will filter for orphans on the client-side, as querying for a non-existent field is tricky.
+    const q = query(collection(db, 'activities'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
+      // Filter for documents that do NOT have the clientId field.
+      const activitiesData = snapshot.docs
+        .filter(doc => !doc.data().clientId)
+        .map(doc => ({ id: doc.id, ...doc.data() } as Activity));
+        
       setOrphanActivities(activitiesData);
       setLoading(false);
     }, (error) => {
