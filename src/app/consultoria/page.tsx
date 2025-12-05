@@ -375,20 +375,11 @@ export default function ConsultancyPage() {
     const unclassifiedCount = useMemo(() => activities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [activities]);
     
     useEffect(() => {
-        const pageIsLoading = userLoading || isClientLoading;
-        if (pageIsLoading) return;
-
+        if (userLoading || isClientLoading) return;
         if (!user) {
             router.push('/login');
-            return;
         }
-        
-        if (!isConsultant) {
-            router.push('/');
-            return;
-        }
-
-    }, [user, userLoading, isConsultant, isClientLoading, router]);
+    }, [user, userLoading, isClientLoading, router]);
 
     useEffect(() => {
         if (!isConsultant || !db) { 
@@ -617,14 +608,14 @@ export default function ConsultancyPage() {
                     </Dialog>
                 </div>
             
-                {!selectedClientId ? (
+                {!selectedClientId && isConsultant ? (
                      <Card>
                         <CardContent className="p-12 text-center">
                             <div className="flex flex-col items-center gap-4">
                                 <Building className="h-16 w-16 text-muted-foreground" />
-                                <h2 className="text-2xl font-semibold">Nenhum Cliente Cadastrado</h2>
-                                <p className="mt-2 text-muted-foreground max-w-md">Para começar, adicione seu primeiro cliente. Você poderá então gerenciar atividades, planos de ação e colaboradores para ele.</p>
-                                <AddClientDialog onClientAdded={(id) => setSelectedClientId(id)} />
+                                <h2 className="text-2xl font-semibold">Nenhum Cliente Cadastrado ou Selecionado</h2>
+                                <p className="mt-2 text-muted-foreground max-w-md">Para começar, adicione seu primeiro cliente ou selecione um cliente existente na lista acima.</p>
+                                {allClients.length === 0 && <AddClientDialog onClientAdded={(id) => setSelectedClientId(id)} />}
                             </div>
                         </CardContent>
                     </Card>
@@ -816,5 +807,7 @@ export default function ConsultancyPage() {
     );
 }
 
+
+    
 
     
