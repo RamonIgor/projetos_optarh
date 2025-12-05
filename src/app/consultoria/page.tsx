@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useTransition, useCallback } from 'react';
@@ -399,7 +400,7 @@ export default function ConsultancyPage() {
     
     const [actions, setActions] = useState<ConsultancyAction[]>([]);
     const [activities, setActivities] = useState<Activity[]>([]);
-    const [isLoadingData, setIsLoadingData] = useState(false);
+    const [isLoadingData, setIsLoadingData] = useState(true);
     const [isLoadingClients, setIsLoadingClients] = useState(true);
     const [isDeleting, startDeleteTransition] = useTransition();
     
@@ -408,15 +409,17 @@ export default function ConsultancyPage() {
 
     const unclassifiedCount = useMemo(() => activities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [activities]);
     
+    const isLoadingPage = userLoading || isClientLoading;
+
     useEffect(() => {
-        if (!userLoading && !user) {
+        if (!isLoadingPage && !user) {
             router.push('/login');
         }
-    }, [user, userLoading, router]);
+    }, [user, isLoadingPage, router]);
 
     // Effect to fetch the list of clients for consultants
     useEffect(() => {
-        if (!isConsultant || !db || !user) {
+        if (isLoadingPage || !isConsultant || !db || !user) {
             setIsLoadingClients(false);
             return;
         }
@@ -433,7 +436,7 @@ export default function ConsultancyPage() {
         });
 
         return () => unsubClients();
-    }, [db, isConsultant, user]);
+    }, [db, isConsultant, user, isLoadingPage]);
 
     const handleClientAdded = useCallback((newClientId: string) => {
         setSelectedClientId(newClientId);
@@ -441,10 +444,10 @@ export default function ConsultancyPage() {
     
     // Data fetching for the selected client
     useEffect(() => {
-        if (!selectedClientId || !db || !user) {
+        if (isLoadingPage || !selectedClientId || !db || !user) {
             setActions([]);
             setActivities([]);
-            setIsLoadingData(false);
+            if (!isLoadingPage) setIsLoadingData(false);
             return;
         }
 
@@ -504,7 +507,7 @@ export default function ConsultancyPage() {
           unsubActions();
           unsubActivities();
         }
-    }, [db, selectedClientId, toast, user]);
+    }, [db, selectedClientId, toast, user, isLoadingPage]);
 
     const handleDelete = (actionId: string) => {
         if (!db || !selectedClientId) return;
@@ -597,8 +600,6 @@ export default function ConsultancyPage() {
         }
         return <ClientSelector clients={allClients} onClientAdded={handleClientAdded} />;
     };
-
-    const isLoadingPage = userLoading || isClientLoading;
 
     if (isLoadingPage) {
         return (
@@ -848,8 +849,3 @@ export default function ConsultancyPage() {
         </AppLayout>
     );
 }
-
-    
-
-    
-

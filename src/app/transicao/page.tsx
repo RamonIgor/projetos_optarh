@@ -189,11 +189,16 @@ export default function TransitionPage() {
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
     const [responsibleFilter, setResponsibleFilter] = useState('all');
+    
+    const isLoadingPage = userLoading || isClientLoading;
 
     useEffect(() => {
-        if (userLoading || isClientLoading) return;
+        if (isLoadingPage) {
+            setIsLoading(true);
+            return;
+        }
         if (!user) {
-            if(!userLoading) router.push('/login');
+            router.push('/login');
             return;
         }
         if (!db || !clientId) {
@@ -211,7 +216,7 @@ export default function TransitionPage() {
         }, () => setIsLoading(false));
 
         return () => unsubscribe();
-    }, [db, user, userLoading, router, clientId, isClientLoading]);
+    }, [db, user, router, clientId, isLoadingPage]);
     
     const getActivityName = (activity: Activity, all: Activity[]) => {
         if (activity.parentId) {
@@ -243,10 +248,10 @@ export default function TransitionPage() {
         return { total, toTransfer, inTransition, concluded, overdue, progress };
     }, [allActivities]);
     
-    if (userLoading || isLoading || isClientLoading) {
+    if (isLoadingPage || isLoading) {
         return (
             <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
-                <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="flex items-center justify-center min-h-[60vh] w-full">
                     <Loader2 className="h-10 w-10 animate-spin text-primary" />
                 </div>
             </AppLayout>
@@ -395,3 +400,4 @@ export default function TransitionPage() {
     
 
     
+

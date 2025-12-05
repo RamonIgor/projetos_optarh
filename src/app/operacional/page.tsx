@@ -115,8 +115,8 @@ function HistoryModal({ activity, name }: { activity: Activity, name: string }) 
         if (!activity.historicoExecucoes) return [];
         const sorted = [...(activity.historicoExecucoes || [])];
         sorted.sort((a, b) => {
-            const dateA = a instanceof Timestamp ? a.toDate() : a;
-            const dateB = b instanceof Timestamp ? b.toDate() : b;
+            const dateA = a instanceof Timestamp ? a.toDate() : new Date(a);
+            const dateB = b instanceof Timestamp ? b.toDate() : new Date(b);
             return dateB.getTime() - dateA.getTime();
         });
         return sorted;
@@ -145,7 +145,7 @@ function HistoryModal({ activity, name }: { activity: Activity, name: string }) 
                                         <div className="flex-1">
                                             <p className="font-medium">Execução concluída</p>
                                             <p className="text-muted-foreground text-xs">
-                                                {format(item instanceof Timestamp ? item.toDate() : item, "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
+                                                {format(item instanceof Timestamp ? item.toDate() : new Date(item), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
                                             </p>
                                         </div>
                                     </li>
@@ -220,15 +220,20 @@ export default function OperationalPage() {
     const [responsibleFilter, setResponsibleFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('pending'); // 'all', 'pending'
 
+    const isLoadingPage = userLoading || isClientLoading;
+
     useEffect(() => {
-        if (userLoading || isClientLoading) return;
+        if (isLoadingPage) {
+            setIsLoading(true);
+            return;
+        }
         if (!user) {
-            if(!userLoading) router.push('/login');
+            router.push('/login');
             return;
         }
         if (!db || !clientId) {
-            setAllActivities([]);
             setIsLoading(false);
+            setAllActivities([]);
             return;
         }
 
@@ -241,7 +246,7 @@ export default function OperationalPage() {
         }, () => setIsLoading(false));
 
         return () => unsubscribe();
-    }, [db, user, userLoading, router, clientId, isClientLoading]);
+    }, [db, user, router, clientId, isLoadingPage]);
 
     const handleToggleActivity = (activityId: string, isCurrentlyPending: boolean) => {
         if (!db || !clientId) return;
@@ -332,10 +337,10 @@ export default function OperationalPage() {
         return { total, pending, executed, completionRate };
     }, [allActivities]);
 
-    if (userLoading || isLoading || isClientLoading) {
+    if (isLoadingPage || isLoading) {
         return (
             <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
-                <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="flex items-center justify-center min-h-[60vh] w-full">
                     <Loader2 className="h-10 w-10 animate-spin text-primary" />
                 </div>
             </AppLayout>
@@ -435,3 +440,4 @@ export default function OperationalPage() {
 }
 
     
+

@@ -136,13 +136,17 @@ export default function ClassificationPage() {
       unclassified: allActivities.filter(a => a.status === 'brainstorm').length,
     }
   }, [allActivities]);
+
+  const isLoadingPage = userLoading || isClientLoading;
   
   useEffect(() => {
-    const pageIsLoading = userLoading || isClientLoading;
-    if (pageIsLoading) return;
+    if (isLoadingPage) {
+        setIsLoading(true);
+        return;
+    }
     
     if (!user) {
-      if(!userLoading) router.push('/login');
+      router.push('/login');
       return;
     }
     if (!db) {
@@ -204,7 +208,7 @@ export default function ClassificationPage() {
         unsubAll();
         unsubscribe();
     }
-  }, [db, user, userLoading, router, view, clientId, isClientLoading, currentActivityId]);
+  }, [db, user, router, view, clientId, isLoadingPage, currentActivityId]);
 
   useEffect(() => {
     if (currentActivity) {
@@ -327,10 +331,10 @@ export default function ClassificationPage() {
   
   const unclassifiedCount = useMemo(() => allActivities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [allActivities]);
 
-  if (userLoading || isClientLoading || (isLoading && allActivities.length === 0)) {
+  if (isLoadingPage || (isLoading && allActivities.length === 0)) {
     return (
       <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
-        <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex items-center justify-center min-h-[60vh] w-full">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
         </div>
       </AppLayout>
@@ -353,7 +357,7 @@ export default function ClassificationPage() {
 
   return (
     <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
-      <div className="flex gap-8 h-[calc(100vh-200px)]">
+      <div className="flex gap-8 h-[calc(100vh-200px)] w-full">
         <Sheet>
           <SheetTrigger asChild>
             <Button variant="outline" className="fixed bottom-4 left-4 z-10 sm:hidden">
