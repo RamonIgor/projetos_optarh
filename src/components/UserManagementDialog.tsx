@@ -1,17 +1,16 @@
 
 "use client";
 
-import { useState } from 'react';
-import { createUserWithEmailAndPassword, type AuthError } from 'firebase/auth';
+import { useState, useTransition } from 'react';
 import { doc, setDoc } from 'firebase/firestore';
-import { useAuth, useFirestore, useClient } from '@/firebase';
+import { useFirestore, useClient } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Loader2, UserPlus, Link2 } from 'lucide-react';
-import { getUserByEmail } from '@/ai/flows/user-management';
+import { getUserByEmail, createUserFlow } from '@/ai/flows/user-management';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -23,69 +22,37 @@ import {
 
 
 export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
-    const auth = useAuth();
     const { toast } = useToast();
     
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
-    const handleAuthError = (error: AuthError) => {
-        let title = "Erro ao Cadastrar";
-        let description = "Ocorreu um erro inesperado. Tente novamente.";
-        
-        switch (error.code) {
-            case 'auth/invalid-email':
-                title = "Email Inválido";
-                description = "Por favor, insira um endereço de email válido.";
-                break;
-            case 'auth/email-already-in-use':
-                title = "Email já cadastrado";
-                description = "Este email já está em uso por outro colaborador. Use a aba 'Associar Existente'.";
-                break;
-            case 'auth/weak-password':
-                title = "Senha Fraca";
-                description = "A senha deve ter pelo menos 6 caracteres.";
-                break;
-            default:
-                console.error("Registration error:", error);
-        }
-
-        toast({
-            variant: "destructive",
-            title: title,
-            description: description,
-        });
-    }
+    const [isSubmitting, startTransition] = useTransition();
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!auth || !email || !password) {
-            toast({
-                title: "Erro de configuração",
-                description: "Não foi possível conectar aos serviços do Firebase.",
-                variant: "destructive",
-            });
+        if (!email || !password) {
             return;
         }
 
-        setIsSubmitting(true);
-        try {
-            await createUserWithEmailAndPassword(auth, email, password);
-            
-            toast({
-                title: "Usuário Criado!",
-                description: `O acesso para ${email} foi criado. Agora, use a aba 'Associar Existente' para definir seu cargo e cliente.`,
-            });
-            
-            setEmail('');
-            setPassword('');
-            onFinished();
-        } catch (error) {
-            handleAuthError(error as AuthError);
-        } finally {
-            setIsSubmitting(false);
-        }
+        startTransition(async () => {
+            const result = await createUserFlow({ email, password });
+
+            if (result.error) {
+                 toast({
+                    variant: "destructive",
+                    title: "Erro ao Cadastrar",
+                    description: result.error,
+                });
+            } else {
+                 toast({
+                    title: "Usuário Criado!",
+                    description: `O acesso para ${email} foi criado. Use a aba 'Associar Existente' para definir o cargo.`,
+                });
+                setEmail('');
+                setPassword('');
+                onFinished();
+            }
+        });
     };
 
     return (
@@ -114,7 +81,7 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
                     />
                 </div>
                  <p className="text-sm text-muted-foreground">
-                    Isto apenas criará o login. Use a aba 'Associar Existente' para definir as permissões.
+                    Isto apenas criará o login no sistema de autenticação. Use a aba 'Associar Existente' para definir as permissões e o cliente.
                 </p>
             </div>
             <DialogFooter className="mt-6">
@@ -164,7 +131,7 @@ export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
         try {
             const result = await getUserByEmail(email);
             
-            if (!result.uid) {
+            if (!result.uid || result.error) {
                  toast({
                     title: "Usuário não encontrado",
                     description: `O e-mail ${email} não corresponde a um usuário existente no sistema de autenticação. Cadastre-o primeiro.`,
@@ -176,7 +143,7 @@ export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
             
             const userDocRef = doc(db, "users", result.uid);
             await setDoc(userDocRef, {
-                clientId: role === 'consultant' ? '' : selectedClientId,
+                clientId: role === 'consultant' ? null : selectedClientId,
                 role: role
             }, { merge: true });
 
