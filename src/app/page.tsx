@@ -177,21 +177,33 @@ export default function BrainstormPage() {
   const activityTree = useMemo(() => {
     const tree: (Activity & { children: Activity[] })[] = [];
     const childrenOf: Record<string, Activity[]> = {};
+    const activityMap = new Map(activities.map(a => [a.id, a]));
 
     for (const activity of activities) {
         if (activity.parentId) {
-            if (!childrenOf[activity.parentId]) {
-                childrenOf[activity.parentId] = [];
+            // Check if parent exists. If not, it's an orphan.
+            if (activityMap.has(activity.parentId)) {
+                if (!childrenOf[activity.parentId]) {
+                    childrenOf[activity.parentId] = [];
+                }
+                childrenOf[activity.parentId].push(activity);
+            } else {
+                // It's an orphan, treat it as a top-level item.
+                tree.push({ ...activity, children: [] });
             }
-            childrenOf[activity.parentId].push(activity);
         } else {
             tree.push({ ...activity, children: [] });
         }
     }
 
     for (const item of tree) {
-        item.children = childrenOf[item.id] || [];
+        if (childrenOf[item.id]) {
+            item.children = childrenOf[item.id].sort((a, b) => (a.createdAt as any) - (b.createdAt as any));
+        }
     }
+    
+    // Sort top-level items by creation date
+    tree.sort((a,b) => (b.createdAt as any) - (a.createdAt as any));
 
     return tree;
   }, [activities]);
