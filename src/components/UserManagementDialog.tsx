@@ -65,14 +65,23 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!auth || !db || !selectedClientId || !email || !password) {
+        if (!auth || !db || !email || !password) {
             toast({
                 title: "Erro de configuração",
-                description: "Selecione um cliente no Painel da Consultoria antes de cadastrar um colaborador.",
+                description: "Não foi possível conectar aos serviços do Firebase.",
                 variant: "destructive",
             });
             return;
         }
+         if (!selectedClientId) {
+            toast({
+                title: "Nenhum cliente selecionado",
+                description: "Selecione um cliente no Painel da Consultoria para associar este novo usuário.",
+                variant: "destructive",
+            });
+            return;
+        }
+
         setIsSubmitting(true);
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -130,7 +139,7 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
             </div>
             <DialogFooter className="mt-6">
                 <Button type="button" variant="outline" onClick={onFinished}>Cancelar</Button>
-                <Button type="submit" disabled={isSubmitting || !email || !password || !selectedClientId}>
+                <Button type="submit" disabled={isSubmitting || !email || !password}>
                     {isSubmitting ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
@@ -287,4 +296,3 @@ export function UserManagementDialog({ children }: { children: React.ReactNode }
         </Dialog>
     );
 }
-
