@@ -135,19 +135,17 @@ function MigrateOrphanData({ onFinished }: { onFinished: () => void }) {
                 const targetActionsCollection = collection(db, 'clients', selectedClientId, 'actions');
                 actionsSnapshot.forEach(docToMigrate => {
                     batch.set(doc(targetActionsCollection, docToMigrate.id), docToMigrate.data());
-                    batch.delete(docToMigrate.ref);
                 });
 
                 // Migrate rh-dp-activities to client's activities subcollection
                 const targetActivitiesCollection = collection(db, 'clients', selectedClientId, 'activities');
                 activitiesSnapshot.forEach(docToMigrate => {
                     batch.set(doc(targetActivitiesCollection, docToMigrate.id), docToMigrate.data());
-                    batch.delete(docToMigrate.ref);
                 });
 
                 await batch.commit();
 
-                toast({ title: 'Migração Concluída!', description: `${totalToMigrate} registros foram migrados com sucesso para o cliente selecionado.` });
+                toast({ title: 'Migração Concluída!', description: `${totalToMigrate} registros foram copiados com sucesso para o cliente selecionado.` });
                 onFinished();
             } catch (error) {
                 console.error('Migration failed:', error);
@@ -185,19 +183,19 @@ function MigrateOrphanData({ onFinished }: { onFinished: () => void }) {
                 <AlertDialogTrigger asChild>
                      <Button className="w-full" disabled={isMigrating || total === 0 || !selectedClientId}>
                         <DatabaseZap className="mr-2 h-4 w-4" />
-                        Migrar {total > 0 ? `${total} Itens` : ''} para o Cliente Selecionado
+                        Copiar {total > 0 ? `${total} Itens` : ''} para o Cliente Selecionado
                     </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Confirmar Migração?</AlertDialogTitle>
+                        <AlertDialogTitle>Confirmar Cópia dos Dados?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Você está prestes a mover {counts.activities} atividades e {counts.actions} ações para o cliente selecionado no painel. As coleções antigas serão excluídas após a migração. Esta ação não pode ser desfeita.
+                            Você está prestes a COPIAR {counts.activities} atividades e {counts.actions} ações para o cliente selecionado no painel. Os dados das coleções antigas NÃO serão excluídos neste momento.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleMigrate}>Sim, migrar dados</AlertDialogAction>
+                        <AlertDialogAction onClick={handleMigrate}>Sim, copiar dados</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
