@@ -28,7 +28,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -57,11 +57,11 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
     { href: '/operacional', label: 'Operacional', icon: PlayCircle, disabled: !hasActivities },
   ];
 
-  const authorizedConsultants = ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'];
-  const isConsultancyPanelDisabled = !user?.email || !authorizedConsultants.includes(user.email);
+  const authorizedConsultants = useMemo(() => ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'], []);
+  const isConsultant = useMemo(() => user?.email && authorizedConsultants.includes(user.email), [user, authorizedConsultants]);
 
   const consultancyButton = (
-     <Button variant="ghost" onClick={() => router.push('/consultoria')} disabled={isConsultancyPanelDisabled}>
+     <Button variant="ghost" onClick={() => router.push('/consultoria')}>
         <Rows className="mr-2 h-4 w-4" />
         Painel
     </Button>
@@ -151,12 +151,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
           </nav>
         </div>
         <div className="hidden sm:flex items-center gap-2">
-            {isConsultancyPanelDisabled ? (
-                 <Tooltip>
-                    <TooltipTrigger asChild>{consultancyButton}</TooltipTrigger>
-                    <TooltipContent><p>Acesso restrito à consultoria.</p></TooltipContent>
-                  </Tooltip>
-            ) : consultancyButton}
+            {isConsultant && consultancyButton}
            
             <SettingsMenu />
             
@@ -182,12 +177,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
                     {navItems.map(renderNavItem)}
                   </nav>
                   <div className="mt-8 pt-4 border-t">
-                    {isConsultancyPanelDisabled ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>{consultancyButton}</TooltipTrigger>
-                        <TooltipContent><p>Acesso restrito à consultoria.</p></TooltipContent>
-                      </Tooltip>
-                    ) : (
+                    {isConsultant && (
                        <div onClick={() => setMobileMenuOpen(false)}>{consultancyButton}</div>
                     )}
                     <div className="mt-2" onClick={() => setMobileMenuOpen(false)}>
