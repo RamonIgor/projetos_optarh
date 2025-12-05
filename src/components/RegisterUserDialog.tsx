@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, type ReactNode } from 'react';
@@ -23,7 +24,7 @@ type RegisterUserDialogComponent = React.FC<{ children: React.ReactNode }> & {
 export const RegisterUserDialog: RegisterUserDialogComponent = ({ children }) => {
     const auth = useAuth();
     const db = useFirestore();
-    const { clientId } = useClient();
+    const { clientId, isConsultant } = useClient();
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [email, setEmail] = useState('');
@@ -63,7 +64,7 @@ export const RegisterUserDialog: RegisterUserDialogComponent = ({ children }) =>
         if (!auth || !db || !clientId || !email || !password) {
             toast({
                 title: "Erro de configuração",
-                description: "Não foi possível identificar o cliente atual. Tente novamente.",
+                description: "Não foi possível identificar o cliente atual. Selecione um cliente no Painel da Consultoria antes de cadastrar um colaborador.",
                 variant: "destructive",
             });
             return;
@@ -110,7 +111,7 @@ export const RegisterUserDialog: RegisterUserDialogComponent = ({ children }) =>
                 <DialogHeader>
                     <DialogTitle>Cadastrar Novo Colaborador</DialogTitle>
                     <DialogDescription>
-                        Crie uma nova conta de acesso para um membro da sua equipe. Ele será associado ao cliente atual.
+                        Crie uma nova conta de acesso para um membro da equipe. Ele será associado ao cliente que está selecionado no seu painel.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleRegister}>
@@ -140,7 +141,7 @@ export const RegisterUserDialog: RegisterUserDialogComponent = ({ children }) =>
                     </div>
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-                        <Button type="submit" disabled={isSubmitting || !email || !password}>
+                        <Button type="submit" disabled={isSubmitting || !email || !password || !clientId}>
                             {isSubmitting ? (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             ) : (
@@ -156,3 +157,5 @@ export const RegisterUserDialog: RegisterUserDialogComponent = ({ children }) =>
 }
 
 RegisterUserDialog.Trigger = DialogPrimitive.Trigger;
+
+    

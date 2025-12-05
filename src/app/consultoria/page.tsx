@@ -286,12 +286,11 @@ const StatCard = ({ title, value, icon, children, className }: { title: string, 
 export default function ConsultancyPage() {
     const db = useFirestore();
     const { user, loading: userLoading } = useUser();
-    const { isConsultant, isClientLoading } = useClient();
+    const { isConsultant, isClientLoading, setSelectedClientId, selectedClientId } = useClient();
     const router = useRouter();
     const { toast } = useToast();
 
     const [allClients, setAllClients] = useState<Client[]>([]);
-    const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
     
     const [actions, setActions] = useState<ConsultancyAction[]>([]);
     const [activities, setActivities] = useState<Activity[]>([]);
@@ -326,7 +325,7 @@ export default function ConsultancyPage() {
         });
         
         return () => unsubClients();
-    }, [db, user, userLoading, isConsultant, isClientLoading, router]);
+    }, [db, user, userLoading, isConsultant, isClientLoading, router, selectedClientId, setSelectedClientId]);
 
     useEffect(() => {
         if (!selectedClientId || !db) {
@@ -723,7 +722,6 @@ export default function ConsultancyPage() {
         </AppLayout>
     );
 }
-
 
 
     
