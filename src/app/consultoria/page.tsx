@@ -380,7 +380,7 @@ function ClientSelector({ clients, onClientAdded }: { clients: Client[], onClien
                 </SelectContent>
             </Select>
             <AddClientDialog onClientAdded={onClientAdded}>
-                 <Button variant="outline" size="icon">
+                 <Button variant="default" size="icon">
                     <PlusCircle className="h-4 w-4" />
                     <span className="sr-only">Adicionar Novo Cliente</span>
                 </Button>
@@ -442,7 +442,7 @@ export default function ConsultancyPage() {
     
     // Data fetching for the selected client
     useEffect(() => {
-        if (!selectedClientId || !db) {
+        if (!selectedClientId || !db || !user) {
             setActions([]);
             setActivities([]);
             setIsLoadingData(false);
@@ -505,7 +505,7 @@ export default function ConsultancyPage() {
           unsubActions();
           unsubActivities();
         }
-    }, [db, selectedClientId, toast]);
+    }, [db, selectedClientId, toast, user]);
 
     const handleDelete = (actionId: string) => {
         if (!db || !selectedClientId) return;
