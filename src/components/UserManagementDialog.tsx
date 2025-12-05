@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { DialogClose } from '@radix-ui/react-dialog';
 import { Loader2, UserPlus, Link2 } from 'lucide-react';
 import { getUserByEmail } from '@/ai/flows/user-management';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,14 +20,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { getAuth } from 'firebase/auth';
-import { getApp } from 'firebase/app';
 
 
 export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
     const auth = useAuth();
-    const db = useFirestore();
-    const { selectedClientId } = useClient();
     const { toast } = useToast();
     
     const [email, setEmail] = useState('');
@@ -46,7 +41,7 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
                 break;
             case 'auth/email-already-in-use':
                 title = "Email já cadastrado";
-                description = "Este email já está em uso por outro colaborador.";
+                description = "Este email já está em uso por outro colaborador. Use a aba 'Associar Existente'.";
                 break;
             case 'auth/weak-password':
                 title = "Senha Fraca";
@@ -65,7 +60,7 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!auth || !db || !email || !password) {
+        if (!auth || !email || !password) {
             toast({
                 title: "Erro de configuração",
                 description: "Não foi possível conectar aos serviços do Firebase.",
@@ -73,29 +68,14 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
             });
             return;
         }
-         if (!selectedClientId) {
-            toast({
-                title: "Nenhum cliente selecionado",
-                description: "Selecione um cliente no Painel da Consultoria para associar este novo usuário.",
-                variant: "destructive",
-            });
-            return;
-        }
 
         setIsSubmitting(true);
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
-
-            const userDocRef = doc(db, "users", user.uid);
-            await setDoc(userDocRef, {
-                clientId: selectedClientId,
-                role: 'client_user'
-            });
-
+            await createUserWithEmailAndPassword(auth, email, password);
+            
             toast({
-                title: "Colaborador Cadastrado!",
-                description: `O acesso para ${email} foi criado com sucesso.`,
+                title: "Usuário Criado!",
+                description: `O acesso para ${email} foi criado. Agora, use a aba 'Associar Existente' para definir seu cargo e cliente.`,
             });
             
             setEmail('');
@@ -134,7 +114,7 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
                     />
                 </div>
                  <p className="text-sm text-muted-foreground">
-                    O novo usuário será associado ao cliente selecionado no seu painel.
+                    Isto apenas criará o login. Use a aba 'Associar Existente' para definir as permissões.
                 </p>
             </div>
             <DialogFooter className="mt-6">
