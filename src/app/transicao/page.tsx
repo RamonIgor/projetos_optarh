@@ -211,6 +211,14 @@ export default function TransitionPage() {
         return () => unsubscribe();
     }, [db, user, userLoading, router]);
     
+    const getActivityName = (activity: Activity, all: Activity[]) => {
+        if (activity.parentId) {
+            const parent = all.find(a => a.id === activity.parentId);
+            return parent ? `${parent.nome} » ${activity.nome}` : activity.nome;
+        }
+        return activity.nome;
+    };
+    
     const unclassifiedCount = 0; // On this page, all are classified/approved.
     const allResponsibles = useMemo(() => Array.from(new Set(allActivities.map(a => a.responsavel).filter(Boolean))), [allActivities]);
 
@@ -336,7 +344,7 @@ export default function TransitionPage() {
                                 };
                                 return (
                                 <TableRow key={activity.id}>
-                                    <TableCell className="font-medium">{activity.nome}</TableCell>
+                                    <TableCell className="font-medium">{getActivityName(activity, allActivities)}</TableCell>
                                     <TableCell>
                                          <Badge variant="outline" className={cn(activity.categoria ? categoryStyles[activity.categoria] : '')}>
                                             {activity.categoria}

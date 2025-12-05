@@ -51,7 +51,7 @@ const categoryStyles: Record<Activity['categoria'] & {}, string> = {
     Compartilhado: 'bg-blue-100 text-blue-800 border-blue-200',
 };
 
-function ActivityItem({ activity, onToggle }: { activity: Activity, onToggle: (id: string, isPending: boolean) => void }) {
+function ActivityItem({ activity, name, onToggle }: { activity: Activity, name: string, onToggle: (id: string, isPending: boolean) => void }) {
     const isPending = isActivityPending(activity);
     const isOverdue = isPending && isActivityOverdue(activity);
     const nextExecution = getNextExecution(activity);
@@ -84,7 +84,7 @@ function ActivityItem({ activity, onToggle }: { activity: Activity, onToggle: (i
                 disabled={isUpdating}
             />
             <div className="flex-1">
-                <label htmlFor={`activity-${activity.id}`} className="font-semibold text-lg cursor-pointer">{activity.nome}</label>
+                <label htmlFor={`activity-${activity.id}`} className="font-semibold text-lg cursor-pointer">{name}</label>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-2">
                     <Badge variant="outline" className={cn(activity.categoria ? categoryStyles[activity.categoria] : '')}>
                         {activity.categoria}
@@ -107,13 +107,13 @@ function ActivityItem({ activity, onToggle }: { activity: Activity, onToggle: (i
             </div>
              <div className="flex flex-col items-end gap-2">
                  {isOverdue && <Badge variant="destructive">Atrasada</Badge>}
-                 <HistoryModal activity={activity} />
+                 <HistoryModal activity={activity} name={name} />
             </div>
         </motion.div>
     );
 }
 
-function HistoryModal({ activity }: { activity: Activity }) {
+function HistoryModal({ activity, name }: { activity: Activity, name: string }) {
     const history = useMemo(() => {
         const sorted = [...(activity.historicoExecucoes || [])];
         sorted.sort((a, b) => (b as any) - (a as any));
@@ -131,7 +131,7 @@ function HistoryModal({ activity }: { activity: Activity }) {
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Histórico de Execução</DialogTitle>
-                    <DialogDescription>{activity.nome}</DialogDescription>
+                    <DialogDescription>{name}</DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="max-h-80">
                     <div className="pr-6">
@@ -162,7 +162,7 @@ function HistoryModal({ activity }: { activity: Activity }) {
 }
 
 
-function RecurrenceGroup({ title, activities, onToggle }: { title: Recurrence, activities: Activity[], onToggle: (id: string, isPending: boolean) => void }) {
+function RecurrenceGroup({ title, activities, onToggle, getActivityName, allActivities }: { title: Recurrence, activities: Activity[], onToggle: (id: string, isPending: boolean) => void, getActivityName: (act: Activity) => string, allActivities: Activity[] }) {
     const [isOpen, setIsOpen] = useState(true);
     const completed = activities.filter(a => !isActivityPending(a)).length;
     const total = activities.length;
@@ -192,7 +192,7 @@ function RecurrenceGroup({ title, activities, onToggle }: { title: Recurrence, a
                     <CardContent className="p-4 space-y-3">
                          <AnimatePresence>
                             {activities.map(activity => (
-                                <ActivityItem key={activity.id} activity={activity} onToggle={onToggle} />
+                                <ActivityItem key={activity.id} activity={activity} name={getActivityName(activity)} onToggle={onToggle} />
                             ))}
                         </AnimatePresence>
                     </CardContent>
@@ -271,6 +271,14 @@ export default function OperationalPage() {
     const unclassifiedCount = 0; 
     const allResponsibles = useMemo(() => Array.from(new Set(allActivities.map(a => a.responsavel).filter(Boolean))), [allActivities]);
     const allRecurrences = useMemo(() => Array.from(new Set(allActivities.map(a => a.recorrencia).filter(Boolean))), [allActivities]);
+
+    const getActivityName = (activity: Activity) => {
+        if (activity.parentId) {
+            const parent = allActivities.find(a => a.id === activity.parentId);
+            return parent ? `${parent.nome} » ${activity.nome}` : activity.nome;
+        }
+        return activity.nome;
+    };
 
 
     const filteredActivities = useMemo(() => {
@@ -390,6 +398,8 @@ export default function OperationalPage() {
                              title={recurrence}
                              activities={groupedActivities[recurrence] || []}
                              onToggle={handleToggleActivity}
+                             getActivityName={(act) => getActivityName(act)}
+                             allActivities={allActivities}
                          />
                      ))}
                      {filteredActivities.length === 0 && !isLoading && (

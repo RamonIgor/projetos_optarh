@@ -121,6 +121,15 @@ export default function DashboardPage() {
 
         return { total, classified, approved, byCategory, byStatus, byResponsible, byRecurrence, pendingDecision, latestApproved };
     }, [filteredActivities, allActivities]);
+    
+    const getActivityName = (activity: Activity, all: Activity[]) => {
+        if (activity.parentId) {
+            const parent = all.find(a => a.id === activity.parentId);
+            return parent ? `${parent.nome} » ${activity.nome}` : activity.nome;
+        }
+        return activity.nome;
+    };
+
 
     const categoryChartData: CategoryChartData[] = useMemo(() => [
         { name: 'DP', value: stats.byCategory['DP'] || 0, fill: 'hsl(var(--primary))' },
@@ -254,7 +263,7 @@ export default function DashboardPage() {
                                 {stats.pendingDecision.map(activity => (
                                     <li key={activity.id}>
                                        <Link href={`/classificacao?activityId=${activity.id}`} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
-                                            <span className="font-medium">{activity.nome}</span>
+                                            <span className="font-medium">{getActivityName(activity, allActivities)}</span>
                                             <Badge variant="outline" className="text-yellow-600 border-yellow-500">{activity.categoria}</Badge>
                                         </Link>
                                     </li>
@@ -272,7 +281,7 @@ export default function DashboardPage() {
                             <ul className="space-y-2">
                                 {stats.latestApproved.map(activity => (
                                     <li key={activity.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
-                                        <span className="font-medium">{activity.nome}</span>
+                                        <span className="font-medium">{getActivityName(activity, allActivities)}</span>
                                         <span className="text-sm text-muted-foreground">
                                             {activity.dataAprovacao && format((activity.dataAprovacao as any).toDate(), "dd/MM/yyyy 'às' HH:mm")}
                                         </span>
