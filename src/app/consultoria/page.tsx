@@ -88,7 +88,7 @@ function AddClientDialog({ onClientAdded, children }: { onClientAdded: (clientId
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Adicionar Novo Cliente</DialogTitle>
-                    <DialogDescription>Crie o primeiro cliente para começar a gerenciar as atividades.</DialogDescription>
+                    <DialogDescription>Crie um novo cliente para começar a gerenciar as atividades.</DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -368,16 +368,24 @@ function ClientSelector({ clients, onClientAdded }: { clients: Client[], onClien
     }
 
     return (
-        <Select value={selectedClientId || ''} onValueChange={setSelectedClientId}>
-            <SelectTrigger className="w-[280px]">
-                <SelectValue placeholder="Selecione um cliente" />
-            </SelectTrigger>
-            <SelectContent>
-                {clients.map(client => (
-                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                ))}
-            </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+            <Select value={selectedClientId || ''} onValueChange={setSelectedClientId}>
+                <SelectTrigger className="w-[280px]">
+                    <SelectValue placeholder="Selecione um cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                    {clients.map(client => (
+                        <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+            <AddClientDialog onClientAdded={onClientAdded}>
+                 <Button variant="outline" size="icon">
+                    <PlusCircle className="h-4 w-4" />
+                    <span className="sr-only">Adicionar Novo Cliente</span>
+                </Button>
+            </AddClientDialog>
+        </div>
     );
 }
 
@@ -434,10 +442,10 @@ export default function ConsultancyPage() {
     
     // Data fetching for the selected client
     useEffect(() => {
-        if (!selectedClientId || !db || !user) {
+        if (!selectedClientId || !db) {
             setActions([]);
             setActivities([]);
-            if(user) setIsLoadingData(false);
+            setIsLoadingData(false);
             return;
         }
 
@@ -497,7 +505,7 @@ export default function ConsultancyPage() {
           unsubActions();
           unsubActivities();
         }
-    }, [db, selectedClientId, toast, user]);
+    }, [db, selectedClientId, toast]);
 
     const handleDelete = (actionId: string) => {
         if (!db || !selectedClientId) return;
@@ -838,5 +846,7 @@ export default function ConsultancyPage() {
         </AppLayout>
     );
 }
+
+    
 
     
