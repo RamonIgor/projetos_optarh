@@ -11,11 +11,9 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import * as admin from 'firebase-admin';
 
-// Initialize Firebase Admin SDK if not already initialized
+// The Firebase Admin SDK is automatically initialized by the environment.
+// Manual initialization is not required and can cause errors.
 if (admin.apps.length === 0) {
-  // In a real production environment, you'd use GOOGLE_APPLICATION_CREDENTIALS
-  // or other server-side credential mechanisms.
-  // For Firebase Studio, this configuration works with the environment.
   admin.initializeApp();
 }
 
