@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useTransition, useCallback } from 'react';
@@ -619,25 +618,33 @@ export default function ConsultancyPage() {
                            {isConsultant && renderClientSelector()}
                         </div>
                     </div>
-                     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button onClick={handleAddNew} disabled={!selectedClientId}>
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                Adicionar Ação
+                    <div className="flex items-center gap-2">
+                         <SystemToolsDialog>
+                            <Button variant="outline">
+                                <Wrench className="mr-2 h-4 w-4" />
+                                Ferramentas
                             </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-2xl max-h-[90vh]">
-                             <DialogHeader>
-                                <DialogTitle>{editingAction ? 'Editar Ação' : 'Adicionar Nova Ação'}</DialogTitle>
-                                <DialogDescription>{editingAction ? `Editando a ação: "${editingAction.acao}"` : 'Preencha os detalhes da nova ação do plano.'}</DialogDescription>
-                            </DialogHeader>
-                            <ScrollArea className="max-h-[70vh] pr-6 -mr-6">
-                              <div className="pr-1">
-                                {selectedClientId && <ActionForm action={editingAction} onFinished={onFormFinished} clientId={selectedClientId} />}
-                              </div>
-                            </ScrollArea>
-                        </DialogContent>
-                    </Dialog>
+                        </SystemToolsDialog>
+                         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button onClick={handleAddNew} disabled={!selectedClientId}>
+                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                    Adicionar Ação
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-2xl max-h-[90vh]">
+                                 <DialogHeader>
+                                    <DialogTitle>{editingAction ? 'Editar Ação' : 'Adicionar Nova Ação'}</DialogTitle>
+                                    <DialogDescription>{editingAction ? `Editando a ação: "${editingAction.acao}"` : 'Preencha os detalhes da nova ação do plano.'}</DialogDescription>
+                                </DialogHeader>
+                                <ScrollArea className="max-h-[70vh] pr-6 -mr-6">
+                                  <div className="pr-1">
+                                    {selectedClientId && <ActionForm action={editingAction} onFinished={onFormFinished} clientId={selectedClientId} />}
+                                  </div>
+                                </ScrollArea>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
                 </div>
             
                 {!selectedClientId && isConsultant ? (
