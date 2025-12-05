@@ -229,7 +229,16 @@ function ActionForm({ action, onFinished }: { action?: ConsultancyAction | null,
                 <FormField control={form.control} name="status" render={({ field }) => (
                     <FormItem>
                         <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                        <Select 
+                            onValueChange={(value) => {
+                                field.onChange(value);
+                                if (value === 'concluida') {
+                                    form.setValue('percentual_concluido', 100);
+                                }
+                            }}
+                            defaultValue={field.value} 
+                            value={field.value}
+                        >
                             <FormControl><SelectTrigger><SelectValue placeholder="Selecione o status" /></SelectTrigger></FormControl>
                             <SelectContent>
                                 {Object.entries(statusConfig).map(([key, { label }]) => (
@@ -662,3 +671,6 @@ export default function ConsultancyPage() {
     );
 }
 
+
+
+    
