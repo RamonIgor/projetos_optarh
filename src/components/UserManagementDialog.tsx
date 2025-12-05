@@ -9,9 +9,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { DialogClose } from '@radix-ui/react-dialog';
 import { Loader2, UserPlus, Link2 } from 'lucide-react';
 import { getUserByEmail } from '@/ai/flows/user-management';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -122,6 +124,9 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
                         required
                     />
                 </div>
+                 <p className="text-sm text-muted-foreground">
+                    O novo usuário será associado ao cliente selecionado no seu painel.
+                </p>
             </div>
             <DialogFooter className="mt-6">
                 <Button type="button" variant="outline" onClick={onFinished}>Cancelar</Button>
@@ -160,7 +165,7 @@ export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
         if (role === 'client_user' && !selectedClientId) {
              toast({
                 title: "Erro de configuração",
-                description: "Selecione um cliente no Painel da Consultoria antes de associar um usuário.",
+                description: "Selecione um cliente no Painel da Consultoria antes de associar um usuário do tipo 'Cliente'.",
                 variant: "destructive",
             });
             return;
@@ -168,64 +173,27 @@ export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
 
         setIsSubmitting(true);
         try {
-            // This is a hack for the development environment as there is no backend.
-            // We'll create a temporary Auth instance to create a "dummy" user, grab the UID, and then delete it.
-            // This is NOT a production-ready solution.
-            const tempPassword = `temp-password-${Date.now()}`;
-            let uid = '';
-            let userExists = false;
-
-            try {
-                // We use the main app's auth instance
-                const mainAuth = getAuth(getApp());
-                // This is a trick to get UID from email. We can't directly query, so we try to sign in.
-                // This is not great, but it's a workaround. A proper backend would be better.
-                // A better flow would be to attempt a create and catch the "already-exists" error.
-                const userCredential = await createUserWithEmailAndPassword(mainAuth, email, tempPassword);
-                uid = userCredential.user.uid;
-                // If creation succeeds, the user did NOT exist, so we should delete them.
-                await userCredential.user.delete();
-            } catch (error: any) {
-                 if (error.code === 'auth/email-already-in-use') {
-                    userExists = true;
-                    // We still don't have the UID here, which is the core problem.
-                    // The Genkit flow was supposed to solve this. Since it failed,
-                    // we will have to assume a different strategy.
-                    // The getUserByEmail flow was not working because of Admin SDK issues.
-                    // Let's call it again, but this time it has a simulated success response.
-                    const result = await getUserByEmail(email);
-                    if (result.uid) {
-                        uid = result.uid;
-                    } else {
-                        throw new Error("A busca por email falhou em encontrar um UID, mesmo que o usuário exista.");
-                    }
-
-                } else {
-                    // Other errors during the temporary user creation
-                    throw error;
-                }
-            }
-
-            if (!userExists) {
+            const result = await getUserByEmail(email);
+            
+            if (!result.uid) {
                  toast({
                     title: "Usuário não encontrado",
-                    description: `O e-mail ${email} não corresponde a nenhum usuário existente. Cadastre-o primeiro.`,
+                    description: `O e-mail ${email} não corresponde a um usuário existente no sistema de autenticação. Cadastre-o primeiro.`,
                     variant: "destructive",
                 });
                 setIsSubmitting(false);
                 return;
             }
             
-
-            const userDocRef = doc(db, "users", uid);
+            const userDocRef = doc(db, "users", result.uid);
             await setDoc(userDocRef, {
-                clientId: role === 'consultant' ? '' : selectedClientId, // Consultants don't have a client ID
+                clientId: role === 'consultant' ? '' : selectedClientId,
                 role: role
             }, { merge: true });
 
             toast({
                 title: "Usuário Associado!",
-                description: `${email} foi associado com sucesso.`,
+                description: `${email} foi associado com o cargo de ${role === 'consultant' ? 'Consultor' : 'Usuário do Cliente'}.`,
             });
             
             setEmail('');
@@ -234,7 +202,7 @@ export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
             console.error(error);
             toast({
                 title: "Erro ao associar usuário",
-                description: error.message || "Ocorreu um erro inesperado.",
+                description: error.message || "Ocorreu um erro inesperado. Verifique se o e-mail está correto.",
                 variant: "destructive",
             });
         } finally {
@@ -268,6 +236,9 @@ export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
                         </SelectContent>
                     </Select>
                 </div>
+                 <p className="text-sm text-muted-foreground">
+                    Irá associar um usuário já existente no sistema de autenticação a um cliente ou a um cargo.
+                </p>
             </div>
             <DialogFooter className="mt-6">
                 <Button type="button" variant="outline" onClick={onFinished}>Cancelar</Button>
@@ -283,3 +254,37 @@ export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
         </form>
     );
 }
+
+
+export function UserManagementDialog({ children }: { children: React.ReactNode }) {
+    const [open, setOpen] = useState(false);
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                {children}
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Gerenciar Colaboradores</DialogTitle>
+                    <DialogDescription>
+                        Crie novos usuários ou associe usuários existentes a um cliente.
+                    </DialogDescription>
+                </DialogHeader>
+                <Tabs defaultValue="create" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="create">Cadastrar Novo</TabsTrigger>
+                        <TabsTrigger value="associate">Associar Existente</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="create">
+                        <CreateUserForm onFinished={() => setOpen(false)} />
+                    </TabsContent>
+                    <TabsContent value="associate">
+                        <AssociateUserForm onFinished={() => setOpen(false)} />
+                    </TabsContent>
+                </Tabs>
+            </DialogContent>
+        </Dialog>
+    );
+}
+

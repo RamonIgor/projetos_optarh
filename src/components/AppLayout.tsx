@@ -26,7 +26,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuPortal
 } from "@/components/ui/dropdown-menu"
-import { UserManagementDialog } from './RegisterUserDialog';
+import { UserManagementDialog } from './UserManagementDialog';
 import Image from 'next/image';
 import {
   Sheet,
@@ -131,13 +131,11 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
             </DropdownMenuTrigger>
             <DropdownMenuContent align={isMobile ? "start" : "end"}>
                 {isAuthorized && (
-                    <UserManagementDialog>
-                        <UserManagementDialog.Trigger asChild>
-                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                <UserPlus className="mr-2 h-4 w-4" />
-                                <span>Cadastrar Colaborador</span>
-                            </DropdownMenuItem>
-                        </UserManagementDialog.Trigger>
+                     <UserManagementDialog>
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                            <UserPlus className="mr-2 h-4 w-4" />
+                            <span>Gerenciar Colaboradores</span>
+                        </DropdownMenuItem>
                     </UserManagementDialog>
                 )}
                 
