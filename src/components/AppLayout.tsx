@@ -1,3 +1,4 @@
+
 "use client";
 
 import { signOut } from 'firebase/auth';
@@ -58,8 +59,12 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
     { href: '/operacional', label: 'Operacional', icon: PlayCircle, disabled: !hasActivities },
   ];
   
+  // Hybrid check: Recognizes both hardcoded emails and the 'consultant' role from the database.
+  const authorizedConsultants = ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'];
+  const isAuthorized = isConsultant || (user && authorizedConsultants.includes(user.email || ''));
+
   const consultancyButton = (
-    isConsultant ? (
+    isAuthorized ? (
         <Button variant="ghost" onClick={() => router.push('/consultoria')}>
             <Rows className="mr-2 h-4 w-4" />
             Painel
@@ -122,7 +127,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
           )}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {isConsultant && (
+          {isAuthorized && (
             <>
               <UserManagementDialog.Trigger asChild>
                   <DropdownMenuItem>

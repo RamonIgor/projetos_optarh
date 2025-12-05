@@ -24,7 +24,7 @@ type UserManagementDialogComponent = React.FC<{ children: React.ReactNode }> & {
 export const UserManagementDialog: UserManagementDialogComponent = ({ children }) => {
     const auth = useAuth();
     const db = useFirestore();
-    const { clientId, isConsultant } = useClient();
+    const { selectedClientId } = useClient();
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [email, setEmail] = useState('');
@@ -61,7 +61,7 @@ export const UserManagementDialog: UserManagementDialogComponent = ({ children }
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!auth || !db || !clientId || !email || !password) {
+        if (!auth || !db || !selectedClientId || !email || !password) {
             toast({
                 title: "Erro de configuração",
                 description: "Não foi possível identificar o cliente atual. Selecione um cliente no Painel da Consultoria antes de cadastrar um colaborador.",
@@ -78,14 +78,14 @@ export const UserManagementDialog: UserManagementDialogComponent = ({ children }
             // 2. Create the user profile document in Firestore
             const userDocRef = doc(db, "users", user.uid);
             await setDoc(userDocRef, {
-                clientId: clientId,
+                clientId: selectedClientId,
                 role: 'client_user'
             });
 
             // 3. (Optional but good practice) Update the client document to include this new user ID
             // This part is omitted for now as we don't have a UI to manage clients yet,
             // but it would be something like:
-            // const clientDocRef = doc(db, "clients", clientId);
+            // const clientDocRef = doc(db, "clients", selectedClientId);
             // await updateDoc(clientDocRef, { userIds: arrayUnion(user.uid) });
 
             toast({
@@ -141,7 +141,7 @@ export const UserManagementDialog: UserManagementDialogComponent = ({ children }
                     </div>
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-                        <Button type="submit" disabled={isSubmitting || !email || !password || !clientId}>
+                        <Button type="submit" disabled={isSubmitting || !email || !password || !selectedClientId}>
                             {isSubmitting ? (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             ) : (
