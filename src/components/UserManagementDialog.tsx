@@ -25,6 +25,7 @@ import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { firebaseConfig } from '@/firebase/config';
 import { type Client } from '@/types/activity';
 import { collection, onSnapshot } from 'firebase/firestore';
+import { getUserByEmail } from '@/ai/flows/user-management';
 
 
 // This function creates a secondary, temporary Firebase app instance
@@ -62,7 +63,7 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
                 });
                 setEmail('');
                 setPassword('');
-                onFinished();
+                // onFinished(); // Keep dialog open to facilitate next step
             } catch (error: any) {
                  let errorMessage = "Ocorreu um erro inesperado.";
                  if (error.code === 'auth/email-already-in-use') {
@@ -111,7 +112,7 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
                 </p>
             </div>
             <DialogFooter className="mt-6">
-                <Button type="button" variant="outline" onClick={onFinished}>Cancelar</Button>
+                <Button type="button" variant="outline" onClick={onFinished}>Fechar</Button>
                 <Button type="submit" disabled={isSubmitting || !email || !password}>
                     {isSubmitting ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -128,7 +129,7 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
 export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
     const db = useFirestore();
     const { toast } = useToast();
-    const [uid, setUid] = useState('');
+    const [email, setEmail] = useState('');
     const [role, setRole] = useState<'client_user' | 'consultant'>('client_user');
     const [selectedClient, setSelectedClient] = useState('');
     const [clients, setClients] = useState<Client[]>([]);
@@ -149,13 +150,19 @@ export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!db || !uid || !role || (role === 'client_user' && !selectedClient)) {
+        if (!db || !email || !role || (role === 'client_user' && !selectedClient)) {
             toast({ variant: 'destructive', title: 'Campos obrigatórios', description: 'Preencha todos os campos para associar o usuário.' });
             return;
         }
 
         startTransition(async () => {
             try {
+                const { uid } = await getUserByEmail({ email });
+                if (!uid) {
+                    toast({ variant: 'destructive', title: 'Usuário não encontrado', description: 'Nenhum usuário encontrado com este e-mail.' });
+                    return;
+                }
+
                 const userDocRef = doc(db, 'users', uid);
                 await setDoc(userDocRef, {
                     clientId: role === 'consultant' ? '' : selectedClient,
@@ -163,33 +170,27 @@ export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
                 });
 
                 toast({ title: 'Usuário associado com sucesso!' });
-                setUid('');
+                setEmail('');
                 setRole('client_user');
                 setSelectedClient('');
                 onFinished();
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Error associating user:", error);
-                toast({ variant: 'destructive', title: 'Erro ao associar', description: 'Não foi possível salvar a associação.' });
+                toast({ variant: 'destructive', title: 'Erro ao associar', description: error.message || 'Não foi possível salvar a associação.' });
             }
         });
     }
 
     return (
         <form onSubmit={handleSubmit} className="py-4 space-y-4">
-            <Alert>
-                <Terminal className="h-4 w-4" />
-                <AlertTitle>Como encontrar o UID?</AlertTitle>
-                <AlertDescription>
-                    Para associar um usuário, você precisa do UID (User ID) dele. Vá para o <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="underline font-bold">Firebase Console</a>, navegue até a seção 'Authentication', encontre o usuário e copie o UID.
-                </AlertDescription>
-            </Alert>
             <div className="grid gap-2">
-                <Label htmlFor="uid">UID do Usuário</Label>
+                <Label htmlFor="email-associate">Email do Usuário</Label>
                 <Input
-                    id="uid"
-                    placeholder="Cole o UID do usuário aqui"
-                    value={uid}
-                    onChange={(e) => setUid(e.target.value)}
+                    id="email-associate"
+                    type="email"
+                    placeholder="Cole o e-mail do usuário aqui"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
                 />
             </div>
