@@ -378,6 +378,7 @@ export default function ConsultancyPage() {
         }
     }, [user, userLoading, router]);
 
+    // Effect to fetch the list of clients
     useEffect(() => {
         if (!isConsultant || !db) {
             setIsLoadingClients(false);
@@ -398,7 +399,7 @@ export default function ConsultancyPage() {
         return () => unsubClients();
     }, [db, isConsultant]);
 
-    // Effect to select the first client if none is selected
+    // Effect to auto-select the first client if none is selected
     useEffect(() => {
         if (!selectedClientId && allClients.length > 0) {
             setSelectedClientId(allClients[0].id);
@@ -558,7 +559,7 @@ export default function ConsultancyPage() {
 
     const renderClientSelector = () => {
         if (isLoadingClients) {
-            return <Loader2 className="h-6 w-6 animate-spin text-primary" />;
+            return <div className="flex items-center justify-center w-[280px] h-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
         }
     
         if (allClients.length === 0) {
@@ -824,3 +825,5 @@ export default function ConsultancyPage() {
         </AppLayout>
     );
 }
+
+    
