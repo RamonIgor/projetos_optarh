@@ -1,9 +1,7 @@
 
 "use client";
 
-import { useState, useTransition, useEffect } from 'react';
-import { doc, setDoc } from 'firebase/firestore';
-import { useFirestore, useClient, useAuth } from '@/firebase';
+import { useState, useTransition } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,20 +11,9 @@ import { Loader2, UserPlus, Link2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { firebaseConfig } from '@/firebase/config';
-import { type Client } from '@/types/activity';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { getUserByEmail } from '@/ai/flows/user-management';
-
 
 // This function creates a secondary, temporary Firebase app instance
 // to handle user creation without affecting the current user's session.
@@ -59,11 +46,11 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
                 await createUserWithEmailAndPassword(secondaryAuth, email, password);
                 toast({
                     title: "Usuário Criado!",
-                    description: `O acesso para ${email} foi criado. O próximo passo é associá-lo a um cliente.`,
+                    description: `O acesso para ${email} foi criado. Agora você pode associá-lo a um cliente.`,
                 });
                 setEmail('');
                 setPassword('');
-                // onFinished(); // Keep dialog open to facilitate next step
+                // We keep the dialog open to make it easier to associate the user next.
             } catch (error: any) {
                  let errorMessage = "Ocorreu um erro inesperado.";
                  if (error.code === 'auth/email-already-in-use') {
@@ -127,108 +114,20 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
 }
 
 export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
-    const db = useFirestore();
-    const { toast } = useToast();
-    const [email, setEmail] = useState('');
-    const [role, setRole] = useState<'client_user' | 'consultant'>('client_user');
-    const [selectedClient, setSelectedClient] = useState('');
-    const [clients, setClients] = useState<Client[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isSubmitting, startTransition] = useTransition();
-
-    useEffect(() => {
-        if (!db) return;
-        setIsLoading(true);
-        const clientsQuery = collection(db, 'clients');
-        const unsubscribe = onSnapshot(clientsQuery, (snapshot) => {
-            const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Client));
-            setClients(clientsData);
-            setIsLoading(false);
-        });
-        return () => unsubscribe();
-    }, [db]);
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!db || !email || !role || (role === 'client_user' && !selectedClient)) {
-            toast({ variant: 'destructive', title: 'Campos obrigatórios', description: 'Preencha todos os campos para associar o usuário.' });
-            return;
-        }
-
-        startTransition(async () => {
-            try {
-                const { uid } = await getUserByEmail({ email });
-                if (!uid) {
-                    toast({ variant: 'destructive', title: 'Usuário não encontrado', description: 'Nenhum usuário encontrado com este e-mail.' });
-                    return;
-                }
-
-                const userDocRef = doc(db, 'users', uid);
-                await setDoc(userDocRef, {
-                    clientId: role === 'consultant' ? '' : selectedClient,
-                    role: role
-                });
-
-                toast({ title: 'Usuário associado com sucesso!' });
-                setEmail('');
-                setRole('client_user');
-                setSelectedClient('');
-                onFinished();
-            } catch (error: any) {
-                console.error("Error associating user:", error);
-                toast({ variant: 'destructive', title: 'Erro ao associar', description: error.message || 'Não foi possível salvar a associação.' });
-            }
-        });
-    }
-
+    
     return (
-        <form onSubmit={handleSubmit} className="py-4 space-y-4">
-            <div className="grid gap-2">
-                <Label htmlFor="email-associate">Email do Usuário</Label>
-                <Input
-                    id="email-associate"
-                    type="email"
-                    placeholder="Cole o e-mail do usuário aqui"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                />
-            </div>
-            <div className="grid gap-2">
-                <Label htmlFor="role">Cargo</Label>
-                <Select value={role} onValueChange={(value) => setRole(value as any)}>
-                    <SelectTrigger id="role">
-                        <SelectValue placeholder="Selecione o cargo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="client_user">Usuário do Cliente</SelectItem>
-                        <SelectItem value="consultant">Consultor(a)</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-
-            {role === 'client_user' && (
-                <div className="grid gap-2">
-                    <Label htmlFor="client">Cliente</Label>
-                    <Select value={selectedClient} onValueChange={setSelectedClient} disabled={isLoading}>
-                        <SelectTrigger id="client">
-                            <SelectValue placeholder={isLoading ? 'Carregando clientes...' : 'Selecione o cliente'} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-            )}
-
-            <DialogFooter className="mt-6">
-                <Button type="button" variant="outline" onClick={onFinished}>Cancelar</Button>
-                <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
-                    Associar Usuário
-                </Button>
+        <div className="py-4 space-y-4">
+            <Alert>
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>Função Temporariamente Indisponível</AlertTitle>
+              <AlertDescription>
+                A função de associar usuários por e-mail está sendo revisada para garantir a estabilidade. Por enquanto, utilize o UID do usuário para fazer a associação, ou aguarde a restauração desta funcionalidade.
+              </AlertDescription>
+            </Alert>
+             <DialogFooter className="mt-6">
+                <Button type="button" variant="outline" onClick={onFinished}>Fechar</Button>
             </DialogFooter>
-        </form>
+        </div>
     );
 }
 
