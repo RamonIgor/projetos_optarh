@@ -84,7 +84,7 @@ function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddS
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, x: -50, transition: { duration: 0.2 } }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className={cn("p-3 bg-muted/50 rounded-lg", isSubItem && "ml-8")}
+            className={cn("p-3 rounded-lg", isSubItem ? "ml-8 bg-card border" : "bg-muted/50")}
         >
              <div className="flex items-center justify-between">
                 <span className="font-medium text-foreground">{activity.nome}</span>
