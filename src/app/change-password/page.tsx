@@ -8,7 +8,7 @@ import { useUser } from '@/firebase/auth/use-user';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, KeyRound } from 'lucide-react';
+import { Loader2, KeyRound, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
@@ -118,7 +118,11 @@ export default function ChangePasswordPage() {
                     />
                   </div>
 
-                  <div>
+                  <div className="flex flex-col-reverse sm:flex-row gap-2">
+                    <Button type="button" variant="outline" className="w-full h-12 text-lg" onClick={() => router.back()}>
+                        <ArrowLeft className="mr-2 h-5 w-5" />
+                        Voltar
+                    </Button>
                     <Button type="submit" className="w-full h-12 text-lg" disabled={isSubmitting}>
                         {isSubmitting ? (
                             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -135,4 +139,3 @@ export default function ChangePasswordPage() {
     </div>
   );
 }
-
