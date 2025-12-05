@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { UserManagementDialog } from './UserManagementDialog';
+import { SystemToolsDialog } from './SystemToolsDialog';
 import Image from 'next/image';
 import {
   Sheet,
@@ -40,7 +40,7 @@ interface AppLayoutProps {
 export default function AppLayout({ children, unclassifiedCount, hasActivities }: AppLayoutProps) {
   const auth = useAuth();
   const { user } = useUser();
-  const { isConsultant, selectedClientId } = useClient();
+  const { isConsultant } = useClient();
   const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -111,32 +111,16 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
   };
   
   const SettingsMenu = ({ isMobile = false }: { isMobile?: boolean }) => (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
+       <SystemToolsDialog isAuthorized={isAuthorized}>
           {isMobile ? (
-             <Button variant="ghost"><Settings className="mr-2 h-4 w-4" /> Configurações</Button>
+             <Button variant="ghost"><Settings className="mr-2 h-4 w-4" /> Ferramentas</Button>
           ) : (
             <Button variant="ghost" size="icon">
               <Settings className="h-5 w-5" />
               <span className="sr-only">Configurações</span>
             </Button>
           )}
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          {isAuthorized && (
-            <UserManagementDialog>
-              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  <span>Gerenciar Colaboradores</span>
-              </DropdownMenuItem>
-            </UserManagementDialog>
-          )}
-           <DropdownMenuItem onClick={() => router.push('/change-password')}>
-              <KeyRound className="mr-2 h-4 w-4" />
-              <span>Alterar minha senha</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        </SystemToolsDialog>
   );
 
   return (
@@ -184,6 +168,16 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
                     <div className="mt-2" onClick={() => setMobileMenuOpen(false)}>
                        <SettingsMenu isMobile />
                     </div>
+                     <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                         <Button variant="ghost" className='w-full justify-start'><KeyRound className="mr-2 h-4 w-4" /> Segurança</Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => {router.push('/change-password'); setMobileMenuOpen(false);}}>
+                            Alterar minha senha
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     <div className="mt-2">
                       <Button variant="ghost" onClick={handleLogout}>
                           <LogOut className="mr-2 h-4 w-4" />

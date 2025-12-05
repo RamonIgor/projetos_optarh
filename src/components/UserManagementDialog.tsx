@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { createUserWithEmailAndPassword, type AuthError } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useAuth, useFirestore, useClient } from '@/firebase';
@@ -9,9 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { DialogFooter } from '@/components/ui/dialog';
 import { Loader2, UserPlus, Link2 } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getUserByEmail } from '@/ai/flows/user-management';
 import {
   Select,
@@ -22,37 +21,7 @@ import {
 } from "@/components/ui/select"
 
 
-export const UserManagementDialog: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [open, setOpen] = useState(false);
-
-    return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>{children}</DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Gerenciar Colaboradores</DialogTitle>
-                    <DialogDescription>
-                        Crie novas contas ou associe usuários existentes ao cliente selecionado no seu painel.
-                    </DialogDescription>
-                </DialogHeader>
-                <Tabs defaultValue="create">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="create">Cadastrar Novo</TabsTrigger>
-                        <TabsTrigger value="associate">Associar Existente</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="create">
-                        <CreateUserForm onFinished={() => setOpen(false)} />
-                    </TabsContent>
-                    <TabsContent value="associate">
-                        <AssociateUserForm onFinished={() => setOpen(false)} />
-                    </TabsContent>
-                </Tabs>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
-function CreateUserForm({ onFinished }: { onFinished: () => void }) {
+export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
     const auth = useAuth();
     const db = useFirestore();
     const { selectedClientId } = useClient();
@@ -167,7 +136,7 @@ function CreateUserForm({ onFinished }: { onFinished: () => void }) {
     );
 }
 
-function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
+export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
     const db = useFirestore();
     const { selectedClientId } = useClient();
     const { toast } = useToast();
