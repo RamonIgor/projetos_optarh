@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { RegisterUserDialog } from './RegisterUserDialog';
+import { UserManagementDialog } from './UserManagementDialog';
 import Image from 'next/image';
 import {
   Sheet,
@@ -59,10 +59,12 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
   ];
   
   const consultancyButton = (
-     <Button variant="ghost" onClick={() => router.push('/consultoria')}>
-        <Rows className="mr-2 h-4 w-4" />
-        Painel
-    </Button>
+    isConsultant ? (
+        <Button variant="ghost" onClick={() => router.push('/consultoria')}>
+            <Rows className="mr-2 h-4 w-4" />
+            Painel
+        </Button>
+    ) : null
   );
 
   const renderNavItem = (item: typeof navItems[0]) => {
@@ -107,7 +109,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
   };
   
   const SettingsMenu = ({ isMobile = false }: { isMobile?: boolean }) => (
-    <RegisterUserDialog>
+    <UserManagementDialog>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           {isMobile ? (
@@ -122,12 +124,12 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
         <DropdownMenuContent align="end">
           {isConsultant && (
             <>
-              <RegisterUserDialog.Trigger asChild>
+              <UserManagementDialog.Trigger asChild>
                   <DropdownMenuItem>
                       <UserPlus className="mr-2 h-4 w-4" />
-                      <span>Cadastrar Colaborador</span>
+                      <span>Gerenciar Colaboradores</span>
                   </DropdownMenuItem>
-              </RegisterUserDialog.Trigger>
+              </UserManagementDialog.Trigger>
               <DropdownMenuSeparator />
             </>
           )}
@@ -137,7 +139,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-    </RegisterUserDialog>
+    </UserManagementDialog>
   );
 
   return (
@@ -153,7 +155,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
           </nav>
         </div>
         <div className="hidden sm:flex items-center gap-2">
-            {isConsultant && consultancyButton}
+            {consultancyButton}
            
             <SettingsMenu />
             
@@ -179,7 +181,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
                     {navItems.map(renderNavItem)}
                   </nav>
                   <div className="mt-8 pt-4 border-t">
-                    {isConsultant && (
+                    {consultancyButton && (
                        <div onClick={() => setMobileMenuOpen(false)}>{consultancyButton}</div>
                     )}
                     <div className="mt-2" onClick={() => setMobileMenuOpen(false)}>
