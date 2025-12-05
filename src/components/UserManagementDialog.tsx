@@ -3,14 +3,13 @@
 
 import { useState, useTransition } from 'react';
 import { doc, setDoc } from 'firebase/firestore';
-import { useFirestore, useClient } from '@/firebase';
+import { useFirestore, useClient, useAuth } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Loader2, UserPlus, Link2 } from 'lucide-react';
-import { getUserByEmail, createUserFlow } from '@/ai/flows/user-management';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -19,11 +18,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { getApp, initializeApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { firebaseConfig } from '@/firebase/config';
+
+
+// This function creates a secondary, temporary Firebase app instance
+// to handle user creation without affecting the current user's session.
+const createSecondaryAuth = () => {
+    const appName = `secondary-auth-app-${Date.now()}`;
+    const secondaryApp = initializeApp(firebaseConfig, appName);
+    return getAuth(secondaryApp);
+};
 
 
 export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
     const { toast } = useToast();
-    
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSubmitting, startTransition] = useTransition();
@@ -35,22 +45,30 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
         }
 
         startTransition(async () => {
-            const result = await createUserFlow({ email, password });
-
-            if (result.error) {
-                 toast({
-                    variant: "destructive",
-                    title: "Erro ao Cadastrar",
-                    description: result.error,
-                });
-            } else {
-                 toast({
+            const secondaryAuth = createSecondaryAuth();
+            try {
+                await createUserWithEmailAndPassword(secondaryAuth, email, password);
+                toast({
                     title: "Usuário Criado!",
                     description: `O acesso para ${email} foi criado. Use a aba 'Associar Existente' para definir o cargo.`,
                 });
                 setEmail('');
                 setPassword('');
                 onFinished();
+            } catch (error: any) {
+                 let errorMessage = "Ocorreu um erro inesperado.";
+                 if (error.code === 'auth/email-already-exists') {
+                    errorMessage = 'Este email já está em uso por outro colaborador.';
+                 } else if (error.code === 'auth/invalid-password') {
+                     errorMessage = 'A senha deve ter pelo menos 6 caracteres.';
+                 } else if (error.code === 'auth/invalid-email') {
+                     errorMessage = 'O formato do e-mail é inválido.';
+                 }
+                 toast({
+                    variant: "destructive",
+                    title: "Erro ao Cadastrar",
+                    description: errorMessage,
+                });
             }
         });
     };
@@ -101,6 +119,7 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
 
 export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
     const db = useFirestore();
+    const auth = useAuth();
     const { selectedClientId } = useClient();
     const { toast } = useToast();
     
@@ -110,7 +129,7 @@ export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
 
     const handleAssociate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!db || !email) {
+        if (!db || !auth || !email) {
             toast({
                 title: "Erro de configuração",
                 description: "Preencha o e-mail para associar um usuário.",
@@ -128,20 +147,38 @@ export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
         }
 
         setIsSubmitting(true);
+        // This part needs a secure way to get user by email. Since we can't use Admin SDK reliably,
+        // we'll assume for now the user must be associated manually if UID is not known.
+        // For a full production app, a cloud function would be required.
+        // For this context, we will simply show a message.
+        
+        toast({
+            title: "Associação Manual Necessária",
+            description: "A associação de um usuário existente a um cargo precisa ser feita diretamente no console do Firebase para garantir a segurança.",
+            variant: "default",
+        });
+
+        // The code below would require an admin privilege that is not available client-side without security risks.
+        /*
         try {
-            const result = await getUserByEmail(email);
+            // This function does not exist on client-side SDK:
+            // const userRecord = await auth.getUserByEmail(email); 
+            // const uid = userRecord.uid;
             
-            if (!result.uid || result.error) {
+            // Placeholder: Manually get UID and uncomment
+            const uid = "MANUAL_UID_HERE";
+
+            if (!uid || uid === "MANUAL_UID_HERE") {
                  toast({
-                    title: "Usuário não encontrado",
-                    description: `O e-mail ${email} não corresponde a um usuário existente no sistema de autenticação. Cadastre-o primeiro.`,
+                    title: "Ação Manual Necessária",
+                    description: "Para associar um usuário, você precisa obter o UID dele no console do Firebase e inseri-lo no código.",
                     variant: "destructive",
                 });
                 setIsSubmitting(false);
                 return;
             }
             
-            const userDocRef = doc(db, "users", result.uid);
+            const userDocRef = doc(db, "users", uid);
             await setDoc(userDocRef, {
                 clientId: role === 'consultant' ? null : selectedClientId,
                 role: role
@@ -158,12 +195,15 @@ export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
             console.error(error);
             toast({
                 title: "Erro ao associar usuário",
-                description: error.message || "Ocorreu um erro inesperado. Verifique se o e-mail está correto.",
+                description: "Não foi possível encontrar o usuário. Verifique se o e-mail está correto e se o usuário já existe no sistema de autenticação.",
                 variant: "destructive",
             });
         } finally {
             setIsSubmitting(false);
         }
+        */
+       setIsSubmitting(false);
+       onFinished();
     };
 
     return (
@@ -193,7 +233,7 @@ export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
                     </Select>
                 </div>
                  <p className="text-sm text-muted-foreground">
-                    Irá associar um usuário já existente no sistema de autenticação a um cliente ou a um cargo.
+                    Devido a limitações de segurança, a associação de um usuário já existente deve ser feita no console do Firebase. Esta função está desabilitada temporariamente.
                 </p>
             </div>
             <DialogFooter className="mt-6">
