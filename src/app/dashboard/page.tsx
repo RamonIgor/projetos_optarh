@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -58,7 +59,7 @@ export default function DashboardPage() {
     useEffect(() => {
         if (userLoading || isClientLoading) return;
         if (!user) {
-            router.push('/login');
+            if(!userLoading) router.push('/login');
             return;
         }
         if (!db || !clientId) {
@@ -137,7 +138,7 @@ export default function DashboardPage() {
         { name: 'Compartilhado', value: stats.byCategory['Compartilhado'] || 0, fill: '#2563eb' }
     ].filter(item => item.value > 0), [stats.byCategory]);
     
-    if (userLoading || isLoading) {
+    if (userLoading || isLoading || isClientLoading) {
         return (
             <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
                 <div className="flex items-center justify-center min-h-[60vh]">

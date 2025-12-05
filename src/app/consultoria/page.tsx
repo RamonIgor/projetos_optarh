@@ -305,7 +305,12 @@ export default function ConsultancyPage() {
     useEffect(() => {
         if (userLoading || isClientLoading) return;
         
-        if (!user || !isConsultant) {
+        if (!user) {
+            if (!userLoading) router.push('/');
+            return;
+        }
+        
+        if (!isConsultant) {
             router.push('/');
             return;
         }
@@ -478,7 +483,7 @@ export default function ConsultancyPage() {
         { name: 'Compartilhado', value: clientStats.byCategory['Compartilhado'] || 0, fill: '#2563eb' }
     ].filter(item => item.value > 0), [clientStats.byCategory]);
 
-    if (isLoading || userLoading || isClientLoading || !isConsultant) {
+    if (isLoading || userLoading || isClientLoading) {
         return (
             <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0 || actions.length > 0}>
                 <div className="flex justify-center items-center h-[80vh]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>

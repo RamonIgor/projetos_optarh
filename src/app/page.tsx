@@ -169,12 +169,15 @@ export default function BrainstormPage() {
 
   useEffect(() => {
     const pageIsLoading = userLoading || isClientLoading;
-    
     if (pageIsLoading) return;
+    
     if (!user) {
-      router.push('/login');
-      return;
+        if (!userLoading) {
+            router.push('/login');
+        }
+        return;
     }
+
     if (!db) return;
     
     if (!clientId) {
@@ -337,7 +340,6 @@ export default function BrainstormPage() {
   }
   
   if (!user) {
-    router.push('/login');
     return null;
   }
 
@@ -440,5 +442,3 @@ export default function BrainstormPage() {
     </AppLayout>
   );
 }
-
-    

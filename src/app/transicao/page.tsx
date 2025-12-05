@@ -193,7 +193,7 @@ export default function TransitionPage() {
     useEffect(() => {
         if (userLoading || isClientLoading) return;
         if (!user) {
-            router.push('/login');
+            if(!userLoading) router.push('/login');
             return;
         }
         if (!db || !clientId) {
