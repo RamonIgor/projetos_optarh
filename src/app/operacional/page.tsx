@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useTransition } from 'react';
@@ -111,8 +112,13 @@ function ActivityItem({ activity, name, onToggle }: { activity: Activity, name: 
 
 function HistoryModal({ activity, name }: { activity: Activity, name: string }) {
     const history = useMemo(() => {
+        if (!activity.historicoExecucoes) return [];
         const sorted = [...(activity.historicoExecucoes || [])];
-        sorted.sort((a, b) => (b as any) - (a as any));
+        sorted.sort((a, b) => {
+            const dateA = a instanceof Timestamp ? a.toDate() : a;
+            const dateB = b instanceof Timestamp ? b.toDate() : b;
+            return dateB.getTime() - dateA.getTime();
+        });
         return sorted;
     }, [activity.historicoExecucoes]);
 
@@ -139,7 +145,7 @@ function HistoryModal({ activity, name }: { activity: Activity, name: string }) 
                                         <div className="flex-1">
                                             <p className="font-medium">Execução concluída</p>
                                             <p className="text-muted-foreground text-xs">
-                                                {format((item as Timestamp).toDate(), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
+                                                {format(item instanceof Timestamp ? item.toDate() : item, "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
                                             </p>
                                         </div>
                                     </li>
@@ -226,6 +232,7 @@ export default function OperationalPage() {
             return;
         }
 
+        setIsLoading(true);
         const q = query(collection(db, 'clients', clientId, 'activities'), where('status', '==', 'aprovada'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
@@ -266,9 +273,13 @@ export default function OperationalPage() {
         });
     };
     
-    const unclassifiedCount = 0; 
+    const unclassifiedCount = useMemo(() => allActivities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [allActivities]);
     const allResponsibles = useMemo(() => Array.from(new Set(allActivities.map(a => a.responsavel).filter(Boolean))), [allActivities]);
-    const allRecurrences = useMemo(() => Array.from(new Set(allActivities.map(a => a.recorrencia).filter(Boolean))), [allActivities]);
+    
+    const allRecurrences = useMemo(() => {
+        const recurrences = new Set(allActivities.map(a => a.recorrencia).filter(Boolean));
+        return recurrenceOrder.filter(r => recurrences.has(r));
+    }, [allActivities]);
 
     const getActivityName = (activity: Activity) => {
         if (activity.parentId) {
@@ -284,7 +295,7 @@ export default function OperationalPage() {
             const categoryMatch = categoryFilter === 'Todas' || activity.categoria === categoryFilter;
             const recurrenceMatch = recurrenceFilter === 'all' || activity.recorrencia === recurrenceFilter;
             const responsibleMatch = responsibleFilter === 'all' || activity.responsavel === responsibleFilter;
-            const statusMatch = statusFilter === 'all' || (statusFilter === 'pending' && isActivityPending(activity));
+            const statusMatch = statusFilter === 'all' || (statusFilter === 'pending' && isActivityPending(activity)) || (statusFilter === 'executed' && !isActivityPending(activity));
             return categoryMatch && recurrenceMatch && responsibleMatch && statusMatch;
         });
     }, [allActivities, categoryFilter, recurrenceFilter, responsibleFilter, statusFilter]);
@@ -300,18 +311,28 @@ export default function OperationalPage() {
                 groups[activity.recorrencia].push(activity);
             }
         }
+        
+        for (const recurrence in groups) {
+            groups[recurrence as Recurrence].sort((a,b) => {
+                const aIsPending = isActivityPending(a);
+                const bIsPending = isActivityPending(b);
+                if (aIsPending && !bIsPending) return -1;
+                if (!aIsPending && bIsPending) return 1;
+                return 0;
+            });
+        }
         return groups;
     }, [filteredActivities]);
 
     const stats = useMemo(() => {
-        const total = filteredActivities.length;
-        const pending = filteredActivities.filter(isActivityPending).length;
+        const total = allActivities.length;
+        const pending = allActivities.filter(isActivityPending).length;
         const executed = total - pending;
         const completionRate = total > 0 ? (executed / total) * 100 : 0;
         return { total, pending, executed, completionRate };
-    }, [filteredActivities]);
+    }, [allActivities]);
 
-    if (userLoading || isLoading) {
+    if (userLoading || isLoading || isClientLoading) {
         return (
             <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
                 <div className="flex items-center justify-center min-h-[60vh]">
@@ -384,7 +405,8 @@ export default function OperationalPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Mostrar Todas</SelectItem>
-                                <SelectItem value="pending">Mostrar Apenas Pendentes</SelectItem>
+                                <SelectItem value="pending">Apenas Pendentes</SelectItem>
+                                <SelectItem value="executed">Apenas Executadas</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

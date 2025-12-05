@@ -29,7 +29,7 @@ export type Recurrence = 'Diária' | 'Semanal' | 'Mensal' | 'Trimestral' | 'Anua
  */
 export function isActivityPending(activity: Activity): boolean {
   if (activity.recorrencia === 'Sob demanda') {
-    return false; // On-demand tasks don't have a pending/overdue state
+    return activity.ultimaExecucao === null; // On-demand tasks are pending until executed once. They can be re-executed anytime.
   }
   
   if (!activity.ultimaExecucao) {
@@ -62,6 +62,9 @@ export function isActivityPending(activity: Activity): boolean {
  */
 export function isActivityOverdue(activity: Activity): boolean {
   if (!isActivityPending(activity)) {
+    return false;
+  }
+  if (activity.recorrencia === 'Sob demanda') {
     return false;
   }
   
@@ -109,3 +112,5 @@ function getNextExecutionDate(referenceDate: Date, recurrence: Recurrence | null
             return referenceDate;
     }
 }
+
+    
