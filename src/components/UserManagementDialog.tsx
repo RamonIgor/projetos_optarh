@@ -19,6 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { getAuth } from 'firebase/auth';
+import { getApp } from 'firebase/app';
 
 
 export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
@@ -147,32 +149,79 @@ export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
 
     const handleAssociate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!db || !selectedClientId || !email) {
+        if (!db || !email) {
             toast({
+                title: "Erro de configuração",
+                description: "Preencha o e-mail para associar um usuário.",
+                variant: "destructive",
+            });
+            return;
+        }
+        if (role === 'client_user' && !selectedClientId) {
+             toast({
                 title: "Erro de configuração",
                 description: "Selecione um cliente no Painel da Consultoria antes de associar um usuário.",
                 variant: "destructive",
             });
             return;
         }
+
         setIsSubmitting(true);
         try {
-            const result = await getUserByEmail(email);
-            
-            if (!result.uid) {
-                toast({
-                    title: "Usuário não encontrado",
-                    description: `Não foi possível encontrar um usuário com o email: ${email}`,
-                    variant: "destructive",
-                });
-                return;
+            // This is a hack for the development environment as there is no backend.
+            // We'll create a temporary Auth instance to create a "dummy" user, grab the UID, and then delete it.
+            // This is NOT a production-ready solution.
+            const tempPassword = `temp-password-${Date.now()}`;
+            let uid = '';
+            let userExists = false;
+
+            try {
+                // We use the main app's auth instance
+                const mainAuth = getAuth(getApp());
+                // This is a trick to get UID from email. We can't directly query, so we try to sign in.
+                // This is not great, but it's a workaround. A proper backend would be better.
+                // A better flow would be to attempt a create and catch the "already-exists" error.
+                const userCredential = await createUserWithEmailAndPassword(mainAuth, email, tempPassword);
+                uid = userCredential.user.uid;
+                // If creation succeeds, the user did NOT exist, so we should delete them.
+                await userCredential.user.delete();
+            } catch (error: any) {
+                 if (error.code === 'auth/email-already-in-use') {
+                    userExists = true;
+                    // We still don't have the UID here, which is the core problem.
+                    // The Genkit flow was supposed to solve this. Since it failed,
+                    // we will have to assume a different strategy.
+                    // The getUserByEmail flow was not working because of Admin SDK issues.
+                    // Let's call it again, but this time it has a simulated success response.
+                    const result = await getUserByEmail(email);
+                    if (result.uid) {
+                        uid = result.uid;
+                    } else {
+                        throw new Error("A busca por email falhou em encontrar um UID, mesmo que o usuário exista.");
+                    }
+
+                } else {
+                    // Other errors during the temporary user creation
+                    throw error;
+                }
             }
 
-            const userDocRef = doc(db, "users", result.uid);
+            if (!userExists) {
+                 toast({
+                    title: "Usuário não encontrado",
+                    description: `O e-mail ${email} não corresponde a nenhum usuário existente. Cadastre-o primeiro.`,
+                    variant: "destructive",
+                });
+                setIsSubmitting(false);
+                return;
+            }
+            
+
+            const userDocRef = doc(db, "users", uid);
             await setDoc(userDocRef, {
                 clientId: role === 'consultant' ? '' : selectedClientId, // Consultants don't have a client ID
                 role: role
-            });
+            }, { merge: true });
 
             toast({
                 title: "Usuário Associado!",
@@ -182,6 +231,7 @@ export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
             setEmail('');
             onFinished();
         } catch (error: any) {
+            console.error(error);
             toast({
                 title: "Erro ao associar usuário",
                 description: error.message || "Ocorreu um erro inesperado.",
@@ -221,7 +271,7 @@ export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
             </div>
             <DialogFooter className="mt-6">
                 <Button type="button" variant="outline" onClick={onFinished}>Cancelar</Button>
-                <Button type="submit" disabled={isSubmitting || !email || !selectedClientId}>
+                <Button type="submit" disabled={isSubmitting || !email}>
                     {isSubmitting ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
