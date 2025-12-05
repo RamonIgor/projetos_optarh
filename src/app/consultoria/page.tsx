@@ -491,7 +491,15 @@ export default function ConsultancyPage() {
                                 {clientCategoryChartData.length > 0 ? (
                                      <ResponsiveContainer width="100%" height={150}>
                                         <PieChart>
-                                            <Pie data={clientCategoryChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} labelLine={false} label={({ cx, cy, midAngle, innerRadius, outerRadius, value, index }) => {
+                                            <Pie 
+                                                data={clientCategoryChartData} 
+                                                dataKey="value" 
+                                                nameKey="name" 
+                                                cx="50%" 
+                                                cy="45%" 
+                                                outerRadius={50} 
+                                                labelLine={false} 
+                                                label={({ cx, cy, midAngle, innerRadius, outerRadius, value, index }) => {
                                                     const RADIAN = Math.PI / 180;
                                                     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
                                                     const x = cx + radius * Math.cos(-midAngle * RADIAN);
@@ -646,4 +654,3 @@ export default function ConsultancyPage() {
     );
 }
 
-    
