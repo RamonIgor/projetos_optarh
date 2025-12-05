@@ -109,7 +109,7 @@ export const UserManagementDialog: UserManagementDialogComponent = ({ children }
             {children}
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Gerenciar Colaboradores</DialogTitle>
+                    <DialogTitle>Cadastrar Novo Colaborador</DialogTitle>
                     <DialogDescription>
                         Crie uma nova conta de acesso para um membro da equipe. Ele será associado ao cliente que está selecionado no seu painel.
                     </DialogDescription>

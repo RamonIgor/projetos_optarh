@@ -21,8 +21,12 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal
 } from "@/components/ui/dropdown-menu"
-import { SystemToolsDialog } from './SystemToolsDialog';
+import { UserManagementDialog } from './RegisterUserDialog';
 import Image from 'next/image';
 import {
   Sheet,
@@ -110,18 +114,50 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
     return link;
   };
   
-  const SettingsMenu = ({ isMobile = false }: { isMobile?: boolean }) => (
-       <SystemToolsDialog isAuthorized={isAuthorized}>
-          {isMobile ? (
-             <Button variant="ghost"><Settings className="mr-2 h-4 w-4" /> Ferramentas</Button>
-          ) : (
-            <Button variant="ghost" size="icon">
-              <Settings className="h-5 w-5" />
-              <span className="sr-only">Configurações</span>
-            </Button>
-          )}
-        </SystemToolsDialog>
-  );
+  const SettingsMenu = ({ isMobile = false }: { isMobile?: boolean }) => {
+    const commonItemClass = "w-full justify-start";
+    
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                {isMobile ? (
+                    <Button variant="ghost" className={commonItemClass}><Settings className="mr-2 h-4 w-4" /> Configurações</Button>
+                ) : (
+                    <Button variant="ghost" size="icon">
+                        <Settings className="h-5 w-5" />
+                        <span className="sr-only">Configurações</span>
+                    </Button>
+                )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align={isMobile ? "start" : "end"}>
+                {isAuthorized && (
+                    <UserManagementDialog>
+                        <UserManagementDialog.Trigger asChild>
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                <UserPlus className="mr-2 h-4 w-4" />
+                                <span>Cadastrar Colaborador</span>
+                            </DropdownMenuItem>
+                        </UserManagementDialog.Trigger>
+                    </UserManagementDialog>
+                )}
+                
+                <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                        <KeyRound className="mr-2 h-4 w-4" />
+                        <span>Segurança</span>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                        <DropdownMenuSubContent>
+                            <DropdownMenuItem onClick={() => { router.push('/change-password'); setMobileMenuOpen(false); }}>
+                                Alterar minha senha
+                            </DropdownMenuItem>
+                        </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                </DropdownMenuSub>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+  };
 
   return (
     <div className="min-h-screen w-full flex flex-col">
@@ -168,18 +204,8 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
                     <div className="mt-2" onClick={() => setMobileMenuOpen(false)}>
                        <SettingsMenu isMobile />
                     </div>
-                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                         <Button variant="ghost" className='w-full justify-start'><KeyRound className="mr-2 h-4 w-4" /> Segurança</Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onClick={() => {router.push('/change-password'); setMobileMenuOpen(false);}}>
-                            Alterar minha senha
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                     <div className="mt-2">
-                      <Button variant="ghost" onClick={handleLogout}>
+                      <Button variant="ghost" onClick={handleLogout} className="w-full justify-start">
                           <LogOut className="mr-2 h-4 w-4" />
                           Sair
                       </Button>
