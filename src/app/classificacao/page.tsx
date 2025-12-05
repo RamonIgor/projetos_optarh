@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -13,7 +14,7 @@ import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ArrowLeft, Check, Square, ChevronsRight, ListTodo, ActivitySquare, ThumbsUp, RotateCcw, MessageSquare, HandPointer } from 'lucide-react';
+import { Loader2, ArrowLeft, Check, Square, ChevronsRight, ListTodo, ActivitySquare, ThumbsUp, RotateCcw, MessageSquare, Hand } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -483,6 +484,9 @@ export default function ClassificationPage() {
                             )}
                         </div>
                         <div className="flex flex-col sm:flex-row gap-4">
+                          <Button onClick={() => handleSaveAndSelectNext()} disabled={isSaving}>
+                              Salvar e Próximo
+                           </Button>
                           <Button onClick={handleApprove} disabled={isApproveDisabled || isSaving} className="bg-green-600 hover:bg-green-700">
                             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Check className="mr-2 h-4 w-4"/>}
                             Aprovar Atividade
@@ -501,7 +505,7 @@ export default function ClassificationPage() {
                       </>
                     ) : (
                        <>
-                          <HandPointer className="h-12 w-12 text-primary mb-4" />
+                          <Hand className="h-12 w-12 text-primary mb-4" />
                           <h2 className="text-2xl font-bold">Selecione uma atividade</h2>
                           <p className="text-muted-foreground mt-2">Escolha uma atividade da lista ao lado para começar.</p>
                        </>
