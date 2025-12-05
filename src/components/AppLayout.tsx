@@ -29,7 +29,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -40,7 +40,7 @@ interface AppLayoutProps {
 export default function AppLayout({ children, unclassifiedCount, hasActivities }: AppLayoutProps) {
   const auth = useAuth();
   const { user } = useUser();
-  const { isConsultant } = useClient();
+  const { isConsultant, selectedClientId } = useClient();
   const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -59,13 +59,12 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
     { href: '/operacional', label: 'Operacional', icon: PlayCircle, disabled: !hasActivities },
   ];
   
-  // Hybrid check: Recognizes both hardcoded emails and the 'consultant' role from the database.
   const authorizedConsultants = ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'];
   const isAuthorized = isConsultant || (user && authorizedConsultants.includes(user.email || ''));
 
   const consultancyButton = (
     isAuthorized ? (
-        <Button variant="ghost" onClick={() => router.push('/consultoria')}>
+        <Button variant={pathname === '/consultoria' ? 'outline' : 'ghost'} onClick={() => router.push('/consultoria')}>
             <Rows className="mr-2 h-4 w-4" />
             Painel
         </Button>
@@ -82,7 +81,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
           "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
           isActive ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground",
           item.disabled ? "opacity-50 cursor-not-allowed" : "",
-          "sm:flex" // Nav items are flex on sm and up
+          "sm:flex"
         )}
         aria-disabled={item.disabled}
         onClick={(e) => {
@@ -99,9 +98,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
     );
 
     if (item.disabled) {
-      const tooltipText = item.href === '/operacional' || item.href === '/classificacao' || item.href === '/dashboard' || item.href === '/transicao'
-        ? "Adicione atividades no Brainstorm primeiro."
-        : "Funcionalidade em desenvolvimento.";
+      const tooltipText = "Adicione e aprove atividades para habilitar esta seção.";
 
       return (
         <Tooltip key={item.href}>
@@ -114,7 +111,6 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
   };
   
   const SettingsMenu = ({ isMobile = false }: { isMobile?: boolean }) => (
-    <UserManagementDialog>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           {isMobile ? (
@@ -128,15 +124,12 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           {isAuthorized && (
-            <>
-              <UserManagementDialog.Trigger asChild>
-                  <DropdownMenuItem>
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      <span>Gerenciar Colaboradores</span>
-                  </DropdownMenuItem>
-              </UserManagementDialog.Trigger>
-              <DropdownMenuSeparator />
-            </>
+            <UserManagementDialog>
+              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  <span>Gerenciar Colaboradores</span>
+              </DropdownMenuItem>
+            </UserManagementDialog>
           )}
            <DropdownMenuItem onClick={() => router.push('/change-password')}>
               <KeyRound className="mr-2 h-4 w-4" />
@@ -144,7 +137,6 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-    </UserManagementDialog>
   );
 
   return (

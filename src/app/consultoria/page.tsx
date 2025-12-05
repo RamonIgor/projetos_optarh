@@ -24,7 +24,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, CalendarIcon, Trash2, Edit, BarChart, LineChart, FileText, CheckSquare, PieChart as PieChartIcon, Shuffle, Clock } from 'lucide-react';
+import { Loader2, PlusCircle, CalendarIcon, Trash2, Edit, BarChart, LineChart, FileText, CheckSquare, PieChart as PieChartIcon, Shuffle, Clock, Building } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -42,6 +42,77 @@ const CategoryChart = dynamic(() => import('@/components/CategoryChart'), {
     loading: () => <div className="h-[250px] flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
 });
 
+const newClientSchema = z.object({
+  name: z.string().min(2, "O nome do cliente é obrigatório."),
+});
+type NewClientFormValues = z.infer<typeof newClientSchema>;
+
+
+function AddClientDialog({ onClientAdded }: { onClientAdded: (clientId: string) => void }) {
+    const db = useFirestore();
+    const { toast } = useToast();
+    const [open, setOpen] = useState(false);
+    const [isSubmitting, startSubmitTransition] = useTransition();
+
+    const form = useForm<NewClientFormValues>({
+        resolver: zodResolver(newClientSchema),
+        defaultValues: { name: '' },
+    });
+
+    const onSubmit = (data: NewClientFormValues) => {
+        if (!db) return;
+        startSubmitTransition(async () => {
+            try {
+                const docRef = await addDoc(collection(db, 'clients'), {
+                    name: data.name,
+                    userIds: [],
+                });
+                toast({ title: "Cliente adicionado com sucesso!" });
+                form.reset();
+                setOpen(false);
+                onClientAdded(docRef.id);
+            } catch (error) {
+                console.error("Error adding client:", error);
+                toast({ title: "Erro ao adicionar cliente", variant: "destructive" });
+            }
+        });
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Adicionar Primeiro Cliente
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Adicionar Novo Cliente</DialogTitle>
+                    <DialogDescription>Crie o primeiro cliente para começar a gerenciar as atividades.</DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        <FormField control={form.control} name="name" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Nome do Cliente</FormLabel>
+                                <FormControl><Input placeholder="Ex: Empresa Exemplo S/A" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <DialogFooter>
+                            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+                                Adicionar Cliente
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 const actionSchema = z.object({
   acao: z.string().min(3, "A ação deve ter pelo menos 3 caracteres."),
@@ -295,6 +366,7 @@ export default function ConsultancyPage() {
     const [actions, setActions] = useState<ConsultancyAction[]>([]);
     const [activities, setActivities] = useState<Activity[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isLoadingClients, setIsLoadingClients] = useState(true);
     const [isDeleting, startDeleteTransition] = useTransition();
     
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -303,26 +375,28 @@ export default function ConsultancyPage() {
     const unclassifiedCount = useMemo(() => activities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [activities]);
     
     useEffect(() => {
-        if (!userLoading && !user) {
-            router.push('/login');
-        }
-    }, [user, userLoading, router]);
+        const pageIsLoading = userLoading || isClientLoading;
+        if (pageIsLoading) return;
 
-    useEffect(() => {
-        if (userLoading || isClientLoading) return;
-        
-        if (!user) return;
+        if (!user) {
+            router.push('/login');
+            return;
+        }
         
         if (!isConsultant) {
             router.push('/');
             return;
         }
 
-        if (!db) { 
-            setIsLoading(false); 
+    }, [user, userLoading, isConsultant, isClientLoading, router]);
+
+    useEffect(() => {
+        if (!isConsultant || !db) { 
+            setIsLoadingClients(false); 
             return; 
         }
 
+        setIsLoadingClients(true);
         const clientsQuery = query(collection(db, 'clients'));
         const unsubClients = onSnapshot(clientsQuery, (snapshot) => {
             const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Client));
@@ -330,10 +404,11 @@ export default function ConsultancyPage() {
             if (!selectedClientId && clientsData.length > 0) {
                 setSelectedClientId(clientsData[0].id);
             }
-        }, () => setIsLoading(false));
+            setIsLoadingClients(false);
+        }, () => setIsLoadingClients(false));
         
         return () => unsubClients();
-    }, [db, user, userLoading, isConsultant, isClientLoading, router, selectedClientId, setSelectedClientId]);
+    }, [db, isConsultant, selectedClientId, setSelectedClientId]);
 
     useEffect(() => {
         if (!selectedClientId || !db) {
@@ -486,15 +561,16 @@ export default function ConsultancyPage() {
         { name: 'Compartilhado', value: clientStats.byCategory['Compartilhado'] || 0, fill: '#2563eb' }
     ].filter(item => item.value > 0), [clientStats.byCategory]);
 
-    if (userLoading || isClientLoading) {
+    if (userLoading || isClientLoading || isLoadingClients) {
         return (
             <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0 || actions.length > 0}>
-                <div className="flex justify-center items-center h-[80vh]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
+                <div className="flex justify-center items-center h-[80vh] w-full"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
             </AppLayout>
         );
     }
     
     const CurrentClientSelect = () => (
+       allClients.length > 0 ? (
         <Select value={selectedClientId || ''} onValueChange={setSelectedClientId}>
             <SelectTrigger className="w-[280px]">
                 <SelectValue placeholder="Selecione um cliente" />
@@ -505,10 +581,13 @@ export default function ConsultancyPage() {
                 ))}
             </SelectContent>
         </Select>
+       ) : (
+            <AddClientDialog onClientAdded={(id) => setSelectedClientId(id)} />
+       )
     );
 
     return (
-        <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0 || actions.length > 0}>
+        <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0 || actions.length > 0 || allClients.length > 0}>
             <div className="space-y-8 max-w-7xl mx-auto w-full">
                 <div className="flex justify-between items-center">
                     <div>
@@ -517,7 +596,7 @@ export default function ConsultancyPage() {
                            <CurrentClientSelect />
                         </div>
                     </div>
-                    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                         <DialogTrigger asChild>
                             <Button onClick={handleAddNew} disabled={!selectedClientId}>
                                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -541,16 +620,16 @@ export default function ConsultancyPage() {
                 {!selectedClientId ? (
                      <Card>
                         <CardContent className="p-12 text-center">
-                            {isLoading ? (
-                                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                            ) : (
-                                <>
-                                    <h2 className="text-2xl font-semibold">Selecione um Cliente</h2>
-                                    <p className="mt-2 text-muted-foreground">Escolha um cliente na lista acima para ver seus dados e plano de ação.</p>
-                                </>
-                            )}
+                            <div className="flex flex-col items-center gap-4">
+                                <Building className="h-16 w-16 text-muted-foreground" />
+                                <h2 className="text-2xl font-semibold">Nenhum Cliente Cadastrado</h2>
+                                <p className="mt-2 text-muted-foreground max-w-md">Para começar, adicione seu primeiro cliente. Você poderá então gerenciar atividades, planos de ação e colaboradores para ele.</p>
+                                <AddClientDialog onClientAdded={(id) => setSelectedClientId(id)} />
+                            </div>
                         </CardContent>
                     </Card>
+                ) : isLoading ? (
+                    <div className="flex justify-center items-center h-[50vh]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
                 ) : (
                 <>
                  <Card>

@@ -17,9 +17,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog"
 // A bit of a hack to create a compound component
 // that can share the open/setOpen state.
 // UserManagementDialog.Trigger
-type UserManagementDialogComponent = React.FC<{ children: React.ReactNode }> & {
-    Trigger: typeof DialogPrimitive.Trigger;
-}
+type UserManagementDialogComponent = React.FC<{ children: React.ReactNode }>
 
 export const UserManagementDialog: UserManagementDialogComponent = ({ children }) => {
     const auth = useAuth();
@@ -106,7 +104,7 @@ export const UserManagementDialog: UserManagementDialogComponent = ({ children }
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            {children}
+            <DialogTrigger asChild>{children}</DialogTrigger>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Gerenciar Colaboradores</DialogTitle>
@@ -156,4 +154,5 @@ export const UserManagementDialog: UserManagementDialogComponent = ({ children }
     );
 }
 
-UserManagementDialog.Trigger = DialogPrimitive.Trigger;
+// UserManagementDialog.Trigger = DialogPrimitive.Trigger;
+
