@@ -18,7 +18,7 @@ import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
 import AppLayout from '@/components/AppLayout';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 
 const ACTIVITIES_COLLECTION = 'rh-dp-activities';
 
@@ -36,7 +36,7 @@ const statusInfo: { [key: string]: { label: string; icon: React.ReactNode; varia
 };
 
 
-function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddSubActivity, onDeleteActivity }: { activity: Activity, isSubItem?: boolean, hasChildren?: boolean, onAddSubActivity: (parentId: string, name: string) => void, onDeleteActivity: (id: string) => void }) {
+function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddSubActivity, onDeleteActivity }: { activity: Activity, isSubItem?: boolean, hasChildren?: boolean, onAddSubActivity: (name: string, parentId: string) => void, onDeleteActivity: (id: string) => void }) {
     const [showAddSub, setShowAddSub] = useState(false);
     const [subActivityName, setSubActivityName] = useState("");
     const [isAdding, startAdding] = useTransition();
@@ -51,7 +51,7 @@ function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddS
         if(!subActivityName.trim()) return;
 
         startAdding(() => {
-            onAddSubActivity(activity.id, subActivityName);
+            onAddSubActivity(subActivityName, activity.id);
             setSubActivityName("");
             setShowAddSub(false);
         });
@@ -96,25 +96,35 @@ function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddS
                     </div>
                     </Badge>
                      {!isSubItem && (
-                        <Button
-                            variant="ghost" size="icon" className="h-8 w-8"
-                            onClick={(e) => { e.stopPropagation(); setShowAddSub(!showAddSub); }}
-                            aria-label="Adicionar micro-processo"
-                            title="Adicionar micro-processo"
-                        >
-                            <GitBranchPlus className="h-4 w-4"/>
-                        </Button>
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost" size="icon" className="h-8 w-8"
+                                        onClick={(e) => { e.stopPropagation(); setShowAddSub(!showAddSub); }}
+                                        aria-label="Adicionar micro-processo"
+                                    >
+                                        <GitBranchPlus className="h-4 w-4"/>
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Adicionar micro-processo</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
                     )}
                     
                     {hasChildren ? (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <span>{deleteButton}</span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Exclua os micro-processos primeiro para poder apagar a atividade principal.</p>
-                            </TooltipContent>
-                        </Tooltip>
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <span>{deleteButton}</span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Exclua os micro-processos primeiro para poder apagar a atividade principal.</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
                     ) : (
                         deleteButton
                     )}
@@ -195,30 +205,29 @@ export default function BrainstormPage() {
     const childrenOf: Record<string, Activity[]> = {};
     const activityMap = new Map(activities.map(a => [a.id, a]));
 
-    for (const activity of activities) {
-        if (activity.parentId) {
-            // Check if parent exists. If not, it's an orphan.
-            if (activityMap.has(activity.parentId)) {
-                if (!childrenOf[activity.parentId]) {
-                    childrenOf[activity.parentId] = [];
-                }
-                childrenOf[activity.parentId].push(activity);
-            } else {
-                // It's an orphan, treat it as a top-level item.
-                tree.push({ ...activity, children: [] });
+    // First pass: group children under their parents
+    activities.forEach(activity => {
+        if (activity.parentId && activityMap.has(activity.parentId)) {
+            if (!childrenOf[activity.parentId]) {
+                childrenOf[activity.parentId] = [];
             }
-        } else {
-            tree.push({ ...activity, children: [] });
+            childrenOf[activity.parentId].push(activity);
         }
-    }
-
-    for (const item of tree) {
-        if (childrenOf[item.id]) {
-            item.children = childrenOf[item.id].sort((a, b) => (a.createdAt as any) - (b.createdAt as any));
-        }
-    }
+    });
     
-    // Sort top-level items by creation date
+    // Second pass: build the tree with only top-level items
+    activities.forEach(activity => {
+        if (!activity.parentId) {
+            const children = (childrenOf[activity.id] || []).sort((a,b) => (a.createdAt as any) - (b.createdAt as any));
+            tree.push({ ...activity, children });
+        } else if (!activityMap.has(activity.parentId)) {
+            // It's an orphan, treat it as a top-level item.
+            const children = (childrenOf[activity.id] || []).sort((a,b) => (a.createdAt as any) - (b.createdAt as any));
+            tree.push({ ...activity, children });
+        }
+    });
+    
+    // Sort top-level items by creation date (newest first)
     tree.sort((a,b) => (b.createdAt as any) - (a.createdAt as any));
 
     return tree;
