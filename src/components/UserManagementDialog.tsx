@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,44 +13,92 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getFirestore, setDoc, doc, collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
+import { useClient, useFirestore as useDb } from '@/firebase';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { type Client } from '@/types/activity';
 
 // This function creates a secondary, temporary Firebase app instance
 // to handle user creation without affecting the current user's session.
 const createSecondaryAuth = () => {
     const appName = `secondary-auth-app-${Date.now()}`;
     try {
-        return getAuth(initializeApp(firebaseConfig, appName));
+        const secondaryApp = initializeApp(firebaseConfig, appName);
+        return {
+            auth: getAuth(secondaryApp),
+            db: getFirestore(secondaryApp)
+        };
     } catch(e) {
         // Fallback for strict mode double-invoking this
-        return getAuth(initializeApp(firebaseConfig, `${appName}-fallback`));
+        const secondaryApp = initializeApp(firebaseConfig, `${appName}-fallback`);
+         return {
+            auth: getAuth(secondaryApp),
+            db: getFirestore(secondaryApp)
+        };
     }
 };
 
-
 export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
     const { toast } = useToast();
+    const db = useDb();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [selectedClientId, setSelectedClientId] = useState('');
+    const [clients, setClients] = useState<Client[]>([]);
+    const [isLoadingClients, setIsLoadingClients] = useState(true);
     const [isSubmitting, startTransition] = useTransition();
+
+    useEffect(() => {
+        if (!db) return;
+        const fetchClients = async () => {
+            setIsLoadingClients(true);
+            try {
+                const clientsQuery = query(collection(db, 'clients'), orderBy('name', 'asc'));
+                const snapshot = await getDocs(clientsQuery);
+                const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Client));
+                setClients(clientsData);
+            } catch (error) {
+                console.error("Error fetching clients:", error);
+                toast({ title: "Erro ao buscar clientes", variant: "destructive" });
+            } finally {
+                setIsLoadingClients(false);
+            }
+        };
+        fetchClients();
+    }, [db, toast]);
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!email || !password) {
+        if (!email || !password || !selectedClientId) {
+            toast({ title: "Preencha todos os campos", description: "Email, senha e cliente são obrigatórios.", variant: "destructive"});
             return;
         }
 
         startTransition(async () => {
-            const secondaryAuth = createSecondaryAuth();
+            const { auth: secondaryAuth, db: secondaryDb } = createSecondaryAuth();
             try {
-                await createUserWithEmailAndPassword(secondaryAuth, email, password);
-                toast({
-                    title: "Usuário Criado!",
-                    description: `O acesso para ${email} foi criado. Agora você pode associá-lo a um cliente.`,
+                // 1. Create the user in Firebase Auth
+                const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+                const newUser = userCredential.user;
+
+                // 2. Create the user profile document in Firestore
+                await setDoc(doc(secondaryDb, "users", newUser.uid), {
+                    clientId: selectedClientId,
+                    role: 'client_user'
                 });
+
+                toast({
+                    title: "Usuário Criado e Associado!",
+                    description: `${email} foi criado e associado ao cliente selecionado.`,
+                });
+
+                // Reset form
                 setEmail('');
                 setPassword('');
-                // We keep the dialog open to make it easier to associate the user next.
+                setSelectedClientId('');
+                onFinished();
+
             } catch (error: any) {
                  let errorMessage = "Ocorreu um erro inesperado.";
                  if (error.code === 'auth/email-already-in-use') {
@@ -94,19 +142,32 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
                         required
                     />
                 </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="client-select">Associar ao Cliente</Label>
+                    <Select value={selectedClientId} onValueChange={setSelectedClientId} required>
+                         <SelectTrigger id="client-select" disabled={isLoadingClients}>
+                            <SelectValue placeholder={isLoadingClients ? "Carregando clientes..." : "Selecione um cliente"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {clients.length > 0 ? clients.map(client => (
+                                <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                            )) : <SelectItem value="" disabled>Nenhum cliente encontrado</SelectItem>}
+                        </SelectContent>
+                    </Select>
+                </div>
                  <p className="text-sm text-muted-foreground">
-                    Isto criará um login. O usuário deverá alterar a senha no primeiro acesso. O próximo passo é associá-lo a um cliente.
+                    O novo usuário será criado e vinculado ao cliente selecionado. Ele deverá alterar a senha no primeiro acesso.
                 </p>
             </div>
             <DialogFooter className="mt-6">
                 <Button type="button" variant="outline" onClick={onFinished}>Fechar</Button>
-                <Button type="submit" disabled={isSubmitting || !email || !password}>
+                <Button type="submit" disabled={isSubmitting || !email || !password || !selectedClientId}>
                     {isSubmitting ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
                         <UserPlus className="mr-2 h-4 w-4" />
                     )}
-                    Cadastrar
+                    Criar e Associar
                 </Button>
             </DialogFooter>
         </form>
@@ -119,9 +180,9 @@ export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
         <div className="py-4 space-y-4">
             <Alert>
               <Terminal className="h-4 w-4" />
-              <AlertTitle>Função Temporariamente Indisponível</AlertTitle>
+              <AlertTitle>Função Integrada</AlertTitle>
               <AlertDescription>
-                A função de associar usuários por e-mail está sendo revisada para garantir a estabilidade. Por enquanto, utilize o UID do usuário para fazer a associação, ou aguarde a restauração desta funcionalidade.
+                A associação de usuários agora é feita diretamente na aba "Cadastrar Novo". Crie um novo usuário e selecione o cliente para associá-lo em uma única etapa.
               </AlertDescription>
             </Alert>
              <DialogFooter className="mt-6">
@@ -144,18 +205,18 @@ export function UserManagementDialog({ children }: { children: React.ReactNode }
                 <DialogHeader>
                     <DialogTitle>Gerenciar Colaboradores</DialogTitle>
                     <DialogDescription>
-                        Crie novos usuários ou associe usuários existentes a um cliente.
+                        Crie novos usuários e associe-os a um cliente em um único passo.
                     </DialogDescription>
                 </DialogHeader>
                 <Tabs defaultValue="create" className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="create">Cadastrar Novo</TabsTrigger>
-                        <TabsTrigger value="associate">Associar Existente</TabsTrigger>
+                        <TabsTrigger value="create">Criar e Associar</TabsTrigger>
+                        <TabsTrigger value="info">Mais Informações</TabsTrigger>
                     </TabsList>
                     <TabsContent value="create">
                         <CreateUserForm onFinished={() => setOpen(false)} />
                     </TabsContent>
-                    <TabsContent value="associate">
+                    <TabsContent value="info">
                         <AssociateUserForm onFinished={() => setOpen(false)} />
                     </TabsContent>
                 </Tabs>
