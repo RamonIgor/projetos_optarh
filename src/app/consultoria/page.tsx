@@ -48,7 +48,7 @@ const newClientSchema = z.object({
 type NewClientFormValues = z.infer<typeof newClientSchema>;
 
 
-function AddClientDialog({ onClientAdded }: { onClientAdded: (clientId: string) => void }) {
+function AddClientDialog({ onClientAdded, children }: { onClientAdded: (clientId: string) => void, children: React.ReactNode }) {
     const db = useFirestore();
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
@@ -82,10 +82,7 @@ function AddClientDialog({ onClientAdded }: { onClientAdded: (clientId: string) 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Adicionar Primeiro Cliente
-                </Button>
+                {children}
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
@@ -376,12 +373,10 @@ export default function ConsultancyPage() {
     const unclassifiedCount = useMemo(() => activities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [activities]);
     
     useEffect(() => {
-        if (userLoading || isClientLoading) return;
-        if (!user) {
-            router.push('/login');
-            return;
-        }
-    }, [user, userLoading, isClientLoading, router]);
+      if (!userLoading && !user) {
+        router.push('/login');
+      }
+    }, [user, userLoading, router]);
 
     useEffect(() => {
         if (!isConsultant || !db) { 
@@ -555,7 +550,37 @@ export default function ConsultancyPage() {
         { name: 'Compartilhado', value: clientStats.byCategory['Compartilhado'] || 0, fill: '#2563eb' }
     ].filter(item => item.value > 0), [clientStats.byCategory]);
 
-    if (userLoading || isClientLoading || isLoadingClients) {
+    const renderClientSelector = () => {
+        if (isLoadingClients) {
+            return <Loader2 className="h-6 w-6 animate-spin text-primary" />;
+        }
+
+        if (allClients.length === 0) {
+            return (
+                 <AddClientDialog onClientAdded={(id) => setSelectedClientId(id)}>
+                    <Button>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Adicionar Primeiro Cliente
+                    </Button>
+                </AddClientDialog>
+            );
+        }
+
+        return (
+            <Select value={selectedClientId || ''} onValueChange={setSelectedClientId}>
+                <SelectTrigger className="w-[280px]">
+                    <SelectValue placeholder="Selecione um cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                    {allClients.map(client => (
+                        <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        );
+    }
+
+    if (userLoading || isClientLoading) {
         return (
             <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0 || allClients.length > 0}>
                 <div className="flex justify-center items-center h-[80vh] w-full"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
@@ -563,24 +588,6 @@ export default function ConsultancyPage() {
         );
     }
     
-    const CurrentClientSelect = () => {
-       if (allClients.length === 0) {
-           return <AddClientDialog onClientAdded={(id) => setSelectedClientId(id)} />;
-       }
-       return (
-        <Select value={selectedClientId || ''} onValueChange={setSelectedClientId}>
-            <SelectTrigger className="w-[280px]">
-                <SelectValue placeholder="Selecione um cliente" />
-            </SelectTrigger>
-            <SelectContent>
-                {allClients.map(client => (
-                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                ))}
-            </SelectContent>
-        </Select>
-       );
-    };
-
     return (
         <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0 || allClients.length > 0}>
             <div className="space-y-8 max-w-7xl mx-auto w-full">
@@ -588,7 +595,7 @@ export default function ConsultancyPage() {
                     <div>
                         <h1 className="text-4xl font-bold text-primary">Painel da Consultoria</h1>
                         <div className="mt-4">
-                           <CurrentClientSelect />
+                           {renderClientSelector()}
                         </div>
                     </div>
                      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -617,8 +624,8 @@ export default function ConsultancyPage() {
                         <CardContent className="p-12 text-center">
                             <div className="flex flex-col items-center gap-4">
                                 <Building className="h-16 w-16 text-muted-foreground" />
-                                <h2 className="text-2xl font-semibold">Nenhum Cliente Cadastrado ou Selecionado</h2>
-                                <p className="mt-2 text-muted-foreground max-w-md">Para começar, adicione seu primeiro cliente ou selecione um cliente existente na lista acima.</p>
+                                <h2 className="text-2xl font-semibold">Nenhum Cliente Selecionado</h2>
+                                <p className="mt-2 text-muted-foreground max-w-md">Selecione um cliente na lista acima para começar a gerenciar as atividades e o plano de ação.</p>
                             </div>
                         </CardContent>
                     </Card>
