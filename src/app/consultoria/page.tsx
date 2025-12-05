@@ -24,7 +24,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, CalendarIcon, Trash2, Edit, BarChart, LineChart, FileText, CheckSquare, PieChart as PieChartIcon } from 'lucide-react';
+import { Loader2, PlusCircle, CalendarIcon, Trash2, Edit, BarChart, LineChart, FileText, CheckSquare, PieChart as PieChartIcon, Shuffle, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -424,10 +424,15 @@ export default function ConsultancyPage() {
             return acc;
         }, {} as Record<string, number>);
 
-        return { total, classified, approved, byCategory, byStatus };
-    }, [activities]);
+        const byTransitionStatus = activities.reduce((acc, a) => {
+            acc[a.statusTransicao] = (acc[a.statusTransicao] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
 
-    const clientCategoryChartData: CategoryChartData[] = useMemo(() => [
+        return { total, classified, approved, byCategory, byStatus, byTransitionStatus };
+    }, [activities]);
+    
+    const clientCategoryChartData = useMemo(() => [
         { name: 'DP', value: clientStats.byCategory['DP'] || 0, fill: 'hsl(var(--primary))' },
         { name: 'RH', value: clientStats.byCategory['RH'] || 0, fill: '#16a34a' },
         { name: 'Compartilhado', value: clientStats.byCategory['Compartilhado'] || 0, fill: '#2563eb' }
@@ -471,8 +476,8 @@ export default function ConsultancyPage() {
                     <CardHeader>
                         <CardTitle className="text-2xl">Visão Geral do Cliente</CardTitle>
                     </CardHeader>
-                    <CardContent className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                         <StatCard title="Progresso do Levantamento" value={clientStats.total} icon={<FileText />}>
+                    <CardContent className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                        <StatCard title="Progresso do Levantamento" value={clientStats.total} icon={<FileText />}>
                             <p className="text-xs text-muted-foreground mt-2">
                                 {clientStats.classified} classificadas, {clientStats.approved} aprovadas.
                             </p>
@@ -484,14 +489,38 @@ export default function ConsultancyPage() {
                             </CardHeader>
                             <CardContent>
                                 {clientCategoryChartData.length > 0 ? (
-                                   <CategoryChart data={clientCategoryChartData} />
-                                ) : <p className="text-center text-sm text-muted-foreground py-10">Nenhum dado na categoria selecionada</p>}
+                                     <ResponsiveContainer width="100%" height={150}>
+                                        <PieChart>
+                                            <Pie data={clientCategoryChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} labelLine={false} label={({ cx, cy, midAngle, innerRadius, outerRadius, value, index }) => {
+                                                    const RADIAN = Math.PI / 180;
+                                                    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                                                    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                                                    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                                                    return value > 0 ? (
+                                                        <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={12}>
+                                                            {value}
+                                                        </text>
+                                                    ) : null;
+                                                }}>
+                                                {clientCategoryChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                                            </Pie>
+                                            <Tooltip />
+                                            <Legend iconSize={10} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                ) : <p className="text-center text-sm text-muted-foreground py-10">Nenhuma atividade categorizada</p>}
                             </CardContent>
                         </Card>
-                        <StatCard title="Status de Aprovação" value={clientStats.approved} icon={<CheckSquare />} color="text-green-500">
+                        <StatCard title="Status de Aprovação" value={clientStats.approved} icon={<CheckSquare />} className="text-green-500">
                             <p className="text-xs text-muted-foreground mt-2">
                                 <span className="text-yellow-500">{clientStats.byStatus['aguardando_consenso'] || 0} aguardando</span>, {' '}
                                 <span className="text-gray-500">{clientStats.byStatus['brainstorm'] || 0} não classificadas</span>
+                            </p>
+                        </StatCard>
+                        <StatCard title="Progresso da Transição" value={`${clientStats.byTransitionStatus['em_transicao'] || 0}`} icon={<Shuffle />}>
+                             <p className="text-xs text-muted-foreground mt-2">
+                                <span className="text-green-500">{clientStats.byTransitionStatus['concluida'] || 0} concluídas</span>, {' '}
+                                <span className="text-gray-500">{clientStats.byTransitionStatus['a_transferir'] || 0} aguardando</span>
                             </p>
                         </StatCard>
                     </CardContent>
