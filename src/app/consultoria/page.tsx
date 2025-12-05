@@ -409,7 +409,7 @@ export default function ConsultancyPage() {
 
     // Effect to fetch the list of clients for consultants
     useEffect(() => {
-        if (!isConsultant || !db) {
+        if (!isConsultant || !db || !user) {
             setIsLoadingClients(false);
             return;
         }
@@ -426,7 +426,7 @@ export default function ConsultancyPage() {
         });
 
         return () => unsubClients();
-    }, [db, isConsultant]);
+    }, [db, isConsultant, user]);
 
     const handleClientAdded = useCallback((newClientId: string) => {
         setSelectedClientId(newClientId);
@@ -836,5 +836,7 @@ export default function ConsultancyPage() {
         </AppLayout>
     );
 }
+
+    
 
     
