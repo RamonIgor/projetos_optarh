@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { type ConsultancyAction } from '@/types/activity';
+import { type ConsultancyAction, type Activity } from '@/types/activity';
 
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, CalendarIcon, Trash2, Edit, BarChart, LineChart } from 'lucide-react';
+import { Loader2, PlusCircle, CalendarIcon, Trash2, Edit, BarChart, LineChart, FileText, CheckSquare, PieChart as PieChartIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -33,6 +33,15 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Progress } from '@/components/ui/progress';
+import dynamic from 'next/dynamic';
+import type { CategoryChartData } from '@/components/CategoryChart';
+
+const CategoryChart = dynamic(() => import('@/components/CategoryChart'), {
+    ssr: false,
+    loading: () => <div className="h-[250px] flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+});
+
 
 const actionSchema = z.object({
   acao: z.string().min(3, "A ação deve ter pelo menos 3 caracteres."),
@@ -48,6 +57,8 @@ const actionSchema = z.object({
 type ActionFormValues = z.infer<typeof actionSchema>;
 
 const ACTIONS_COLLECTION = 'consultancy-actions';
+const ACTIVITIES_COLLECTION = 'rh-dp-activities';
+
 
 const statusConfig: Record<ConsultancyAction['status'], { label: string; color: string }> = {
     nao_iniciada: { label: 'Não iniciada', color: 'bg-gray-500' },
@@ -241,6 +252,19 @@ function ActionForm({ action, onFinished }: { action?: ConsultancyAction | null,
     );
 }
 
+const StatCard = ({ title, value, icon, children, className }: { title: string, value: string | number, icon: React.ReactNode, children?: React.ReactNode, className?: string }) => (
+    <Card className={cn("shadow-lg", className)}>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+            <div className={cn("h-6 w-6")}>{icon}</div>
+        </CardHeader>
+        <CardContent>
+            <div className="text-4xl font-bold">{value}</div>
+            {children}
+        </CardContent>
+    </Card>
+);
+
 export default function ConsultancyPage() {
     const db = useFirestore();
     const { user, loading: userLoading } = useUser();
@@ -250,13 +274,14 @@ export default function ConsultancyPage() {
     const authorizedConsultants = useMemo(() => ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'], []);
 
     const [actions, setActions] = useState<ConsultancyAction[]>([]);
+    const [activities, setActivities] = useState<Activity[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDeleting, startDeleteTransition] = useTransition();
     
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingAction, setEditingAction] = useState<ConsultancyAction | null>(null);
 
-    const unclassifiedCount = useMemo(() => actions.filter(a => a.status === 'nao_iniciada').length, [actions]);
+    const unclassifiedCount = useMemo(() => activities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [activities]);
     
     useEffect(() => {
         if (userLoading) return;
@@ -270,10 +295,16 @@ export default function ConsultancyPage() {
             setIsLoading(false); 
             return; 
         }
+        
+        let activeSubscriptions = 2;
+        const onSubscriptionLoaded = () => {
+            activeSubscriptions--;
+            if(activeSubscriptions === 0) setIsLoading(false);
+        }
 
         const actionsCollectionRef = collection(db, ACTIONS_COLLECTION);
-        const q = query(actionsCollectionRef, orderBy("createdAt", "asc"));
-        const unsubscribe = onSnapshot(q, 
+        const qActions = query(actionsCollectionRef, orderBy("createdAt", "asc"));
+        const unsubActions = onSnapshot(qActions, 
             (snapshot) => {
                 const actionsData = snapshot.docs.map(doc => ({
                     id: doc.id,
@@ -284,7 +315,7 @@ export default function ConsultancyPage() {
                     createdAt: doc.data().createdAt?.toDate() || new Date(),
                 } as ConsultancyAction));
                 setActions(actionsData);
-                setIsLoading(false);
+                onSubscriptionLoaded();
             },
             (error) => {
                 console.error("Error fetching consultancy actions:", error);
@@ -293,7 +324,7 @@ export default function ConsultancyPage() {
                     operation: 'list',
                 });
                 errorEmitter.emit('permission-error', permissionError);
-                setIsLoading(false);
+                onSubscriptionLoaded();
                 toast({
                     title: "Erro de Permissão",
                     description: "Você não tem permissão para visualizar estas ações.",
@@ -301,8 +332,25 @@ export default function ConsultancyPage() {
                 });
             }
         );
+        
+        const activitiesCollectionRef = collection(db, ACTIVITIES_COLLECTION);
+        const qActivities = query(activitiesCollectionRef, orderBy("createdAt", "desc"));
+        const unsubActivities = onSnapshot(qActivities, 
+            (snapshot) => {
+                const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
+                setActivities(activitiesData);
+                onSubscriptionLoaded();
+            },
+            (error) => {
+                console.error("Error fetching client activities:", error);
+                onSubscriptionLoaded();
+            }
+        );
 
-        return () => unsubscribe();
+        return () => {
+          unsubActions();
+          unsubActivities();
+        }
     }, [db, user, userLoading, router, toast, authorizedConsultants]);
 
     const handleDelete = (actionId: string) => {
@@ -341,7 +389,7 @@ export default function ConsultancyPage() {
         setEditingAction(null);
     }
 
-    const chartData = useMemo(() => {
+    const actionChartData = useMemo(() => {
         const statusCounts = actions.reduce((acc, action) => {
             acc[action.status] = (acc[action.status] || 0) + 1;
             return acc;
@@ -354,24 +402,47 @@ export default function ConsultancyPage() {
         }));
     }, [actions]);
 
-    const performanceData = useMemo(() => {
+    const actionPerformanceData = useMemo(() => {
         return actions.map(action => ({
             name: action.acao.substring(0, 15) + '...',
             concluido: action.percentual_concluido,
-            meta: 100, // Target is always 100%
+            meta: 100,
         }));
     }, [actions]);
 
+    const clientStats = useMemo(() => {
+        const total = activities.length;
+        const classified = activities.filter(a => a.status !== 'brainstorm').length;
+        const approved = activities.filter(a => a.status === 'aprovada').length;
+        const byCategory = activities.reduce((acc, a) => {
+            if (a.categoria) acc[a.categoria] = (acc[a.categoria] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
+        const byStatus = activities.reduce((acc, a) => {
+            acc[a.status] = (acc[a.status] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
+        return { total, classified, approved, byCategory, byStatus };
+    }, [activities]);
+
+    const clientCategoryChartData: CategoryChartData[] = useMemo(() => [
+        { name: 'DP', value: clientStats.byCategory['DP'] || 0, fill: 'hsl(var(--primary))' },
+        { name: 'RH', value: clientStats.byCategory['RH'] || 0, fill: '#16a34a' },
+        { name: 'Compartilhado', value: clientStats.byCategory['Compartilhado'] || 0, fill: '#2563eb' }
+    ].filter(item => item.value > 0), [clientStats.byCategory]);
+
     if (isLoading || userLoading || !user || !user.email || !authorizedConsultants.includes(user.email)) {
         return (
-            <AppLayout unclassifiedCount={0} hasActivities={actions.length > 0}>
+            <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0 || actions.length > 0}>
                 <div className="flex justify-center items-center h-[80vh]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
             </AppLayout>
         );
     }
 
     return (
-        <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={actions.length > 0}>
+        <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0 || actions.length > 0}>
             <div className="space-y-8 max-w-7xl mx-auto w-full">
                 <div className="flex justify-between items-center">
                     <h1 className="text-4xl font-bold text-primary">Painel da Consultoria</h1>
@@ -396,63 +467,94 @@ export default function ConsultancyPage() {
                     </Dialog>
                 </div>
             
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <Card className="lg:col-span-1">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Status das Ações</CardTitle>
-                            <BarChart className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            {actions.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={250}>
-                                <PieChart>
-                                    <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} labelLine={false} label={({ cx, cy, midAngle, innerRadius, outerRadius, value, index }) => {
-                                        const RADIAN = Math.PI / 180;
-                                        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                                        const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                                        const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                                        return (
-                                            <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
-                                                {value}
-                                            </text>
-                                        );
-                                    }}>
-                                        {chartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
-                                    </Pie>
-                                    <Tooltip />
-                                    <Legend />
-                                </PieChart>
-                            </ResponsiveContainer>
-                            ) : <p className="text-sm text-muted-foreground text-center pt-10">Sem dados para exibir.</p>}
-                        </CardContent>
-                    </Card>
-                    <Card className="lg:col-span-2">
-                        <CardHeader className='pb-2'>
-                            <CardTitle className="text-sm font-medium flex items-center justify-between">
-                                <span>Análise de Desempenho (% Concluído)</span>
-                                <LineChart className="h-4 w-4 text-muted-foreground" />
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {actions.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={250}>
-                                <ComposedChart data={performanceData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 10 }} />
-                                    <YAxis />
-                                    <Tooltip />
-                                    <Legend />
-                                    <Bar dataKey="concluido" name="% Concluído" barSize={20} fill="#48BB78" />
-                                </ComposedChart>
-                            </ResponsiveContainer>
-                            ) : <p className="text-sm text-muted-foreground text-center pt-10">Sem dados para exibir.</p>}
-                        </CardContent>
-                    </Card>
-                </div>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="text-2xl">Visão Geral do Cliente</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                         <StatCard title="Progresso do Levantamento" value={clientStats.total} icon={<FileText />}>
+                            <p className="text-xs text-muted-foreground mt-2">
+                                {clientStats.classified} classificadas, {clientStats.approved} aprovadas.
+                            </p>
+                            <Progress value={(clientStats.approved / (clientStats.total || 1)) * 100} className="mt-2 h-2" />
+                        </StatCard>
+                         <Card className="shadow-lg">
+                            <CardHeader>
+                                <CardTitle className="text-md font-medium text-muted-foreground flex items-center gap-2"><PieChartIcon className="h-5 w-5" />Divisão por Categoria</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {clientCategoryChartData.length > 0 ? (
+                                   <CategoryChart data={clientCategoryChartData} />
+                                ) : <p className="text-center text-sm text-muted-foreground py-10">Nenhum dado na categoria selecionada</p>}
+                            </CardContent>
+                        </Card>
+                        <StatCard title="Status de Aprovação" value={clientStats.approved} icon={<CheckSquare />} color="text-green-500">
+                            <p className="text-xs text-muted-foreground mt-2">
+                                <span className="text-yellow-500">{clientStats.byStatus['aguardando_consenso'] || 0} aguardando</span>, {' '}
+                                <span className="text-gray-500">{clientStats.byStatus['brainstorm'] || 0} não classificadas</span>
+                            </p>
+                        </StatCard>
+                    </CardContent>
+                </Card>
 
-                <Card>
-                    <CardHeader><CardTitle>Lista de Ações</CardTitle></CardHeader>
-                    <CardContent>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="text-2xl">Plano de Ação da Consultoria</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <Card className="lg:col-span-1">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Status das Ações</CardTitle>
+                                    <BarChart className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    {actions.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height={250}>
+                                        <PieChart>
+                                            <Pie data={actionChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} labelLine={false} label={({ cx, cy, midAngle, innerRadius, outerRadius, value, index }) => {
+                                                const RADIAN = Math.PI / 180;
+                                                const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                                                const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                                                const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                                                return (
+                                                    <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+                                                        {value}
+                                                    </text>
+                                                );
+                                            }}>
+                                                {actionChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                                            </Pie>
+                                            <Tooltip />
+                                            <Legend />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                    ) : <p className="text-sm text-muted-foreground text-center pt-10">Sem dados para exibir.</p>}
+                                </CardContent>
+                            </Card>
+                            <Card className="lg:col-span-2">
+                                <CardHeader className='pb-2'>
+                                    <CardTitle className="text-sm font-medium flex items-center justify-between">
+                                        <span>Análise de Desempenho (% Concluído)</span>
+                                        <LineChart className="h-4 w-4 text-muted-foreground" />
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    {actions.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height={250}>
+                                        <ComposedChart data={actionPerformanceData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" />
+                                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 10 }} />
+                                            <YAxis />
+                                            <Tooltip />
+                                            <Legend />
+                                            <Bar dataKey="concluido" name="% Concluído" barSize={20} fill="#48BB78" />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                    ) : <p className="text-sm text-muted-foreground text-center pt-10">Sem dados para exibir.</p>}
+                                </CardContent>
+                            </Card>
+                        </div>
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -509,8 +611,10 @@ export default function ConsultancyPage() {
                             </TableBody>
                         </Table>
                     </CardContent>
-                </Card>
+                 </Card>
             </div>
         </AppLayout>
     );
 }
+
+    
