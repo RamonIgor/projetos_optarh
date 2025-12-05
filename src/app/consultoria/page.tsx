@@ -66,6 +66,7 @@ function AddClientDialog({ onClientAdded }: { onClientAdded: (clientId: string) 
                 const docRef = await addDoc(collection(db, 'clients'), {
                     name: data.name,
                     userIds: [],
+                    createdAt: serverTimestamp(),
                 });
                 toast({ title: "Cliente adicionado com sucesso!" });
                 form.reset();
@@ -388,10 +389,11 @@ export default function ConsultancyPage() {
         }
 
         setIsLoadingClients(true);
-        const clientsQuery = query(collection(db, 'clients'));
+        const clientsQuery = query(collection(db, 'clients'), orderBy('name', 'asc'));
         const unsubClients = onSnapshot(clientsQuery, (snapshot) => {
             const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Client));
             setAllClients(clientsData);
+            
             if (!selectedClientId && clientsData.length > 0) {
                 setSelectedClientId(clientsData[0].id);
             }
@@ -554,7 +556,7 @@ export default function ConsultancyPage() {
 
     if (userLoading || isClientLoading || isLoadingClients) {
         return (
-            <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0 || actions.length > 0}>
+            <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0 || allClients.length > 0}>
                 <div className="flex justify-center items-center h-[80vh] w-full"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
             </AppLayout>
         );
@@ -578,7 +580,7 @@ export default function ConsultancyPage() {
     );
 
     return (
-        <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0 || actions.length > 0 || allClients.length > 0}>
+        <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0 || allClients.length > 0}>
             <div className="space-y-8 max-w-7xl mx-auto w-full">
                 <div className="flex justify-between items-center">
                     <div>
@@ -806,8 +808,5 @@ export default function ConsultancyPage() {
         </AppLayout>
     );
 }
-
-
-    
 
     
