@@ -18,6 +18,7 @@ import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
 import AppLayout from '@/components/AppLayout';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const ACTIVITIES_COLLECTION = 'rh-dp-activities';
 
@@ -35,14 +36,14 @@ const statusInfo: { [key: string]: { label: string; icon: React.ReactNode; varia
 };
 
 
-function ActivityItem({ activity, isSubItem = false, onAddSubActivity, onDeleteActivity }: { activity: Activity, isSubItem?: boolean, onAddSubActivity: (parentId: string, name: string) => void, onDeleteActivity: (id: string) => void }) {
+function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddSubActivity, onDeleteActivity }: { activity: Activity, isSubItem?: boolean, hasChildren?: boolean, onAddSubActivity: (parentId: string, name: string) => void, onDeleteActivity: (id: string) => void }) {
     const [showAddSub, setShowAddSub] = useState(false);
     const [subActivityName, setSubActivityName] = useState("");
     const [isAdding, startAdding] = useTransition();
     const [isDeleting, startDeleting] = useTransition();
 
     const status = statusInfo[activity.status] || statusInfo.brainstorm;
-    const isDeletable = activity.status === 'brainstorm';
+    const isDeletable = activity.status === 'brainstorm' && !hasChildren;
 
     const handleAddSubmit = (e: FormEvent) => {
         e.preventDefault();
@@ -62,6 +63,19 @@ function ActivityItem({ activity, isSubItem = false, onAddSubActivity, onDeleteA
             onDeleteActivity(activity.id);
         })
     }
+
+    const deleteButton = (
+        <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed" 
+            onClick={handleDelete} 
+            disabled={isDeleting || !isDeletable} 
+            aria-label={`Excluir ${activity.nome}`}
+        >
+            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+        </Button>
+    );
 
     return (
         <motion.div
@@ -91,17 +105,19 @@ function ActivityItem({ activity, isSubItem = false, onAddSubActivity, onDeleteA
                             <GitBranchPlus className="h-4 w-4"/>
                         </Button>
                     )}
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed" 
-                        onClick={handleDelete} 
-                        disabled={isDeleting || !isDeletable} 
-                        aria-label={`Excluir ${activity.nome}`}
-                        title={isDeletable ? "Excluir" : "Apenas atividades 'Não classificadas' podem ser excluídas daqui."}
-                    >
-                        {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
-                    </Button>
+                    
+                    {hasChildren ? (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span>{deleteButton}</span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Exclua os micro-processos primeiro para poder apagar a atividade principal.</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    ) : (
+                        deleteButton
+                    )}
                 </div>
             </div>
             {showAddSub && (
@@ -353,6 +369,7 @@ export default function BrainstormPage() {
                                 activity={activity} 
                                 onAddSubActivity={addActivity}
                                 onDeleteActivity={handleDeleteActivity}
+                                hasChildren={activity.children.length > 0}
                             />
                              {activity.children.length > 0 && (
                                 <div className="space-y-2 mt-2">
