@@ -4,7 +4,7 @@ import { signOut } from 'firebase/auth';
 import { useAuth, useUser } from '@/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { LogOut, LayoutGrid, ListTodo, BarChart3, Shuffle, PlayCircle, Settings, Rows, Menu } from 'lucide-react';
+import { LogOut, LayoutGrid, ListTodo, BarChart3, Shuffle, PlayCircle, Settings, Rows, Menu, UserPlus, KeyRound } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
@@ -14,6 +14,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { RegisterUserDialog } from './RegisterUserDialog';
 import Image from 'next/image';
 import {
@@ -100,6 +107,36 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
     }
     return link;
   };
+  
+  const SettingsMenu = ({ isMobile = false }: { isMobile?: boolean }) => (
+    <RegisterUserDialog>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          {isMobile ? (
+             <Button variant="ghost"><Settings className="mr-2 h-4 w-4" /> Configurações</Button>
+          ) : (
+            <Button variant="ghost" size="icon">
+              <Settings className="h-5 w-5" />
+              <span className="sr-only">Configurações</span>
+            </Button>
+          )}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+            <RegisterUserDialog.Trigger asChild>
+                <DropdownMenuItem>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    <span>Cadastrar Colaborador</span>
+                </DropdownMenuItem>
+            </RegisterUserDialog.Trigger>
+            <DropdownMenuSeparator />
+             <DropdownMenuItem onClick={() => router.push('/change-password')}>
+                <KeyRound className="mr-2 h-4 w-4" />
+                <span>Alterar minha senha</span>
+            </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </RegisterUserDialog>
+  );
 
   return (
     <div className="min-h-screen w-full flex flex-col">
@@ -121,12 +158,8 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
                   </Tooltip>
             ) : consultancyButton}
            
-            <RegisterUserDialog>
-                <Button variant="ghost" size="icon">
-                    <Settings className="h-5 w-5" />
-                    <span className="sr-only">Configurações</span>
-                </Button>
-            </RegisterUserDialog>
+            <SettingsMenu />
+            
             <Button variant="ghost" onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Sair
@@ -157,12 +190,8 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
                     ) : (
                        <div onClick={() => setMobileMenuOpen(false)}>{consultancyButton}</div>
                     )}
-                    <div className="mt-2">
-                      <RegisterUserDialog>
-                          <Button variant="ghost">
-                            <Settings className="mr-2 h-4 w-4" /> Configurações
-                          </Button>
-                      </RegisterUserDialog>
+                    <div className="mt-2" onClick={() => setMobileMenuOpen(false)}>
+                       <SettingsMenu isMobile />
                     </div>
                     <div className="mt-2">
                       <Button variant="ghost" onClick={handleLogout}>

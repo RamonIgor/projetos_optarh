@@ -9,8 +9,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Loader2, UserPlus } from 'lucide-react';
+import * as DialogPrimitive from "@radix-ui/react-dialog"
 
-export function RegisterUserDialog({ children }: { children: ReactNode }) {
+
+// A bit of a hack to create a compound component
+// that can share the open/setOpen state.
+// RegisterUserDialog.Trigger
+type RegisterUserDialogComponent = React.FC<{ children: React.ReactNode }> & {
+    Trigger: typeof DialogPrimitive.Trigger;
+}
+
+export const RegisterUserDialog: RegisterUserDialogComponent = ({ children }) => {
     const auth = useAuth();
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
@@ -69,9 +78,7 @@ export function RegisterUserDialog({ children }: { children: ReactNode }) {
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                {children}
-            </DialogTrigger>
+            {children}
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Cadastrar Novo Colaborador</DialogTitle>
@@ -120,3 +127,6 @@ export function RegisterUserDialog({ children }: { children: ReactNode }) {
         </Dialog>
     );
 }
+
+RegisterUserDialog.Trigger = DialogPrimitive.Trigger;
+
