@@ -9,11 +9,11 @@ import type { UserProfile } from '@/types/activity';
 import { usePathname } from 'next/navigation';
 
 interface ClientContextValue {
-    clientId: string | null;
+    clientId: string | null; // This is the ACTIVE client ID for the whole app
     isClientLoading: boolean;
     userProfile: UserProfile | null;
     isConsultant: boolean;
-    selectedClientId: string | null;
+    selectedClientId: string | null; // This is the client ID SELECTED by the consultant in the panel
     setSelectedClientId: (id: string | null) => void;
 }
 
@@ -59,20 +59,20 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
                 const profile = doc.data() as UserProfile;
                 setUserProfile(profile);
                 if (profile.role === 'consultant') {
-                    setUserNativeClientId(null);
+                    setUserNativeClientId(null); // Consultants don't have a native client
                 } else {
                     setUserNativeClientId(profile.clientId);
                 }
             } else {
-                // If the user profile doesn't exist, check if they are a hardcoded consultant
                 const authorizedConsultants = ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'];
                 if (user.email && authorizedConsultants.includes(user.email)) {
-                    setUserProfile({ role: 'consultant', clientId: '' }); // Mock profile for consultant
+                    setUserProfile({ role: 'consultant', clientId: '' }); // Mock profile for hardcoded consultant
+                    setUserNativeClientId(null);
                 } else {
                     console.warn(`User profile not found for uid: ${user.uid}`);
                     setUserProfile(null);
+                    setUserNativeClientId(null);
                 }
-                setUserNativeClientId(null);
             }
             setClientLoading(false);
         }, (error) => {

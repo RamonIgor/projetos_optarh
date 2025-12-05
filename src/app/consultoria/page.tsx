@@ -363,7 +363,7 @@ export default function ConsultancyPage() {
     
     const [actions, setActions] = useState<ConsultancyAction[]>([]);
     const [activities, setActivities] = useState<Activity[]>([]);
-    const [isLoadingData, setIsLoadingData] = useState(true);
+    const [isLoadingData, setIsLoadingData] = useState(false);
     const [isLoadingClients, setIsLoadingClients] = useState(true);
     const [isDeleting, startDeleteTransition] = useTransition();
     
@@ -398,6 +398,10 @@ export default function ConsultancyPage() {
 
         return () => unsubClients();
     }, [db, isConsultant]);
+    
+    const handleClientAdded = useCallback((newClientId: string) => {
+        setSelectedClientId(newClientId);
+    }, [setSelectedClientId]);
 
     // Data fetching for the selected client
     useEffect(() => {
@@ -558,7 +562,7 @@ export default function ConsultancyPage() {
     
         if (allClients.length === 0) {
             return (
-                <AddClientDialog onClientAdded={(id) => setSelectedClientId(id)}>
+                <AddClientDialog onClientAdded={handleClientAdded}>
                     <Button>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Adicionar Primeiro Cliente
@@ -628,7 +632,12 @@ export default function ConsultancyPage() {
                             <div className="flex flex-col items-center gap-4">
                                 <Building className="h-16 w-16 text-muted-foreground" />
                                 <h2 className="text-2xl font-semibold">Nenhum Cliente Selecionado</h2>
-                                <p className="mt-2 text-muted-foreground max-w-md">Selecione um cliente na lista acima para começar a gerenciar as atividades e o plano de ação.</p>
+                                <p className="mt-2 text-muted-foreground max-w-md">
+                                    {allClients.length > 0 
+                                        ? "Selecione um cliente na lista acima para começar a gerenciar as atividades e o plano de ação."
+                                        : "Nenhum cliente cadastrado. Adicione seu primeiro cliente para começar."
+                                    }
+                                </p>
                             </div>
                         </CardContent>
                     </Card>
