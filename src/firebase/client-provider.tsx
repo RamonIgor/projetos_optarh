@@ -3,6 +3,7 @@
 import React, { useState, useEffect, ReactNode } from 'react';
 import { initializeFirebase } from './';
 import { FirebaseProvider } from './provider';
+import { ClientProvider } from './auth/use-client'; // Import ClientProvider
 import type { FirebaseApp } from 'firebase/app';
 import type { Auth } from 'firebase/auth';
 import type { Firestore } from 'firebase/firestore';
@@ -28,7 +29,9 @@ export const FirebaseClientProvider = ({ children }: { children: ReactNode }) =>
 
     return (
         <FirebaseProvider value={instances}>
-            {children}
+            <ClientProvider>
+                {children}
+            </ClientProvider>
         </FirebaseProvider>
     );
 };
