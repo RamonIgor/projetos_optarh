@@ -91,11 +91,12 @@ function MigrateOrphanActivities({ onFinished }: { onFinished: () => void }) {
             const targetCollection = collection(db, 'clients', selectedClientId, 'activities');
 
             orphanActivities.forEach(activity => {
-                // Set the new doc with the same ID
-                const newDocRef = doc(targetCollection, activity.id);
-                batch.set(newDocRef, { ...activity, clientId: selectedClientId });
+                const activityData = { ...activity };
+                delete (activityData as any).id; // Remove the old id from the data object
 
-                // Delete the old doc
+                const newDocRef = doc(targetCollection, activity.id); // Keep the same ID
+                batch.set(newDocRef, activityData);
+
                 const oldDocRef = doc(db, 'activities', activity.id);
                 batch.delete(oldDocRef);
             });
@@ -156,3 +157,5 @@ function MigrateOrphanActivities({ onFinished }: { onFinished: () => void }) {
         </div>
     )
 }
+
+    

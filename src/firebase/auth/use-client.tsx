@@ -9,11 +9,11 @@ import type { UserProfile } from '@/types/activity';
 import { usePathname } from 'next/navigation';
 
 interface ClientContextValue {
-    clientId: string | null; // This is the ACTIVE client ID for the whole app
+    clientId: string | null;
     isClientLoading: boolean;
     userProfile: UserProfile | null;
     isConsultant: boolean;
-    selectedClientId: string | null; // This is the client ID SELECTED by the consultant in the panel
+    selectedClientId: string | null; 
     setSelectedClientId: (id: string | null) => void;
 }
 
@@ -33,10 +33,7 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [isClientLoading, setClientLoading] = useState(true);
     
-    // This state holds the client ID for the logged-in user if they are a 'client_user'
     const [userNativeClientId, setUserNativeClientId] = useState<string | null>(null);
-    
-    // This state holds the client ID selected by a consultant in the /consultoria page
     const [consultantSelectedClientId, setConsultantSelectedClientId] = useState<string | null>(null);
 
     const isConsultant = userProfile?.role === 'consultant';
@@ -59,14 +56,14 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
                 const profile = doc.data() as UserProfile;
                 setUserProfile(profile);
                 if (profile.role === 'consultant') {
-                    setUserNativeClientId(null); // Consultants don't have a native client
+                    setUserNativeClientId(null);
                 } else {
                     setUserNativeClientId(profile.clientId);
                 }
             } else {
                 const authorizedConsultants = ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'];
                 if (user.email && authorizedConsultants.includes(user.email)) {
-                    setUserProfile({ role: 'consultant', clientId: '' }); // Mock profile for hardcoded consultant
+                    setUserProfile({ role: 'consultant', clientId: '' });
                     setUserNativeClientId(null);
                 } else {
                     console.warn(`User profile not found for uid: ${user.uid}`);
@@ -89,8 +86,9 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
         }
     }, [isConsultant]);
 
-    // The active clientId depends on the user's role.
-    // A consultant's context is what they select. A client_user's context is always their own company.
+    // This is the active client ID for the entire app.
+    // If the user is a consultant, it's the client they have selected in the UI.
+    // If they are a client_user, it's always their own company's client ID.
     const activeClientId = isConsultant ? consultantSelectedClientId : userNativeClientId;
 
     return (
@@ -114,3 +112,5 @@ export const useClient = () => {
     }
     return context;
 };
+
+    

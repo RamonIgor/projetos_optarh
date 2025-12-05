@@ -24,7 +24,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, CalendarIcon, Trash2, Edit, BarChart, LineChart, FileText, CheckSquare, PieChart as PieChartIcon, Shuffle, Clock, Building } from 'lucide-react';
+import { Loader2, PlusCircle, CalendarIcon, Trash2, Edit, BarChart, LineChart, FileText, CheckSquare, PieChart as PieChartIcon, Shuffle, Clock, Building, Wrench } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -36,6 +36,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import dynamic from 'next/dynamic';
 import type { CategoryChartData } from '@/components/CategoryChart';
+import { SystemToolsDialog } from '@/components/SystemToolsDialog';
 
 const CategoryChart = dynamic(() => import('@/components/CategoryChart'), {
     ssr: false,
@@ -352,6 +353,34 @@ const StatCard = ({ title, value, icon, children, className }: { title: string, 
     </Card>
 );
 
+function ClientSelector({ clients, onClientAdded }: { clients: Client[], onClientAdded: (id: string) => void }) {
+    const { selectedClientId, setSelectedClientId } = useClient();
+
+    if (clients.length === 0) {
+        return (
+            <AddClientDialog onClientAdded={onClientAdded}>
+                <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Adicionar Primeiro Cliente
+                </Button>
+            </AddClientDialog>
+        );
+    }
+
+    return (
+        <Select value={selectedClientId || ''} onValueChange={setSelectedClientId}>
+            <SelectTrigger className="w-[280px]">
+                <SelectValue placeholder="Selecione um cliente" />
+            </SelectTrigger>
+            <SelectContent>
+                {clients.map(client => (
+                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
+    );
+}
+
 export default function ConsultancyPage() {
     const db = useFirestore();
     const { user, loading: userLoading } = useUser();
@@ -398,11 +427,11 @@ export default function ConsultancyPage() {
 
         return () => unsubClients();
     }, [db, isConsultant]);
-    
+
     const handleClientAdded = useCallback((newClientId: string) => {
         setSelectedClientId(newClientId);
     }, [setSelectedClientId]);
-
+    
     // Data fetching for the selected client
     useEffect(() => {
         if (!selectedClientId || !db) {
@@ -559,30 +588,7 @@ export default function ConsultancyPage() {
         if (isLoadingClients) {
             return <div className="flex items-center justify-center w-[280px] h-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
         }
-    
-        if (allClients.length === 0) {
-            return (
-                <AddClientDialog onClientAdded={handleClientAdded}>
-                    <Button>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Adicionar Primeiro Cliente
-                    </Button>
-                </AddClientDialog>
-            );
-        }
-    
-        return (
-            <Select value={selectedClientId || ''} onValueChange={setSelectedClientId}>
-                <SelectTrigger className="w-[280px]">
-                    <SelectValue placeholder="Selecione um cliente" />
-                </SelectTrigger>
-                <SelectContent>
-                    {allClients.map(client => (
-                        <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        );
+        return <ClientSelector clients={allClients} onClientAdded={handleClientAdded} />;
     };
 
     const isLoadingPage = userLoading || isClientLoading;
@@ -628,17 +634,19 @@ export default function ConsultancyPage() {
             
                 {!selectedClientId && isConsultant ? (
                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-2xl">
+                              <Wrench />
+                              Ferramentas do Sistema
+                          </CardTitle>
+                           <CardDescription>
+                               Use estas ferramentas para configurar e migrar dados para um cliente.
+                           </CardDescription>
+                        </CardHeader>
                         <CardContent className="p-12 text-center">
-                            <div className="flex flex-col items-center gap-4">
-                                <Building className="h-16 w-16 text-muted-foreground" />
-                                <h2 className="text-2xl font-semibold">Nenhum Cliente Selecionado</h2>
-                                <p className="mt-2 text-muted-foreground max-w-md">
-                                    {allClients.length > 0 
-                                        ? "Selecione um cliente na lista acima para começar a gerenciar as atividades e o plano de ação."
-                                        : "Nenhum cliente cadastrado. Adicione seu primeiro cliente para começar."
-                                    }
-                                </p>
-                            </div>
+                           <SystemToolsDialog isAuthorized={isConsultant}>
+                               <Button size="lg">Abrir Ferramentas</Button>
+                           </SystemToolsDialog>
                         </CardContent>
                     </Card>
                 ) : isLoadingData ? (
@@ -828,3 +836,5 @@ export default function ConsultancyPage() {
         </AppLayout>
     );
 }
+
+    
