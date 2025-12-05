@@ -15,7 +15,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, setDoc, doc, collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
-import { useClient, useFirestore as useDb } from '@/firebase';
+import { useFirestore as useDb } from '@/firebase';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { type Client } from '@/types/activity';
 
@@ -107,6 +107,8 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
                      errorMessage = 'A senha deve ter pelo menos 6 caracteres.';
                  } else if (error.code === 'auth/invalid-email') {
                      errorMessage = 'O formato do e-mail é inválido.';
+                 } else {
+                     console.error("Unexpected registration error:", error);
                  }
                  toast({
                     variant: "destructive",
@@ -178,25 +180,6 @@ export function CreateUserForm({ onFinished }: { onFinished: () => void }) {
     );
 }
 
-export function AssociateUserForm({ onFinished }: { onFinished: () => void }) {
-    
-    return (
-        <div className="py-4 space-y-4">
-            <Alert>
-              <Terminal className="h-4 w-4" />
-              <AlertTitle>Função Integrada</AlertTitle>
-              <AlertDescription>
-                A associação de usuários agora é feita diretamente na aba "Cadastrar Novo". Crie um novo usuário e selecione o cliente para associá-lo em uma única etapa.
-              </AlertDescription>
-            </Alert>
-             <DialogFooter className="mt-6">
-                <Button type="button" variant="outline" onClick={onFinished}>Fechar</Button>
-            </DialogFooter>
-        </div>
-    );
-}
-
-
 export function UserManagementDialog({ children }: { children: React.ReactNode }) {
     const [open, setOpen] = useState(false);
 
@@ -212,18 +195,7 @@ export function UserManagementDialog({ children }: { children: React.ReactNode }
                         Crie novos usuários e associe-os a um cliente em um único passo.
                     </DialogDescription>
                 </DialogHeader>
-                <Tabs defaultValue="create" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="create">Criar e Associar</TabsTrigger>
-                        <TabsTrigger value="info">Mais Informações</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="create">
-                        <CreateUserForm onFinished={() => setOpen(false)} />
-                    </TabsContent>
-                    <TabsContent value="info">
-                        <AssociateUserForm onFinished={() => setOpen(false)} />
-                    </TabsContent>
-                </Tabs>
+                <CreateUserForm onFinished={() => setOpen(false)} />
             </DialogContent>
         </Dialog>
     );
