@@ -3,13 +3,13 @@
 
 import { useState, useEffect, useMemo, useTransition } from 'react';
 import { collection, onSnapshot, query, orderBy, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useClient } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { type ConsultancyAction, type Activity } from '@/types/activity';
+import { type ConsultancyAction, type Activity, type Client } from '@/types/activity';
 
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -64,10 +64,6 @@ const actionSchema = z.object({
 
 type ActionFormValues = z.infer<typeof actionSchema>;
 
-const ACTIONS_COLLECTION = 'consultancy-actions';
-const ACTIVITIES_COLLECTION = 'rh-dp-activities';
-
-
 const statusConfig: Record<ConsultancyAction['status'], { label: string; color: string }> = {
     nao_iniciada: { label: 'Não iniciada', color: 'bg-gray-500' },
     em_andamento: { label: 'Em andamento', color: 'bg-blue-500' },
@@ -84,7 +80,7 @@ const statusChartColors = {
     cancelada: '#ED8936',
 }
 
-function ActionForm({ action, onFinished }: { action?: ConsultancyAction | null, onFinished: () => void }) {
+function ActionForm({ action, onFinished, clientId }: { action?: ConsultancyAction | null, onFinished: () => void, clientId: string }) {
     const db = useFirestore();
     const { toast } = useToast();
     const [isSubmitting, startSubmitTransition] = useTransition();
@@ -102,9 +98,19 @@ function ActionForm({ action, onFinished }: { action?: ConsultancyAction | null,
             observacoes: action?.observacoes || '',
         },
     });
+    
+    const status = form.watch('status');
+    useEffect(() => {
+        if (status === 'concluida') {
+            form.setValue('percentual_concluido', 100);
+        }
+    }, [status, form]);
+
 
     const onSubmit = (data: ActionFormValues) => {
         if (!db) return;
+        
+        const actionsCollectionPath = `clients/${clientId}/actions`;
 
         startSubmitTransition(async () => {
             try {
@@ -114,9 +120,9 @@ function ActionForm({ action, onFinished }: { action?: ConsultancyAction | null,
                 };
 
                 if (action) {
-                    const docRef = doc(db, ACTIONS_COLLECTION, action.id);
+                    const docRef = doc(db, actionsCollectionPath, action.id);
                     await updateDoc(docRef, actionData)
-                    .catch(async (error) => {
+                    .catch(async () => {
                         const permissionError = new FirestorePermissionError({
                             path: docRef.path,
                             operation: 'update',
@@ -127,13 +133,13 @@ function ActionForm({ action, onFinished }: { action?: ConsultancyAction | null,
                     });
                     toast({ title: "Ação atualizada com sucesso!" });
                 } else {
-                     await addDoc(collection(db, ACTIONS_COLLECTION), {
+                     await addDoc(collection(db, actionsCollectionPath), {
                         ...actionData,
                         createdAt: serverTimestamp(),
                         prazo_realizado: null,
-                    }).catch(async (error) => {
+                    }).catch(async () => {
                          const permissionError = new FirestorePermissionError({
-                            path: collection(db, ACTIONS_COLLECTION).path,
+                            path: collection(db, actionsCollectionPath).path,
                             operation: 'create',
                             requestResourceData: actionData,
                         });
@@ -230,12 +236,7 @@ function ActionForm({ action, onFinished }: { action?: ConsultancyAction | null,
                     <FormItem>
                         <FormLabel>Status</FormLabel>
                         <Select 
-                            onValueChange={(value) => {
-                                field.onChange(value);
-                                if (value === 'concluida') {
-                                    form.setValue('percentual_concluido', 100);
-                                }
-                            }}
+                            onValueChange={field.onChange}
                             defaultValue={field.value} 
                             value={field.value}
                         >
@@ -285,11 +286,13 @@ const StatCard = ({ title, value, icon, children, className }: { title: string, 
 export default function ConsultancyPage() {
     const db = useFirestore();
     const { user, loading: userLoading } = useUser();
+    const { isConsultant, isClientLoading } = useClient();
     const router = useRouter();
     const { toast } = useToast();
-    
-    const authorizedConsultants = useMemo(() => ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'], []);
 
+    const [allClients, setAllClients] = useState<Client[]>([]);
+    const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+    
     const [actions, setActions] = useState<ConsultancyAction[]>([]);
     const [activities, setActivities] = useState<Activity[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -301,9 +304,9 @@ export default function ConsultancyPage() {
     const unclassifiedCount = useMemo(() => activities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [activities]);
     
     useEffect(() => {
-        if (userLoading) return;
+        if (userLoading || isClientLoading) return;
         
-        if (!user || !user.email || !authorizedConsultants.includes(user.email)) {
+        if (!user || !isConsultant) {
             router.push('/');
             return;
         }
@@ -312,14 +315,35 @@ export default function ConsultancyPage() {
             setIsLoading(false); 
             return; 
         }
+
+        const clientsQuery = query(collection(db, 'clients'));
+        const unsubClients = onSnapshot(clientsQuery, (snapshot) => {
+            const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Client));
+            setAllClients(clientsData);
+            if (!selectedClientId && clientsData.length > 0) {
+                setSelectedClientId(clientsData[0].id);
+            }
+        });
         
+        return () => unsubClients();
+    }, [db, user, userLoading, isConsultant, isClientLoading, router]);
+
+    useEffect(() => {
+        if (!selectedClientId || !db) {
+            setActions([]);
+            setActivities([]);
+            setIsLoading(false);
+            return;
+        }
+
+        setIsLoading(true);
         let activeSubscriptions = 2;
         const onSubscriptionLoaded = () => {
             activeSubscriptions--;
             if(activeSubscriptions === 0) setIsLoading(false);
         }
 
-        const actionsCollectionRef = collection(db, ACTIONS_COLLECTION);
+        const actionsCollectionRef = collection(db, 'clients', selectedClientId, 'actions');
         const qActions = query(actionsCollectionRef, orderBy("createdAt", "asc"));
         const unsubActions = onSnapshot(qActions, 
             (snapshot) => {
@@ -350,7 +374,7 @@ export default function ConsultancyPage() {
             }
         );
         
-        const activitiesCollectionRef = collection(db, ACTIVITIES_COLLECTION);
+        const activitiesCollectionRef = collection(db, 'clients', selectedClientId, 'activities');
         const qActivities = query(activitiesCollectionRef, orderBy("createdAt", "desc"));
         const unsubActivities = onSnapshot(qActivities, 
             (snapshot) => {
@@ -368,14 +392,14 @@ export default function ConsultancyPage() {
           unsubActions();
           unsubActivities();
         }
-    }, [db, user, userLoading, router, toast, authorizedConsultants]);
+    }, [db, selectedClientId, toast]);
 
     const handleDelete = (actionId: string) => {
-        if (!db) return;
+        if (!db || !selectedClientId) return;
         startDeleteTransition(async () => {
             try {
-                const docRef = doc(db, ACTIONS_COLLECTION, actionId);
-                await deleteDoc(docRef).catch((error) => {
+                const docRef = doc(db, 'clients', selectedClientId, 'actions', actionId);
+                await deleteDoc(docRef).catch(() => {
                      const permissionError = new FirestorePermissionError({
                         path: docRef.path,
                         operation: 'delete',
@@ -455,22 +479,40 @@ export default function ConsultancyPage() {
         { name: 'Compartilhado', value: clientStats.byCategory['Compartilhado'] || 0, fill: '#2563eb' }
     ].filter(item => item.value > 0), [clientStats.byCategory]);
 
-    if (isLoading || userLoading || !user || !user.email || !authorizedConsultants.includes(user.email)) {
+    if (isLoading || userLoading || isClientLoading || !isConsultant) {
         return (
             <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0 || actions.length > 0}>
                 <div className="flex justify-center items-center h-[80vh]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
             </AppLayout>
         );
     }
+    
+    const CurrentClientSelect = () => (
+        <Select value={selectedClientId || ''} onValueChange={setSelectedClientId}>
+            <SelectTrigger className="w-[280px]">
+                <SelectValue placeholder="Selecione um cliente" />
+            </SelectTrigger>
+            <SelectContent>
+                {allClients.map(client => (
+                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
+    );
 
     return (
         <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0 || actions.length > 0}>
             <div className="space-y-8 max-w-7xl mx-auto w-full">
                 <div className="flex justify-between items-center">
-                    <h1 className="text-4xl font-bold text-primary">Painel da Consultoria</h1>
+                    <div>
+                        <h1 className="text-4xl font-bold text-primary">Painel da Consultoria</h1>
+                        <div className="mt-4">
+                           <CurrentClientSelect />
+                        </div>
+                    </div>
                     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                         <DialogTrigger asChild>
-                            <Button onClick={handleAddNew}>
+                            <Button onClick={handleAddNew} disabled={!selectedClientId}>
                                 <PlusCircle className="mr-2 h-4 w-4" />
                                 Adicionar Ação
                             </Button>
@@ -482,13 +524,22 @@ export default function ConsultancyPage() {
                             </DialogHeader>
                             <ScrollArea className="max-h-[70vh] pr-6 -mr-6">
                               <div className="pr-1">
-                                <ActionForm action={editingAction} onFinished={onFormFinished} />
+                                {selectedClientId && <ActionForm action={editingAction} onFinished={onFormFinished} clientId={selectedClientId} />}
                               </div>
                             </ScrollArea>
                         </DialogContent>
                     </Dialog>
                 </div>
             
+                {!selectedClientId ? (
+                     <Card>
+                        <CardContent className="p-12 text-center">
+                            <h2 className="text-2xl font-semibold">Selecione um Cliente</h2>
+                            <p className="mt-2 text-muted-foreground">Escolha um cliente na lista acima para ver seus dados e plano de ação.</p>
+                        </CardContent>
+                    </Card>
+                ) : (
+                <>
                  <Card>
                     <CardHeader>
                         <CardTitle className="text-2xl">Visão Geral do Cliente</CardTitle>
@@ -666,6 +717,8 @@ export default function ConsultancyPage() {
                         </Table>
                     </CardContent>
                  </Card>
+                 </>
+                )}
             </div>
         </AppLayout>
     );

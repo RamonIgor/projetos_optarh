@@ -1,7 +1,7 @@
 "use client";
 
 import { signOut } from 'firebase/auth';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth, useUser, useClient } from '@/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { LogOut, LayoutGrid, ListTodo, BarChart3, Shuffle, PlayCircle, Settings, Rows, Menu, UserPlus, KeyRound } from 'lucide-react';
@@ -39,6 +39,7 @@ interface AppLayoutProps {
 export default function AppLayout({ children, unclassifiedCount, hasActivities }: AppLayoutProps) {
   const auth = useAuth();
   const { user } = useUser();
+  const { isConsultant } = useClient();
   const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -56,10 +57,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
     { href: '/transicao', label: 'Transição', icon: Shuffle, disabled: !hasActivities },
     { href: '/operacional', label: 'Operacional', icon: PlayCircle, disabled: !hasActivities },
   ];
-
-  const authorizedConsultants = useMemo(() => ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'], []);
-  const isConsultant = useMemo(() => user?.email && authorizedConsultants.includes(user.email), [user, authorizedConsultants]);
-
+  
   const consultancyButton = (
      <Button variant="ghost" onClick={() => router.push('/consultoria')}>
         <Rows className="mr-2 h-4 w-4" />
@@ -122,17 +120,21 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
           )}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-            <RegisterUserDialog.Trigger asChild>
-                <DropdownMenuItem>
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    <span>Cadastrar Colaborador</span>
-                </DropdownMenuItem>
-            </RegisterUserDialog.Trigger>
-            <DropdownMenuSeparator />
-             <DropdownMenuItem onClick={() => router.push('/change-password')}>
-                <KeyRound className="mr-2 h-4 w-4" />
-                <span>Alterar minha senha</span>
-            </DropdownMenuItem>
+          {isConsultant && (
+            <>
+              <RegisterUserDialog.Trigger asChild>
+                  <DropdownMenuItem>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      <span>Cadastrar Colaborador</span>
+                  </DropdownMenuItem>
+              </RegisterUserDialog.Trigger>
+              <DropdownMenuSeparator />
+            </>
+          )}
+           <DropdownMenuItem onClick={() => router.push('/change-password')}>
+              <KeyRound className="mr-2 h-4 w-4" />
+              <span>Alterar minha senha</span>
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </RegisterUserDialog>

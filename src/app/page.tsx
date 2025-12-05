@@ -11,7 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from '@/hooks/use-toast';
 import { X, Plus, Loader2, ThumbsUp, ActivitySquare, Square, GitBranchPlus } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useClient } from '@/firebase';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { useUser } from '@/firebase/auth/use-user';
@@ -20,7 +20,6 @@ import AppLayout from '@/components/AppLayout';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 
-const ACTIVITIES_COLLECTION = 'rh-dp-activities';
 
 // Simple similarity check
 const isSimilar = (a: string, b: string) => {
@@ -156,6 +155,7 @@ function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddS
 export default function BrainstormPage() {
   const db = useFirestore();
   const { user, loading: userLoading } = useUser();
+  const { clientId, isClientLoading } = useClient();
   const router = useRouter();
 
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -168,17 +168,31 @@ export default function BrainstormPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (userLoading) return;
+    const pageIsLoading = userLoading || isClientLoading;
+    setIsLoading(pageIsLoading);
+    
+    if (pageIsLoading) return;
     if (!user) {
       router.push('/login');
       return;
     }
-    if (!db) {
-        setIsLoading(false);
-        return;
-    };
+    if (!db) return;
     
-    const activitiesCollectionRef = collection(db, ACTIVITIES_COLLECTION);
+    if (!clientId) {
+        if (!isClientLoading) {
+            console.warn("Nenhum ID de cliente encontrado para este usuário.");
+            // Potentially show an error message to the user
+            toast({
+                title: "Cliente não encontrado",
+                description: "Sua conta não está associada a nenhum cliente.",
+                variant: "destructive",
+            });
+        }
+        setActivities([]);
+        return;
+    }
+    
+    const activitiesCollectionRef = collection(db, 'clients', clientId, 'activities');
     const q = query(activitiesCollectionRef, orderBy("createdAt", "desc"));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -198,7 +212,7 @@ export default function BrainstormPage() {
     });
 
     return () => unsubscribe();
-  }, [db, toast, user, userLoading, router]);
+  }, [db, toast, user, userLoading, router, clientId, isClientLoading]);
   
   const activityTree = useMemo(() => {
     const tree: (Activity & { children: Activity[] })[] = [];
@@ -236,7 +250,7 @@ export default function BrainstormPage() {
 
   const addActivity = (name: string, parentId: string | null = null) => {
     const trimmedName = name.trim();
-    if (!trimmedName || !db) return;
+    if (!trimmedName || !db || !clientId) return;
     
     setNewActivityName("");
     
@@ -260,7 +274,7 @@ export default function BrainstormPage() {
         historicoExecucoes: [],
       };
 
-      const activitiesCollection = collection(db, ACTIVITIES_COLLECTION);
+      const activitiesCollection = collection(db, 'clients', clientId, 'activities');
       addDoc(activitiesCollection, activityData)
         .catch(async (error) => {
           if (!parentId) setNewActivityName(name); // Restore input on error for main activity
@@ -301,9 +315,9 @@ export default function BrainstormPage() {
   };
 
   const handleDeleteActivity = (id: string) => {
-    if (!db) return;
+    if (!db || !clientId) return;
     
-    const docRef = doc(db, ACTIVITIES_COLLECTION, id);
+    const docRef = doc(db, 'clients', clientId, 'activities', id);
     deleteDoc(docRef)
     .catch(async (error) => {
         const permissionError = new FirestorePermissionError({ path: docRef.path, operation: 'delete' });
@@ -316,7 +330,7 @@ export default function BrainstormPage() {
     });
   };
     
-  if (userLoading || !user) {
+  if (userLoading || isClientLoading || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -352,7 +366,7 @@ export default function BrainstormPage() {
                 disabled={isAdding}
                 aria-label="Nova atividade principal"
               />
-              <Button type="submit" size="lg" className="h-12 w-full sm:w-auto" disabled={isAdding || !newActivityName.trim()}>
+              <Button type="submit" size="lg" className="h-12 w-full sm:w-auto" disabled={isAdding || !newActivityName.trim() || !clientId}>
                 {isAdding ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5 sm:mr-2" />}
                 <span className="hidden sm:inline">Adicionar</span>
               </Button>

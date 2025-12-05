@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { collection, onSnapshot, query, doc, updateDoc, arrayUnion, serverTimestamp, where, Timestamp } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useClient } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
 import { type Activity, type ActivityComment } from '@/types/activity';
@@ -30,7 +30,6 @@ import { ptBR } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 
-const ACTIVITIES_COLLECTION = 'rh-dp-activities';
 
 const CategoryButton = ({ category, selected, onClick, color, children }: any) => (
   <Button
@@ -106,6 +105,7 @@ function CommentItem({ comment }: { comment: ActivityComment }) {
 export default function ClassificationPage() {
   const db = useFirestore();
   const { user, loading: userLoading } = useUser();
+  const { clientId, isClientLoading } = useClient();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -137,7 +137,9 @@ export default function ClassificationPage() {
   }, [allActivities]);
   
   useEffect(() => {
-    if (userLoading) return;
+    const pageIsLoading = userLoading || isClientLoading;
+    if (pageIsLoading) return;
+    
     if (!user) {
       router.push('/login');
       return;
@@ -146,10 +148,18 @@ export default function ClassificationPage() {
         setIsLoading(false);
         return;
     };
+    
+    if (!clientId) {
+      setIsLoading(false);
+      setAllActivities([]);
+      setFilteredActivities([]);
+      return;
+    }
 
     setIsLoading(true);
+    const activitiesCollectionRef = collection(db, 'clients', clientId, 'activities');
     
-    const allQuery = query(collection(db, ACTIVITIES_COLLECTION));
+    const allQuery = query(activitiesCollectionRef);
     const unsubAll = onSnapshot(allQuery, (snapshot) => {
         const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
         setAllActivities(activitiesData);
@@ -158,9 +168,9 @@ export default function ClassificationPage() {
     const fetchActivities = () => {
         let classifyQuery;
         if (view === 'pending') {
-            classifyQuery = query(collection(db, ACTIVITIES_COLLECTION), where('status', '!=', 'aprovada'));
+            classifyQuery = query(activitiesCollectionRef, where('status', '!=', 'aprovada'));
         } else { // 'approved'
-            classifyQuery = query(collection(db, ACTIVITIES_COLLECTION), where('status', '==', 'aprovada'));
+            classifyQuery = query(activitiesCollectionRef, where('status', '==', 'aprovada'));
         }
 
         const unsubClassify = onSnapshot(classifyQuery, (snapshot) => {
@@ -194,7 +204,7 @@ export default function ClassificationPage() {
         unsubAll();
         unsubscribe();
     }
-  }, [db, user, userLoading, router, view]);
+  }, [db, user, userLoading, router, view, clientId, isClientLoading]);
 
   useEffect(() => {
     if (currentActivity) {
@@ -212,10 +222,10 @@ export default function ClassificationPage() {
   }, [currentActivity]);
 
   const updateActivity = async (data: Partial<Activity>) => {
-    if (!currentActivity || !db) return;
+    if (!currentActivity || !db || !clientId) return;
     setIsSaving(true);
     try {
-      const docRef = doc(db, ACTIVITIES_COLLECTION, currentActivity.id);
+      const docRef = doc(db, 'clients', clientId, 'activities', currentActivity.id);
       await updateDoc(docRef, data);
     } catch (error) {
       console.error("Error updating activity: ", error);
@@ -299,13 +309,13 @@ export default function ClassificationPage() {
   }
 
   const handleAddComment = async () => {
-    if (!newComment.trim() || !user?.email || !currentActivity) return;
+    if (!newComment.trim() || !user?.email || !currentActivity || !clientId) return;
     const comment: ActivityComment = {
       autor: user.email,
       texto: newComment.trim(),
       data: new Date(),
     };
-    const docRef = doc(db, ACTIVITIES_COLLECTION, currentActivity.id);
+    const docRef = doc(db, 'clients', clientId, 'activities', currentActivity.id);
     await updateDoc(docRef, {
       comentarios: arrayUnion(comment)
     });
@@ -320,7 +330,7 @@ export default function ClassificationPage() {
   
   const unclassifiedCount = useMemo(() => allActivities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [allActivities]);
 
-  if (userLoading || (isLoading && allActivities.length === 0)) {
+  if (userLoading || isClientLoading || (isLoading && allActivities.length === 0)) {
     return (
       <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
         <div className="flex items-center justify-center min-h-[60vh]">

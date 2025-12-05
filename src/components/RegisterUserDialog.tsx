@@ -2,7 +2,8 @@
 
 import { useState, type ReactNode } from 'react';
 import { createUserWithEmailAndPassword, type AuthError } from 'firebase/auth';
-import { useAuth } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { useAuth, useFirestore, useClient } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,8 @@ type RegisterUserDialogComponent = React.FC<{ children: React.ReactNode }> & {
 
 export const RegisterUserDialog: RegisterUserDialogComponent = ({ children }) => {
     const auth = useAuth();
+    const db = useFirestore();
+    const { clientId } = useClient();
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [email, setEmail] = useState('');
@@ -57,14 +60,38 @@ export const RegisterUserDialog: RegisterUserDialogComponent = ({ children }) =>
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!auth || !email || !password) return;
+        if (!auth || !db || !clientId || !email || !password) {
+            toast({
+                title: "Erro de configuração",
+                description: "Não foi possível identificar o cliente atual. Tente novamente.",
+                variant: "destructive",
+            });
+            return;
+        }
         setIsSubmitting(true);
         try {
-            await createUserWithEmailAndPassword(auth, email, password);
+            // 1. Create the user in Firebase Auth
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+
+            // 2. Create the user profile document in Firestore
+            const userDocRef = doc(db, "users", user.uid);
+            await setDoc(userDocRef, {
+                clientId: clientId,
+                role: 'client_user'
+            });
+
+            // 3. (Optional but good practice) Update the client document to include this new user ID
+            // This part is omitted for now as we don't have a UI to manage clients yet,
+            // but it would be something like:
+            // const clientDocRef = doc(db, "clients", clientId);
+            // await updateDoc(clientDocRef, { userIds: arrayUnion(user.uid) });
+
             toast({
                 title: "Colaborador Cadastrado!",
                 description: `O acesso para ${email} foi criado com sucesso.`,
             });
+            
             // Reset form and close dialog
             setEmail('');
             setPassword('');
@@ -83,7 +110,7 @@ export const RegisterUserDialog: RegisterUserDialogComponent = ({ children }) =>
                 <DialogHeader>
                     <DialogTitle>Cadastrar Novo Colaborador</DialogTitle>
                     <DialogDescription>
-                        Crie uma nova conta de acesso para um membro da sua equipe. Ele poderá fazer login com o email e senha definidos.
+                        Crie uma nova conta de acesso para um membro da sua equipe. Ele será associado ao cliente atual.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleRegister}>
@@ -93,7 +120,7 @@ export const RegisterUserDialog: RegisterUserDialogComponent = ({ children }) =>
                             <Input
                                 id="email"
                                 type="email"
-                                placeholder="nome@optarh.com.br"
+                                placeholder="nome@cliente.com.br"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
@@ -129,4 +156,3 @@ export const RegisterUserDialog: RegisterUserDialogComponent = ({ children }) =>
 }
 
 RegisterUserDialog.Trigger = DialogPrimitive.Trigger;
-

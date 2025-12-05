@@ -26,3 +26,4 @@ export { initializeFirebase };
 export { FirebaseClientProvider } from './client-provider';
 export { useFirestore, useAuth, useFirebase, FirebaseProvider } from './provider';
 export { useUser } from './auth/use-user';
+export { useClient, ClientProvider } from './auth/use-client';

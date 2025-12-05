@@ -1,5 +1,17 @@
 import type { Timestamp } from 'firebase/firestore';
 
+export interface Client {
+  id: string;
+  name: string;
+  logoUrl?: string | null;
+  userIds: string[];
+}
+
+export interface UserProfile {
+    clientId: string;
+    role: 'client_user' | 'consultant';
+}
+
 export interface ActivityComment {
   autor: string;
   texto: string;
