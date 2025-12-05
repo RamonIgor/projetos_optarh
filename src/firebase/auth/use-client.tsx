@@ -39,6 +39,12 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
     const isConsultant = userProfile?.role === 'consultant';
 
     useEffect(() => {
+        if (!user) {
+            setConsultantSelectedClientId(null);
+        }
+    }, [user]);
+
+    useEffect(() => {
         if (userLoading) {
             setClientLoading(true);
             return;
