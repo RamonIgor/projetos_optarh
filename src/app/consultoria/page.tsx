@@ -35,7 +35,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import dynamic from 'next/dynamic';
 import type { CategoryChartData } from '@/components/CategoryChart';
-import { SystemToolsDialog } from '@/components/SystemToolsDialog';
+import { UserManagementDialog } from '@/components/UserManagementDialog';
 
 const CategoryChart = dynamic(() => import('@/components/CategoryChart'), {
     ssr: false,
@@ -619,12 +619,7 @@ export default function ConsultancyPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                         <SystemToolsDialog>
-                            <Button variant="outline">
-                                <Wrench className="mr-2 h-4 w-4" />
-                                Ferramentas
-                            </Button>
-                        </SystemToolsDialog>
+                        
                          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button onClick={handleAddNew} disabled={!selectedClientId}>
@@ -857,3 +852,4 @@ export default function ConsultancyPage() {
     
 
     
+
