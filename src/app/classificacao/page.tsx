@@ -13,7 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ArrowLeft, Check, Square, ChevronsRight, ListTodo, ActivitySquare, ThumbsUp, RotateCcw, MessageSquare } from 'lucide-react';
+import { Loader2, ArrowLeft, Check, Square, ChevronsRight, ListTodo, ActivitySquare, ThumbsUp, RotateCcw, MessageSquare, HandPointer } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -110,11 +110,10 @@ export default function ClassificationPage() {
   const { toast } = useToast();
 
   const [allActivities, setAllActivities] = useState<Activity[]>([]);
-  const [activitiesToClassify, setActivitiesToClassify] = useState<Activity[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [filteredActivities, setFilteredActivities] = useState<Activity[]>([]);
+  const [currentActivityId, setCurrentActivityId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [showSummary, setShowSummary] = useState(false);
   const [view, setView] = useState<'pending' | 'approved'>('pending');
   
   const [currentCategory, setCurrentCategory] = useState<'DP' | 'RH' | 'Compartilhado' | null>(null);
@@ -124,8 +123,8 @@ export default function ClassificationPage() {
   const [newComment, setNewComment] = useState('');
 
   const currentActivity = useMemo(() => {
-    return activitiesToClassify.length > 0 ? activitiesToClassify[currentIndex] : null;
-  }, [activitiesToClassify, currentIndex]);
+    return filteredActivities.find(a => a.id === currentActivityId) || null;
+  }, [filteredActivities, currentActivityId]);
 
   const classifiedCount = useMemo(() => allActivities.filter(a => a.status === 'aprovada').length, [allActivities]);
   
@@ -166,21 +165,21 @@ export default function ClassificationPage() {
 
         const unsubClassify = onSnapshot(classifyQuery, (snapshot) => {
             const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
-            const sortedToClassify = activitiesData.sort((a,b) => {
+            const sortedActivities = activitiesData.sort((a,b) => {
               const timeA = (a.createdAt as Timestamp)?.seconds || 0;
               const timeB = (b.createdAt as Timestamp)?.seconds || 0;
               return timeA - timeB;
             });
             
-            setActivitiesToClassify(sortedToClassify);
+            setFilteredActivities(sortedActivities);
 
-            if (view === 'pending' && sortedToClassify.length === 0 && allActivities.length > 0) {
-                setShowSummary(true);
-            } else {
-                setShowSummary(false);
+            // If there's no current activity selected, select the first one.
+            if (!currentActivityId && sortedActivities.length > 0) {
+              setCurrentActivityId(sortedActivities[0].id);
+            } else if (sortedActivities.length === 0) {
+              setCurrentActivityId(null);
             }
             
-            setCurrentIndex(0);
             setIsLoading(false);
         }, () => {
           setIsLoading(false);
@@ -195,7 +194,7 @@ export default function ClassificationPage() {
         unsubAll();
         unsubscribe();
     }
-  }, [db, user, userLoading, router, view, allActivities.length]);
+  }, [db, user, userLoading, router, view]);
 
   useEffect(() => {
     if (currentActivity) {
@@ -203,6 +202,12 @@ export default function ClassificationPage() {
       setCurrentJustification(currentActivity.justificativa || '');
       setCurrentResponsible(currentActivity.responsavel || '');
       setCurrentRecurrence(currentActivity.recorrencia || null);
+    } else {
+      // Clear form if no activity is selected
+      setCurrentCategory(null);
+      setCurrentJustification('');
+      setCurrentResponsible('');
+      setCurrentRecurrence(null);
     }
   }, [currentActivity]);
 
@@ -223,28 +228,10 @@ export default function ClassificationPage() {
       setIsSaving(false);
     }
   };
-
-  const handleRevertToBrainstorm = async () => {
-    if (!currentActivity || !db || isSaving) return;
-
-    const data: Partial<Activity> = {
-      status: 'brainstorm',
-      dataAprovacao: null,
-    };
-    
-    await updateActivity(data);
-
-    toast({
-        title: "Atividade Revertida!",
-        description: `A atividade "${currentActivity?.nome}" voltou para o estágio de Brainstorm.`,
-    });
-
-    handleNext(false); // Move to next without saving again
-  }
-
-  const handleSaveAndNext = async (status?: 'aguardando_consenso' | 'aprovada') => {
+  
+  const handleSaveAndSelectNext = async (status?: 'aguardando_consenso' | 'aprovada') => {
     if (isSaving || !currentActivity) return;
-    
+
     const hasChanged = (
       currentActivity.categoria !== currentCategory ||
       currentActivity.justificativa !== currentJustification ||
@@ -266,7 +253,7 @@ export default function ClassificationPage() {
       recorrencia: currentRecurrence,
       status: newStatus,
     };
-
+    
     if (newStatus === 'aprovada' && currentActivity.status !== 'aprovada') {
       data.dataAprovacao = serverTimestamp();
     }
@@ -280,26 +267,35 @@ export default function ClassificationPage() {
         });
     }
     
-    handleNext(false);
-  };
-
-
-  const handleNext = (save = true) => {
-     if (save) {
-        handleSaveAndNext();
-        return;
-     }
-     if (currentIndex < activitiesToClassify.length - 1) {
-      setCurrentIndex(prev => prev + 1);
-    } else if (view === 'pending') {
-      setShowSummary(true);
+    // Select the next activity in the list
+    const currentIndex = filteredActivities.findIndex(a => a.id === currentActivity.id);
+    const nextActivity = filteredActivities[currentIndex + 1];
+    if (nextActivity) {
+      setCurrentActivityId(nextActivity.id);
     } else {
-      toast({ title: 'Fim da lista!', description: 'Você revisou todas as atividades aprovadas.' });
+      // Last item was just classified, so there's nothing to select.
+      setCurrentActivityId(null);
     }
   };
 
+  const handleRevertToBrainstorm = async () => {
+    if (!currentActivity || !db || isSaving) return;
+
+    const data: Partial<Activity> = {
+      status: 'brainstorm',
+      dataAprovacao: null,
+    };
+    
+    await updateActivity(data);
+
+    toast({
+        title: "Atividade Revertida!",
+        description: `A atividade "${currentActivity?.nome}" voltou para o estágio de Brainstorm.`,
+    });
+  }
+
   const handleApprove = () => {
-    handleSaveAndNext('aprovada');
+    handleSaveAndSelectNext('aprovada');
   }
 
   const handleAddComment = async () => {
@@ -318,15 +314,8 @@ export default function ClassificationPage() {
 
   const isApproveDisabled = !currentCategory || !currentJustification || !currentResponsible;
   
-  const handlePrev = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(prev => prev - 1);
-    }
-  };
-
-  const goToActivity = (index: number) => {
-    setCurrentIndex(index);
-    setShowSummary(false);
+  const goToActivity = (id: string) => {
+    setCurrentActivityId(id);
   }
   
   const unclassifiedCount = useMemo(() => allActivities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [allActivities]);
@@ -339,18 +328,6 @@ export default function ClassificationPage() {
         </div>
       </AppLayout>
     );
-  }
-  
-  if (showSummary && view === 'pending') {
-    return (
-        <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
-            <SummaryScreen 
-              stats={summaryStats} 
-              onReviewPending={() => { setView('pending'); setShowSummary(false); }}
-              onReviewApproved={() => { setView('approved'); setShowSummary(false); }}
-            />
-        </AppLayout>
-    )
   }
 
   if (allActivities.length === 0) {
@@ -388,25 +365,25 @@ export default function ClassificationPage() {
                 </TabsList>
               </Tabs>
             </div>
-            <ActivityList activities={activitiesToClassify} currentIndex={currentIndex} goToActivity={goToActivity} />
+            <ActivityList activities={filteredActivities} currentActivityId={currentActivityId} goToActivity={goToActivity} />
           </SheetContent>
         </Sheet>
 
         <aside className="w-1/4 hidden sm:block border-r pr-6">
             <h2 className="text-lg font-semibold mb-4">Revisão de Atividades</h2>
-             <Tabs value={view} onValueChange={(v) => setView(v as 'pending' | 'approved')}>
+             <Tabs value={view} onValueChange={(v) => { setView(v as 'pending' | 'approved'); setCurrentActivityId(null); }}>
               <TabsList className="grid w-full grid-cols-2 mb-4">
                 <TabsTrigger value="pending">Pendentes</TabsTrigger>
                 <TabsTrigger value="approved">Aprovadas</TabsTrigger>
               </TabsList>
              </Tabs>
-            <ActivityList activities={activitiesToClassify} currentIndex={currentIndex} goToActivity={goToActivity} />
+            <ActivityList activities={filteredActivities} currentActivityId={currentActivityId} goToActivity={goToActivity} />
         </aside>
         
         <div className="flex-1 flex flex-col">
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
               <h1 className="text-3xl md:text-4xl font-bold text-primary tracking-tight">Classificação de Atividades</h1>
-              <p className="mt-2 text-md text-muted-foreground">Vamos definir cada atividade em DP, RH ou Compartilhado</p>
+              <p className="mt-2 text-md text-muted-foreground">Selecione uma atividade na lista para começar a classificar.</p>
             </motion.div>
             
             <div className="my-4">
@@ -429,15 +406,6 @@ export default function ClassificationPage() {
               {currentActivity ? (
                 <Card className="shadow-lg overflow-hidden flex-1 flex flex-col">
                   <CardContent className="p-6 md:p-8 flex-1 flex flex-col">
-                    <div className="flex justify-between items-center mb-6">
-                        <Button variant="ghost" onClick={handlePrev} disabled={currentIndex === 0}><ArrowLeft className="mr-2 h-4 w-4"/> Anterior</Button>
-                        <span className="text-sm font-medium text-muted-foreground text-center">Atividade {currentIndex + 1} de {activitiesToClassify.length}</span>
-                        <Button variant="ghost" onClick={() => handleNext()}>
-                            {currentIndex === activitiesToClassify.length - 1 ? 'Finalizar Revisão' : 'Próxima'}
-                            {currentIndex !== activitiesToClassify.length - 1 && <ArrowLeft className="ml-2 h-4 w-4 transform rotate-180"/>}
-                        </Button>
-                    </div>
-
                     <div className="grid md:grid-cols-2 gap-8 flex-1">
                       {/* Coluna da Esquerda */}
                       <div className="flex flex-col space-y-6">
@@ -454,7 +422,7 @@ export default function ClassificationPage() {
 
                       {/* Coluna da Direita */}
                       <div className="flex flex-col space-y-4">
-                          <div className="h-[52px] mb-2"></div> {/* Spacer to align with h2 */}
+                           <div className="h-[52px] mb-2"></div>
                           <div>
                               <label className="text-lg font-semibold mb-2 block" htmlFor="justification">2. Justificativa</label>
                               <Textarea 
@@ -515,13 +483,9 @@ export default function ClassificationPage() {
                             )}
                         </div>
                         <div className="flex flex-col sm:flex-row gap-4">
-                          <Button variant="secondary" onClick={() => handleSaveAndNext()} disabled={isSaving}>
-                            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                            Salvar e Próxima
-                          </Button>
                           <Button onClick={handleApprove} disabled={isApproveDisabled || isSaving} className="bg-green-600 hover:bg-green-700">
                             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Check className="mr-2 h-4 w-4"/>}
-                            Aprovar e Próxima
+                            Aprovar Atividade
                           </Button>
                         </div>
                     </div>
@@ -529,17 +493,18 @@ export default function ClassificationPage() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="text-center py-20 flex-1 flex flex-col items-center justify-center">
-                    {activitiesToClassify.length === 0 && !isLoading ? (
-                        <>
-                          <h2 className="text-2xl font-bold">Nenhuma atividade nesta lista.</h2>
-                          <p className="text-muted-foreground mt-2">Selecione outra aba ou adicione novas atividades.</p>
-                        </>
+                <div className="text-center py-20 flex-1 flex flex-col items-center justify-center bg-muted/50 rounded-lg border-2 border-dashed">
+                    {isLoading ? (
+                      <>
+                        <h2 className="text-2xl font-bold">Carregando atividades...</h2>
+                        <Loader2 className="h-8 w-8 animate-spin text-primary mt-4"/>
+                      </>
                     ) : (
-                        <>
-                            <h2 className="text-2xl font-bold">Carregando atividades...</h2>
-                            <Loader2 className="h-8 w-8 animate-spin text-primary mt-4"/>
-                        </>
+                       <>
+                          <HandPointer className="h-12 w-12 text-primary mb-4" />
+                          <h2 className="text-2xl font-bold">Selecione uma atividade</h2>
+                          <p className="text-muted-foreground mt-2">Escolha uma atividade da lista ao lado para começar.</p>
+                       </>
                     )}
                 </div>
               )}
@@ -552,25 +517,25 @@ export default function ClassificationPage() {
 }
 
 
-function ActivityList({ activities, currentIndex, goToActivity }: { activities: Activity[], currentIndex: number, goToActivity: (index: number) => void }) {
+function ActivityList({ activities, currentActivityId, goToActivity }: { activities: Activity[], currentActivityId: string | null, goToActivity: (id: string) => void }) {
   if (!activities || activities.length === 0) {
       return <div className="text-center text-sm text-muted-foreground p-10">Nenhuma atividade encontrada nesta lista.</div>
   }
   return (
     <ScrollArea className="h-[calc(100vh-280px)] px-4 sm:px-0">
       <ul className="space-y-2 pr-4">
-        {activities.map((act, index) => (
+        {activities.map((act) => (
           <li key={act.id}>
             <button
-              onClick={() => goToActivity(index)}
+              onClick={() => goToActivity(act.id)}
               className={cn(
                 "w-full text-left p-3 rounded-md transition-colors text-sm flex items-center gap-3",
-                index === currentIndex ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-muted'
+                act.id === currentActivityId ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-muted'
               )}
             >
               <span title={statusLabels[act.status]}>{statusIcons[act.status as keyof typeof statusIcons]}</span>
               <span className="flex-1 truncate">{act.nome}</span>
-              <Badge variant={index === currentIndex ? 'default' : 'secondary'} className="hidden lg:inline-flex">{statusLabels[act.status]}</Badge>
+              <Badge variant={act.id === currentActivityId ? 'default' : 'secondary'} className="hidden lg:inline-flex">{statusLabels[act.status]}</Badge>
             </button>
           </li>
         ))}
@@ -683,3 +648,5 @@ function SummaryScreen({ stats, onReviewPending, onReviewApproved }: { stats: { 
     </div>
   )
 }
+
+    
