@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useTransition } from 'react';
@@ -242,7 +243,7 @@ export default function TransitionPage() {
         return { total, toTransfer, inTransition, concluded, overdue, progress };
     }, [allActivities]);
     
-    if (userLoading || isLoading) {
+    if (userLoading || isLoading || isClientLoading) {
         return (
             <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
                 <div className="flex items-center justify-center min-h-[60vh]">
@@ -318,7 +319,7 @@ export default function TransitionPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Todos os Responsáveis</SelectItem>
-                                {allResponsibles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                                {allResponsibles.map(r => <SelectItem key={r} value={r!}>{r}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -390,5 +391,7 @@ export default function TransitionPage() {
         </AppLayout>
     );
 }
+
+    
 
     
