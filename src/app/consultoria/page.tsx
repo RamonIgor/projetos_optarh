@@ -52,6 +52,14 @@ const actionSchema = z.object({
   percentual_concluido: z.number().min(0).max(100),
   status: z.enum(["nao_iniciada", "em_andamento", "concluida", "atrasada", "cancelada"]),
   observacoes: z.string().optional(),
+}).refine(data => {
+    if (data.status === 'concluida' && data.percentual_concluido !== 100) {
+        return false;
+    }
+    return true;
+}, {
+    message: "O percentual concluído deve ser 100% para o status 'Concluída'.",
+    path: ['status'],
 });
 
 type ActionFormValues = z.infer<typeof actionSchema>;
