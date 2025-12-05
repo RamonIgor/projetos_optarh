@@ -87,7 +87,7 @@ function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddS
             className={cn("p-3 rounded-lg", isSubItem ? "ml-8 bg-card border" : "bg-muted/50")}
         >
              <div className="flex items-center justify-between">
-                <span className="font-medium text-foreground">{activity.nome}</span>
+                <span className={cn("font-medium", isSubItem ? "text-muted-foreground" : "text-foreground")}>{activity.nome}</span>
                 <div className="flex items-center gap-1 flex-shrink-0">
                     <Badge variant={status.variant} className={status.className}>
                     <div className="flex items-center gap-1.5">
