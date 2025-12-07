@@ -39,87 +39,13 @@ const surveyFormSchema = z.object({
 
 type SurveyFormValues = z.infer<typeof surveyFormSchema>;
 
-
-function ClientSelectorForEditor() {
-    const { clientId, setSelectedClientId, isConsultant } = useClient();
-    const db = useFirestore();
-    const { toast } = useToast();
-
-    const [clients, setClients] = useState<Client[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        if (!db || !isConsultant) {
-            setIsLoading(false);
-            return;
-        }
-        
-        const fetchClients = async () => {
-            setIsLoading(true);
-            try {
-                const clientsQuery = query(collection(db, 'clients'), orderBy('name', 'asc'));
-                const snapshot = await getDocs(clientsQuery);
-                const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Client));
-                setClients(clientsData);
-            } catch (error) {
-                console.error("Error fetching clients:", error);
-                toast({ title: "Erro ao buscar clientes", variant: "destructive" });
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchClients();
-    }, [db, isConsultant, toast]);
-
-    if (!isConsultant) return null;
-
-    return (
-        <Card className="mb-6 bg-muted/50">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <Building className="h-5 w-5 text-primary" />
-                    Cliente Alvo da Pesquisa
-                </CardTitle>
-                <CardDescription>
-                    Selecione para qual cliente esta pesquisa será direcionada. Esta ação não poderá ser alterada após o envio da pesquisa.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                {isLoading ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                    <Select value={clientId || ''} onValueChange={setSelectedClientId}>
-                        <SelectTrigger className="w-full md:w-1/2">
-                            <SelectValue placeholder="Selecione um cliente..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {clients.length > 0 ? (
-                                clients.map(client => (
-                                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                                ))
-                            ) : (
-                                <div className="px-2 py-1.5 text-sm text-muted-foreground">Nenhum cliente cadastrado.</div>
-                            )}
-                        </SelectContent>
-                    </Select>
-                )}
-                 {!clientId && !isLoading && (
-                    <p className="text-sm text-destructive mt-2">
-                        Por favor, selecione um cliente para habilitar o formulário.
-                    </p>
-                 )}
-            </CardContent>
-        </Card>
-    );
-}
-
 export default function SurveyEditorPage() {
   const { surveyId } = useParams();
   const isNewSurvey = surveyId === 'novo';
   
   const router = useRouter();
   const db = useFirestore();
-  const { clientId } = useClient();
+  const { clientId, isConsultant } = useClient();
   const { toast } = useToast();
 
   const [isLoading, setIsLoading] = useState(!isNewSurvey);
@@ -211,6 +137,8 @@ export default function SurveyEditorPage() {
     );
   }
 
+  const showDisabledMessage = isConsultant && !clientId;
+
   return (
     <div className="w-full max-w-4xl mx-auto">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
@@ -218,11 +146,21 @@ export default function SurveyEditorPage() {
             <p className="mt-2 text-lg text-muted-foreground">Passo 1 de 3: Informações Básicas</p>
         </motion.div>
         
-        <div className="mt-8">
-            <ClientSelectorForEditor />
-        </div>
+        {showDisabledMessage && (
+            <Card className="mt-8 bg-yellow-100 dark:bg-yellow-900/50 border-yellow-300">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
+                        <Building className="h-5 w-5" />
+                        Nenhum Cliente Selecionado
+                    </CardTitle>
+                    <CardDescription className="text-yellow-700 dark:text-yellow-300">
+                        Por favor, retorne ao painel e selecione um cliente para criar ou editar uma pesquisa.
+                    </CardDescription>
+                </CardHeader>
+            </Card>
+        )}
 
-        <fieldset disabled={!clientId || isSaving} className="disabled:opacity-50">
+        <fieldset disabled={!clientId || isSaving} className="disabled:opacity-50 mt-8">
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)}>
                     <Card>
