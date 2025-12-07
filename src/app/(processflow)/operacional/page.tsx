@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useTransition } from 'react';
-import { collection, onSnapshot, query, where, doc, updateDoc, serverTimestamp, Timestamp, arrayUnion } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useFirestore, useClient } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
@@ -11,23 +11,30 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Calendar, User, Repeat, CheckSquare, Clock, ChevronsDown, History, ListChecks } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Loader2, AlertCircle, CheckCircle2, PlayCircle, Clock, Calendar, Shuffle, BarChart3, Edit } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useToast } from '@/hooks/use-toast';
-import { isActivityPending, isActivityOverdue, getNextExecution, type Recurrence } from '@/lib/date-utils';
-import { format, formatDistanceToNow } from 'date-fns';
+import Link from 'next/link';
+import { format, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 
-function cn(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(' ');
-}
+const transitionStatusConfig: Record<Activity['statusTransicao'] | 'undefined', { label: string; color: string; icon: React.ReactNode }> = {
+    a_transferir: { label: 'Aguardando', color: 'bg-gray-200 text-gray-800', icon: <Clock className="h-4 w-4 text-gray-500" /> },
+    em_transicao: { label: 'Em Transição', color: 'bg-yellow-200 text-yellow-800', icon: <PlayCircle className="h-4 w-4 text-yellow-600" /> },
+    concluida: { label: 'Concluída', color: 'bg-green-200 text-green-800', icon: <CheckCircle2 className="h-4 w-4 text-green-600" /> },
+    undefined: { label: 'Indefinido', color: 'bg-gray-100 text-gray-500', icon: <AlertCircle className="h-4 w-4 text-gray-400" /> },
+};
+
 
 const StatCard = ({ title, value, icon, className }: { title: string, value: string | number, icon: React.ReactNode, className?: string }) => (
     <Card className={cn("shadow-sm", className)}>
@@ -41,184 +48,147 @@ const StatCard = ({ title, value, icon, className }: { title: string, value: str
     </Card>
 );
 
-const recurrenceOrder: Recurrence[] = ['Diária', 'Semanal', 'Mensal', 'Trimestral', 'Anual', 'Sob demanda'];
 
-const categoryStyles: Record<string, string> = {
-    DP: 'bg-purple-100 text-purple-800 border-purple-200',
-    RH: 'bg-green-100 text-green-800 border-green-200',
-    Compartilhado: 'bg-blue-100 text-blue-800 border-blue-200',
-};
+function EditTransitionModal({ activity, children }: { activity: Activity, children: React.ReactNode }) {
+    const db = useFirestore();
+    const { clientId } = useClient();
+    const { toast } = useToast();
+    const [isSaving, setIsSaving] = useState(false);
+    const [open, setOpen] = useState(false);
 
-function ActivityItem({ activity, name, onToggle }: { activity: Activity, name: string, onToggle: (id: string, isPending: boolean) => void }) {
-    const isPending = isActivityPending(activity);
-    const isOverdue = isPending && isActivityOverdue(activity);
-    const nextExecution = getNextExecution(activity);
-    const [isUpdating, setIsUpdating] = useState(false);
+    const [prazo, setPrazo] = useState<Date | undefined>(activity.prazoTransicao ? (activity.prazoTransicao as any).toDate() : undefined);
+    const [responsavelAnterior, setResponsavelAnterior] = useState(activity.responsavelAnterior || '');
+    const [status, setStatus] = useState<Activity['statusTransicao']>(activity.statusTransicao);
 
-    const handleToggle = () => {
-        setIsUpdating(true);
-        onToggle(activity.id, isPending);
-        setTimeout(() => setIsUpdating(false), 1000);
-    }
+    useEffect(() => {
+        if(open) {
+            setPrazo(activity.prazoTransicao ? (activity.prazoTransicao as any).toDate() : undefined);
+            setResponsavelAnterior(activity.responsavelAnterior || '');
+            setStatus(activity.statusTransicao);
+        }
+    }, [open, activity]);
+    
+    const handleSave = async () => {
+        if (!db || !clientId) return;
+        setIsSaving(true);
+        try {
+            const docRef = doc(db, 'clients', clientId, 'activities', activity.id);
+
+            const data: Partial<Activity> = {
+                prazoTransicao: prazo,
+                responsavelAnterior: responsavelAnterior,
+                statusTransicao: status,
+            };
+
+            if (status !== activity.statusTransicao) {
+                if(status === 'em_transicao') {
+                    data.dataInicioTransicao = serverTimestamp();
+                } else if (status === 'concluida') {
+                    data.dataConclusaoTransicao = serverTimestamp();
+                }
+            }
+            
+            await updateDoc(docRef, data);
+
+            toast({ title: "Alterações salvas com sucesso!" });
+            setOpen(false);
+        } catch (error) {
+            console.error(error);
+            toast({ title: "Erro ao salvar", description: "Não foi possível salvar as alterações.", variant: "destructive" });
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     return (
-        <motion.div
-            layout
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className={cn(
-                "flex items-start gap-4 rounded-lg p-4 transition-colors",
-                !isPending ? 'bg-green-500/10' : isOverdue ? 'bg-red-500/10' : 'bg-card'
-            )}
-        >
-            <Checkbox 
-                id={`activity-${activity.id}`}
-                checked={!isPending}
-                onCheckedChange={handleToggle}
-                className="h-6 w-6 mt-1"
-                disabled={isUpdating}
-            />
-            <div className="flex-1">
-                <label htmlFor={`activity-${activity.id}`} className="font-semibold text-lg cursor-pointer">{name}</label>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-2">
-                    <Badge variant="outline" className={cn(activity.categoria ? categoryStyles[activity.categoria] : '')}>
-                        {activity.categoria}
-                    </Badge>
-                    <div className="flex items-center gap-1.5"><User className="h-3 w-3" /> {activity.responsavel}</div>
-                    <div className="flex items-center gap-1.5"><Repeat className="h-3 w-3" /> {activity.recorrencia}</div>
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>{children}</DialogTrigger>
+            <DialogContent className="sm:max-w-[480px]">
+                <DialogHeader>
+                    <DialogTitle>Editar Transição</DialogTitle>
+                    <DialogDescription>{activity.nome}</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-6 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="prev-responsible" className="text-right">
+                            Resp. Anterior
+                        </Label>
+                        <Input
+                            id="prev-responsible"
+                            value={responsavelAnterior}
+                            onChange={(e) => setResponsavelAnterior(e.target.value)}
+                            className="col-span-3"
+                            placeholder="Quem realizava a tarefa?"
+                        />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right">
+                            Prazo
+                        </Label>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "col-span-3 justify-start text-left font-normal",
+                                        !prazo && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {prazo ? format(prazo, "PPP", { locale: ptBR }) : <span>Escolha uma data</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <CalendarComponent
+                                    mode="single"
+                                    selected={prazo}
+                                    onSelect={setPrazo}
+                                    initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="status" className="text-right">
+                            Status
+                        </Label>
+                         <Select value={status} onValueChange={(value) => setStatus(value as Activity['statusTransicao'])}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Selecione o status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Object.entries(transitionStatusConfig).map(([key, config]) => (
+                                    (key !== 'undefined') && <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
-                <div className="text-xs text-muted-foreground mt-2 space-y-1">
-                   {activity.ultimaExecucao && (
-                     <p>
-                        Última execução: {formatDistanceToNow((activity.ultimaExecucao as Timestamp).toDate(), { addSuffix: true, locale: ptBR })}
-                     </p>
-                   )}
-                   {nextExecution && (
-                     <p className={cn(isOverdue && 'text-red-500 font-medium')}>
-                        {isOverdue ? 'Execução atrasada!' : `Próxima execução esperada: ${formatDistanceToNow(nextExecution, { addSuffix: true, locale: ptBR })}`}
-                     </p>
-                   )}
-                </div>
-            </div>
-             <div className="flex flex-col items-end gap-2">
-                 {isOverdue && <Badge variant="destructive">Atrasada</Badge>}
-                 <HistoryModal activity={activity} name={name} />
-            </div>
-        </motion.div>
+                <DialogFooter>
+                     <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+                    <Button onClick={handleSave} disabled={isSaving}>
+                        {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Salvar Alterações
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }
 
-function HistoryModal({ activity, name }: { activity: Activity, name: string }) {
-    const history = useMemo(() => {
-        if (!activity.historicoExecucoes) return [];
-        const sorted = [...(activity.historicoExecucoes || [])];
-        sorted.sort((a, b) => {
-            const dateA = a instanceof Timestamp ? a.toDate() : new Date(a);
-            const dateB = b instanceof Timestamp ? b.toDate() : new Date(b);
-            return dateB.getTime() - dateA.getTime();
-        });
-        return sorted;
-    }, [activity.historicoExecucoes]);
-
-    return (
-        <Dialog>
-            <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="mt-auto">
-                    <History className="h-4 w-4 mr-2" />
-                    Histórico
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Histórico de Execução</DialogTitle>
-                    <DialogDescription>{name}</DialogDescription>
-                </DialogHeader>
-                <ScrollArea className="max-h-80">
-                    <div className="pr-6">
-                        {history.length > 0 ? (
-                            <ul className="space-y-3">
-                                {history.map((item, index) => (
-                                    <li key={index} className="flex items-center gap-4 text-sm">
-                                        <ListChecks className="h-5 w-5 text-green-500" />
-                                        <div className="flex-1">
-                                            <p className="font-medium">Execução concluída</p>
-                                            <p className="text-muted-foreground text-xs">
-                                                {format(item instanceof Timestamp ? item.toDate() : new Date(item), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
-                                            </p>
-                                        </div>
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <div className="text-center py-10">
-                                <p className="text-muted-foreground">Nenhuma execução registrada.</p>
-                            </div>
-                        )}
-                    </div>
-                </ScrollArea>
-            </DialogContent>
-        </Dialog>
-    )
-}
-
-
-function RecurrenceGroup({ title, activities, onToggle, getActivityName }: { title: Recurrence, activities: Activity[], onToggle: (id: string, isPending: boolean) => void, getActivityName: (act: Activity) => string }) {
-    const [isOpen, setIsOpen] = useState(true);
-    const completed = activities.filter(a => !isActivityPending(a)).length;
-    const total = activities.length;
-    const progress = total > 0 ? (completed / total) * 100 : 0;
-
-    if (activities.length === 0) return null;
-
-    return (
-        <Card className="overflow-hidden">
-            <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-                <CollapsibleTrigger asChild>
-                    <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-muted/50 p-4">
-                        <div className="flex items-center gap-4">
-                            <h2 className="text-xl font-bold">{title}</h2>
-                            <Badge variant="secondary">{activities.length} atividades</Badge>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <span className="text-sm text-muted-foreground">{completed} de {total} concluídas</span>
-                            <Progress value={progress} className="w-32 h-2" />
-                            <Button variant="ghost" size="sm" className="w-9 p-0">
-                                <ChevronsDown className={cn("h-5 w-5 transition-transform", isOpen && "rotate-180")} />
-                            </Button>
-                        </div>
-                    </CardHeader>
-                </CollapsibleTrigger>
-                <CollapsibleContent asChild>
-                    <CardContent className="p-4 space-y-3">
-                         <AnimatePresence>
-                            {activities.map(activity => (
-                                <ActivityItem key={activity.id} activity={activity} name={getActivityName(activity)} onToggle={onToggle} />
-                            ))}
-                        </AnimatePresence>
-                    </CardContent>
-                </CollapsibleContent>
-            </Collapsible>
-        </Card>
-    )
-}
-
-export default function OperationalPage() {
+export default function TransitionPage() {
     const db = useFirestore();
     const { user, loading: userLoading } = useUser();
     const { clientId, isClientLoading } = useClient();
     const router = useRouter();
-    const { toast } = useToast();
 
     const [allActivities, setAllActivities] = useState<Activity[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isUpdating, startUpdateTransition] = useTransition();
-
-    const [categoryFilter, setCategoryFilter] = useState<string>('Todas');
-    const [recurrenceFilter, setRecurrenceFilter] = useState('all');
+    
+    const [categoryFilter, setCategoryFilter] = useState('all');
+    const [statusFilter, setStatusFilter] = useState('all');
     const [responsibleFilter, setResponsibleFilter] = useState('all');
-    const [statusFilter, setStatusFilter] = useState('pending'); // 'all', 'pending'
-
+    
     const isLoadingPage = userLoading || isClientLoading;
 
     useEffect(() => {
@@ -236,106 +206,47 @@ export default function OperationalPage() {
             return;
         }
 
-        setIsLoading(true);
         const q = query(collection(db, 'clients', clientId, 'activities'), where('status', '==', 'aprovada'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
-            setAllActivities(activitiesData);
+            const sortedActivities = activitiesData.sort((a, b) => ((a.createdAt as any)?.seconds || 0) - ((b.createdAt as any)?.seconds || 0));
+            setAllActivities(sortedActivities);
             setIsLoading(false);
         }, () => setIsLoading(false));
 
         return () => unsubscribe();
     }, [db, user, router, clientId, isLoadingPage]);
-
-    const handleToggleActivity = (activityId: string, isCurrentlyPending: boolean) => {
-        if (!db || !clientId) return;
-        startUpdateTransition(async () => {
-            try {
-                const docRef = doc(db, 'clients', clientId, 'activities', activityId);
-                
-                const updateData: any = {
-                    ultimaExecucao: isCurrentlyPending ? serverTimestamp() : null
-                };
-
-                if (isCurrentlyPending) {
-                   updateData.historicoExecucoes = arrayUnion(new Date());
-                }
-                
-                await updateDoc(docRef, updateData);
-
-                toast({
-                    title: `Atividade ${isCurrentlyPending ? 'concluída' : 'reaberta'}!`,
-                    description: 'O status da atividade foi atualizado.',
-                });
-            } catch (error) {
-                console.error(error);
-                toast({
-                    title: 'Erro ao atualizar atividade',
-                    variant: 'destructive'
-                });
-            }
-        });
-    };
     
-    const unclassifiedCount = useMemo(() => allActivities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [allActivities]);
-    const allResponsibles = useMemo(() => Array.from(new Set(allActivities.map(a => a.responsavel).filter(Boolean))), [allActivities]);
-    
-    const allRecurrences = useMemo(() => {
-        const recurrences = new Set(allActivities.map(a => a.recorrencia).filter(Boolean));
-        return recurrenceOrder.filter(r => recurrences.has(r));
-    }, [allActivities]);
-
-    const getActivityName = (activity: Activity) => {
+    const getActivityName = (activity: Activity, all: Activity[]) => {
         if (activity.parentId) {
-            const parent = allActivities.find(a => a.id === activity.parentId);
+            const parent = all.find(a => a.id === activity.parentId);
             return parent ? `${parent.nome} » ${activity.nome}` : activity.nome;
         }
         return activity.nome;
     };
-
+    
+    const unclassifiedCount = 0; // On this page, all are classified/approved.
+    const allResponsibles = useMemo(() => Array.from(new Set(allActivities.map(a => a.responsavel).filter(Boolean))), [allActivities]);
 
     const filteredActivities = useMemo(() => {
         return allActivities.filter(activity => {
-            const categoryMatch = categoryFilter === 'Todas' || activity.categoria === categoryFilter;
-            const recurrenceMatch = recurrenceFilter === 'all' || activity.recorrencia === recurrenceFilter;
+            const categoryMatch = categoryFilter === 'all' || activity.categoria === categoryFilter;
+            const statusMatch = statusFilter === 'all' || activity.statusTransicao === statusFilter;
             const responsibleMatch = responsibleFilter === 'all' || activity.responsavel === responsibleFilter;
-            const statusMatch = statusFilter === 'all' || (statusFilter === 'pending' && isActivityPending(activity)) || (statusFilter === 'executed' && !isActivityPending(activity));
-            return categoryMatch && recurrenceMatch && responsibleMatch && statusMatch;
+            return categoryMatch && statusMatch && responsibleMatch;
         });
-    }, [allActivities, categoryFilter, recurrenceFilter, responsibleFilter, statusFilter]);
-
-    const groupedActivities = useMemo(() => {
-        const groups = {} as Record<Recurrence, Activity[]>;
-        for (const recurrence of recurrenceOrder) {
-            groups[recurrence] = [];
-        }
-
-        for (const activity of filteredActivities) {
-            if (activity.recorrencia && groups[activity.recorrencia]) {
-                groups[activity.recorrencia].push(activity);
-            }
-        }
-        
-        for (const recurrence in groups) {
-            groups[recurrence as Recurrence].sort((a,b) => {
-                const aIsPending = isActivityPending(a);
-                const bIsPending = isActivityPending(b);
-                if (aIsPending && !bIsPending) return -1;
-                if (!aIsPending && bIsPending) return 1;
-                return 0;
-            });
-        }
-        return groups;
-    }, [filteredActivities]);
-
+    }, [allActivities, categoryFilter, statusFilter, responsibleFilter]);
+    
     const stats = useMemo(() => {
         const total = allActivities.length;
-        const pending = allActivities.filter(isActivityPending).length;
-        const executed = total - pending;
-        const completionRate = total > 0 ? (executed / total) * 100 : 0;
-        return { total, pending, executed, completionRate };
+        const toTransfer = allActivities.filter(a => a.statusTransicao === 'a_transferir').length;
+        const inTransition = allActivities.filter(a => a.statusTransicao === 'em_transicao').length;
+        const concluded = allActivities.filter(a => a.statusTransicao === 'concluida').length;
+        const overdue = allActivities.filter(a => a.prazoTransicao && a.statusTransicao !== 'concluida' && isPast((a.prazoTransicao as any).toDate())).length;
+        const progress = total > 0 ? (concluded / total) * 100 : 0;
+        return { total, toTransfer, inTransition, concluded, overdue, progress };
     }, [allActivities]);
-
+    
     if (isLoadingPage || isLoading) {
         return (
             <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
@@ -351,7 +262,7 @@ export default function OperationalPage() {
            <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={false}>
             <div className="text-center py-20">
               <h1 className="mt-4 text-3xl font-bold">Nenhuma atividade aprovada</h1>
-              <p className="mt-2 text-lg text-muted-foreground">Classifique e aprove atividades para popular o checklist operacional.</p>
+              <p className="mt-2 text-lg text-muted-foreground">Classifique e aprove atividades para iniciar o plano de transição.</p>
               <Button onClick={() => router.push('/processflow/classificacao')} className="mt-6">
                 Ir para Classificação
               </Button>
@@ -364,81 +275,123 @@ export default function OperationalPage() {
         <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
           <div className="max-w-7xl mx-auto w-full">
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">Checklist Operacional</h1>
-                <p className="mt-4 text-lg text-muted-foreground">Acompanhe a execução das atividades recorrentes da equipe.</p>
+                <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">Plano de Transição</h1>
+                <p className="mt-4 text-lg text-muted-foreground">Acompanhe a transferência de responsabilidades das atividades aprovadas.</p>
             </motion.div>
             
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 my-8">
-                <StatCard title="Total de Atividades" value={stats.total} icon={<Calendar className="h-6 w-6 text-muted-foreground" />} />
-                <StatCard title="Executadas no Período" value={stats.executed} icon={<CheckSquare className="h-6 w-6 text-green-500" />} />
-                <StatCard title="Pendentes" value={stats.pending} icon={<Clock className="h-6 w-6 text-yellow-500" />} />
-                <StatCard title="Taxa de Conclusão" value={`${Math.round(stats.completionRate)}%`} icon={<Progress value={stats.completionRate} className="w-12 h-3" /> } />
+             <div className="my-8">
+                <Progress value={stats.progress} />
+                <p className="text-right text-sm text-muted-foreground mt-2">{Math.round(stats.progress)}% das transições concluídas</p>
             </div>
 
-             <Tabs value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as any)}>
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <TabsList>
-                        <TabsTrigger value="Todas">Todas</TabsTrigger>
-                        <TabsTrigger value="DP">DP</TabsTrigger>
-                        <TabsTrigger value="RH">RH</TabsTrigger>
-                        <TabsTrigger value="Compartilhado">Compartilhado</TabsTrigger>
-                    </TabsList>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-8">
+                <StatCard title="Atividades no Plano" value={stats.total} icon={<Shuffle className="h-6 w-6 text-muted-foreground" />} />
+                <StatCard title="Aguardando Transição" value={stats.toTransfer} icon={<Clock className="h-6 w-6 text-gray-500" />} />
+                <StatCard title="Em Transição" value={stats.inTransition} icon={<PlayCircle className="h-6 w-6 text-yellow-500" />} />
+                <StatCard title="Concluídas" value={stats.concluded} icon={<CheckCircle2 className="h-6 w-6 text-green-500" />} />
+                <StatCard title="Atrasadas" value={stats.overdue} icon={<AlertCircle className="h-6 w-6 text-red-500" />} />
+            </div>
 
-                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                        <Select value={recurrenceFilter} onValueChange={setRecurrenceFilter}>
-                            <SelectTrigger className="w-full sm:w-[180px]">
-                                <SelectValue placeholder="Filtrar por recorrência" />
+            <Card>
+                <CardHeader>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                            <SelectTrigger className="w-full sm:w-[200px]">
+                                <SelectValue placeholder="Filtrar por categoria" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">Todas Recorrências</SelectItem>
-                                {allRecurrences.map(r => <SelectItem key={r} value={r!}>{r}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        <Select value={responsibleFilter} onValueChange={setResponsibleFilter}>
-                            <SelectTrigger className="w-full sm:w-[180px]">
-                                <SelectValue placeholder="Filtrar por responsável" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos Responsáveis</SelectItem>
-                                {allResponsibles.map(r => <SelectItem key={r} value={r!}>{r}</SelectItem>)}
+                                <SelectItem value="all">Todas as Categorias</SelectItem>
+                                <SelectItem value="DP">DP</SelectItem>
+                                <SelectItem value="RH">RH</SelectItem>
+                                <SelectItem value="Compartilhado">Compartilhado</SelectItem>
                             </SelectContent>
                         </Select>
                         <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="w-full sm:w-[180px]">
+                            <SelectTrigger className="w-full sm:w-[200px]">
                                 <SelectValue placeholder="Filtrar por status" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">Mostrar Todas</SelectItem>
-                                <SelectItem value="pending">Apenas Pendentes</SelectItem>
-                                <SelectItem value="executed">Apenas Executadas</SelectItem>
+                                <SelectItem value="all">Todos os Status</SelectItem>
+                                {Object.entries(transitionStatusConfig).map(([key, config]) => (
+                                    (key !== 'undefined') && <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Select value={responsibleFilter} onValueChange={setResponsibleFilter}>
+                            <SelectTrigger className="w-full sm:w-[200px]">
+                                <SelectValue placeholder="Filtrar por responsável" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos os Responsáveis</SelectItem>
+                                {allResponsibles.map(r => <SelectItem key={r} value={r!}>{r}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
-                </div>
-                 <div className="mt-6 space-y-6">
-                    {recurrenceOrder.map(recurrence => (
-                         <RecurrenceGroup
-                             key={recurrence}
-                             title={recurrence}
-                             activities={groupedActivities[recurrence] || []}
-                             onToggle={handleToggleActivity}
-                             getActivityName={(act) => getActivityName(act)}
-                         />
-                     ))}
-                     {filteredActivities.length === 0 && !isLoading && (
-                        <div className="text-center py-20 border-2 border-dashed rounded-lg">
-                            <h3 className="text-xl font-semibold">Nenhuma atividade encontrada</h3>
-                            <p className="mt-2 text-muted-foreground">Tente ajustar os filtros ou adicione mais atividades.</p>
-                        </div>
-                     )}
-                 </div>
-            </Tabs>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[30%]">Atividade</TableHead>
+                                <TableHead>Categoria</TableHead>
+                                <TableHead>Responsáveis</TableHead>
+                                <TableHead>Prazo</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="text-right">Ações</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredActivities.length > 0 ? filteredActivities.map(activity => {
+                                const statusConfig = transitionStatusConfig[activity.statusTransicao] || transitionStatusConfig.undefined;
+                                const categoryStyles = {
+                                    DP: 'bg-purple-100 text-purple-800 border-purple-200',
+                                    RH: 'bg-green-100 text-green-800 border-green-200',
+                                    Compartilhado: 'bg-blue-100 text-blue-800 border-blue-200',
+                                };
+                                return (
+                                <TableRow key={activity.id}>
+                                    <TableCell className="font-medium">{getActivityName(activity, allActivities)}</TableCell>
+                                    <TableCell>
+                                         <Badge variant="outline" className={cn(activity.categoria ? categoryStyles[activity.categoria as keyof typeof categoryStyles] : '')}>
+                                            {activity.categoria}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-col">
+                                            <span className="font-semibold">{activity.responsavel}</span>
+                                            {activity.responsavelAnterior && <span className="text-xs text-muted-foreground">de: {activity.responsavelAnterior}</span>}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        {activity.prazoTransicao ? format((activity.prazoTransicao as any).toDate(), 'dd/MM/yyyy') : <span className="text-muted-foreground">-</span>}
+                                        {activity.prazoTransicao && isPast((activity.prazoTransicao as any).toDate()) && activity.statusTransicao !== 'concluida' && (
+                                            <p className="text-xs text-red-500">Atrasado</p>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant="outline" className={cn(statusConfig.color, "whitespace-nowrap")}>
+                                            {statusConfig.label}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <EditTransitionModal activity={activity}>
+                                            <Button size="sm" variant="ghost">
+                                                <Edit className="h-4 w-4 mr-2" />
+                                                Editar
+                                            </Button>
+                                        </EditTransitionModal>
+                                    </TableCell>
+                                </TableRow>
+                            )}) : (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="h-24 text-center">Nenhuma atividade encontrada com os filtros selecionados.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
           </div>
         </AppLayout>
     );
 }
-
-    
-
-
-
