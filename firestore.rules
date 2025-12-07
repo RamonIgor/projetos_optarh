@@ -4,52 +4,72 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // --- Helper Functions ---
+    
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
     function isConsultant() {
-      // Check for role in the users collection OR if the user email is in the admin list.
-      let isRoleConsultant = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'consultant';
+      let userData = getUserData(request.auth.uid);
       let isEmailConsultant = request.auth.token.email in ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'];
-      return isRoleConsultant || isEmailConsultant;
+      return (isSignedIn() && userData.isConsultant == true) || isEmailConsultant;
     }
 
-    function isClientMember(clientId) {
-      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      return userDoc.clientId == clientId && userDoc.role == 'client_user';
-    }
-
-    match /users/{userId} {
-      allow read: if request.auth != null && (request.auth.uid == userId || isConsultant());
-      allow write: if request.auth != null && isConsultant();
+    function isMemberOfClient(clientId) {
+      let userData = getUserData(request.auth.uid);
+      return isSignedIn() && userData.clientId == clientId;
     }
     
-    // Rules for old collections, for migration purposes.
-    match /activities/{activityId} {
-      allow read, write, delete: if request.auth != null && isConsultant();
+    function hasProductAccess(productName) {
+        let userData = getUserData(request.auth.uid);
+        return productName in userData.products;
     }
-    match /consultancy-actions/{actionId} {
-       allow read, write, delete: if request.auth != null && isConsultant();
-    }
-    match /rh-dp-activities/{activityId} {
-       allow read, write, delete: if request.auth != null && isConsultant();
+    
+    function canAccessProcessFlow(clientId) {
+      return isMemberOfClient(clientId) && hasProductAccess('process_flow');
     }
 
+    // --- Collection Rules ---
 
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isConsultant();
+      allow write: if isConsultant(); // Only consultants can create/edit user roles.
+    }
+    
     match /clients/{clientId} {
-      // Consultants can create clients.
-      // Members of a client or consultants can read/update their own client doc.
-      allow create: if request.auth != null && isConsultant();
-      allow read, update: if request.auth != null && (isClientMember(clientId) || isConsultant());
-      
-      // Deletion of clients is disallowed for now.
-      allow delete: if false;
+      allow create: if isConsultant();
+      allow read, update: if isConsultant() || isMemberOfClient(clientId);
+      allow delete: if false; // Deletion of clients is disallowed.
 
+      // Subcollections for ProcessFlow
       match /activities/{activityId} {
-        allow read, write: if request.auth != null && (isClientMember(clientId) || isConsultant());
+        allow read, write: if isConsultant() || canAccessProcessFlow(clientId);
       }
       
       match /actions/{actionId} {
-        allow read: if request.auth != null && (isClientMember(clientId) || isConsultant());
-        allow write: if request.auth != null && isConsultant();
+        allow read: if isConsultant() || canAccessProcessFlow(clientId);
+        allow write: if isConsultant(); // Only consultants can create/edit actions.
       }
+    }
+
+    // --- Deprecated Collections (for migration if needed) ---
+    match /activities/{activityId} {
+      allow read, write, delete: if isConsultant();
+    }
+    match /consultancy-actions/{actionId} {
+       allow read, write, delete: if isConsultant();
+    }
+    match /rh-dp-activities/{activityId} {
+       allow read, write, delete: if isConsultant();
     }
   }
 }

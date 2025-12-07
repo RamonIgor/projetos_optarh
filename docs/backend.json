@@ -25,20 +25,27 @@
     },
     "User": {
         "title": "User",
-        "description": "Maps a Firebase Auth user to a client.",
+        "description": "Maps a Firebase Auth user to a client and their product access.",
         "type": "object",
         "properties": {
             "clientId": {
                 "type": "string",
                 "description": "The ID of the client this user belongs to."
             },
-            "role": {
-                "type": "string",
-                "enum": ["client_user", "consultant"],
-                "description": "The role of the user."
+            "products": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                    "enum": ["process_flow", "pesquisa_clima"]
+                },
+                "description": "List of products this user has access to."
+            },
+            "isConsultant": {
+                "type": "boolean",
+                "description": "Defines if the user is a consultant with broader access."
             }
         },
-        "required": ["clientId", "role"]
+        "required": ["clientId", "products", "isConsultant"]
     },
     "ActivityComment": {
       "title": "Activity Comment",
@@ -227,14 +234,14 @@
                 "schema": {
                     "$ref": "#/entities/Activity"
                 },
-                "description": "Stores all activities for a specific client."
+                "description": "Stores all activities for a specific client (ProcessFlow product)."
             },
             "actions": {
                 "path": "/clients/{clientId}/actions/{actionId}",
                 "schema": {
                     "$ref": "#/entities/ConsultancyAction"
                 },
-                "description": "Stores all consultancy action items for a specific client."
+                "description": "Stores all consultancy action items for a specific client (ProcessFlow product)."
             }
         }
     },
@@ -242,7 +249,7 @@
         "schema": {
             "$ref": "#/entities/User"
         },
-        "description": "Maps Firebase Auth UIDs to client IDs and roles."
+        "description": "Maps Firebase Auth UIDs to client IDs and product access."
     }
   }
 }
