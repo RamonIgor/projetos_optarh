@@ -4,7 +4,7 @@ import { signOut } from 'firebase/auth';
 import { useAuth, useUser, useClient } from '@/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { LogOut, LayoutGrid, ListTodo, BarChart3, Shuffle, PlayCircle, Settings, Rows, Menu, UserPlus, KeyRound, Workflow } from 'lucide-react';
+import { LogOut, LayoutGrid, ListTodo, BarChart3, Shuffle, PlayCircle, Settings, Rows, Menu, UserPlus, KeyRound, Workflow, AreaChart } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
@@ -116,6 +116,44 @@ const ProcessFlowNav = () => {
 };
 
 
+const PulseCheckNav = () => {
+  const pathname = usePathname();
+
+  const navItems = [
+    { href: '/pulsecheck', label: 'Minhas Pesquisas', icon: AreaChart },
+    // Futuros links podem ser adicionados aqui
+    // { href: '/pulsecheck/templates', label: 'Templates', icon: Files },
+  ];
+  
+  if (!pathname.startsWith('/pulsecheck')) {
+    return null;
+  }
+
+  const renderNavItem = (item: typeof navItems[0]) => {
+    const isActive = pathname === item.href;
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={cn(
+          "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+          isActive ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground",
+        )}
+      >
+        <item.icon className="h-4 w-4" />
+        <span>{item.label}</span>
+      </Link>
+    );
+  };
+  
+  return (
+    <nav className="hidden sm:flex p-1.5 rounded-full bg-background/50 backdrop-blur-sm border border-black/5 items-center gap-1 shadow-sm">
+      {navItems.map(renderNavItem)}
+    </nav>
+  );
+};
+
+
 interface AppLayoutProps {
   children: React.ReactNode;
   hasActivities: boolean;
@@ -189,6 +227,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} className="cursor-pointer" unoptimized/>
           </Link>
           <ProcessFlowNav />
+          <PulseCheckNav />
         </div>
         <div className="hidden sm:flex items-center gap-2">
             {consultancyButton}
