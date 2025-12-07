@@ -58,20 +58,15 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
 
         const userDocRef = doc(db, 'users', user.uid);
 
-        const handleUserProfile = async (profileData: UserProfile | undefined) => {
+        const handleUserProfile = (profileData: UserProfile | undefined) => {
             if (profileData) {
                 // Check for legacy users who don't have the 'products' field.
                 if (!profileData.hasOwnProperty('products')) {
+                    // This is a legacy user. Grant them access to process_flow in memory
+                    // without writing to the database to avoid permission issues.
+                    // The consultant can later migrate this user profile.
                     const migratedProfile: UserProfile = { ...profileData, products: ['process_flow'] };
                     setUserProfile(migratedProfile);
-
-                    // Update the document in the background to migrate the user.
-                    try {
-                        await updateDoc(userDocRef, { products: ['process_flow'] });
-                    } catch (e) {
-                        console.error("Failed to migrate user profile:", e);
-                    }
-
                 } else {
                     setUserProfile(profileData);
                 }
@@ -97,17 +92,16 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
         }
 
 
-        const unsubscribe = onSnapshot(userDocRef, async (docSnapshot) => {
-            await handleUserProfile(docSnapshot.data() as UserProfile | undefined);
-        }, async (error) => {
+        const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
+            handleUserProfile(docSnapshot.data() as UserProfile | undefined);
+        }, (error) => {
             console.error("Error with onSnapshot, trying getDoc as fallback:", error);
-            try {
-                const docSnapshot = await getDoc(userDocRef);
-                await handleUserProfile(docSnapshot.data() as UserProfile | undefined);
-            } catch (getDocError) {
+            getDoc(userDocRef).then(docSnapshot => {
+                 handleUserProfile(docSnapshot.data() as UserProfile | undefined);
+            }).catch(getDocError => {
                  console.error("Error fetching user profile with getDoc:", getDocError);
                  setClientLoading(false);
-            }
+            })
         });
 
         return () => unsubscribe();
