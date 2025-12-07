@@ -27,7 +27,7 @@ export function SelectedQuestions({ questions, onReorder, onUpdate, onRemove, on
       </CardHeader>
       <CardContent>
         <DragDropContext onDragEnd={handleOnDragEnd}>
-          <Droppable droppableId="selected-questions">
+          <Droppable droppableId="selected-questions" isDropDisabled={false}>
             {(provided) => (
               <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
                 {questions.length > 0 ? (
