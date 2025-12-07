@@ -109,16 +109,24 @@ export default function ConfigureQuestionsPage() {
     };
 
     const handleSaveFromBuilder = (questionData: Omit<SelectedQuestion, 'id'>) => {
+        const finalQuestionData = {
+          ...questionData,
+          options:
+            questionData.type === 'multiple-choice'
+              ? (questionData.options || []).map(opt => typeof opt === 'object' ? (opt as any).value : opt)
+              : null,
+        };
+
         // If we are editing
         if (questionToEdit) {
             const updatedQuestions = selectedQuestions.map(q => 
-                q.id === questionToEdit.id ? { ...q, ...questionData } : q
+                q.id === questionToEdit.id ? { ...q, ...finalQuestionData, id: q.id } as SelectedQuestion : q
             );
             setSelectedQuestions(updatedQuestions);
         } else { // If we are creating a new one
             const newCustomQuestion: SelectedQuestion = {
                 id: `custom-${Date.now()}`,
-                ...questionData,
+                ...finalQuestionData,
             };
             setSelectedQuestions([...selectedQuestions, newCustomQuestion]);
         }
