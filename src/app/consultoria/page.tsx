@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo, useTransition, useCallback } from 'react';
 import { collection, onSnapshot, query, orderBy, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { useFirestore, useClient } from '@/firebase';
+import { useAuth, useFirestore, useClient } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -23,7 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, CalendarIcon, Trash2, Edit, BarChart, LineChart, FileText, CheckSquare, PieChart as PieChartIcon, Shuffle, Clock, Building, Wrench, LogOut, ArrowLeft } from 'lucide-react';
+import { Loader2, PlusCircle, CalendarIcon, Trash2, Edit, BarChart, LineChart, FileText, CheckSquare, PieChart as PieChartIcon, Shuffle, Clock, Building, Wrench, LogOut, ArrowLeft, Settings, UserPlus, KeyRound } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -36,6 +36,19 @@ import { Progress } from '@/components/ui/progress';
 import dynamic from 'next/dynamic';
 import type { CategoryChartData } from '@/components/CategoryChart';
 import Image from 'next/image';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal
+} from "@/components/ui/dropdown-menu";
+import { UserManagementDialog } from '@/components/UserManagementDialog';
+import { signOut } from 'firebase/auth';
 
 const CategoryChart = dynamic(() => import('@/components/CategoryChart'), {
     ssr: false,
@@ -390,6 +403,7 @@ function ClientSelector({ clients, onClientAdded }: { clients: Client[], onClien
 
 export default function ConsultancyPage() {
     const db = useFirestore();
+    const auth = useAuth();
     const { user, loading: userLoading } = useUser();
     const { isConsultant, isClientLoading, setSelectedClientId, selectedClientId } = useClient();
     const router = useRouter();
@@ -405,6 +419,12 @@ export default function ConsultancyPage() {
     
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingAction, setEditingAction] = useState<ConsultancyAction | null>(null);
+
+    const handleLogout = async () => {
+        if (!auth) return;
+        await signOut(auth);
+        router.push('/login');
+    };
 
     useEffect(() => {
         if (!userLoading && !user) {
@@ -600,7 +620,7 @@ export default function ConsultancyPage() {
 
     const isLoadingPage = userLoading || isClientLoading;
 
-    if (isLoadingPage) {
+    if (isLoadingPage && !isConsultant) {
         return (
             <div className="flex justify-center items-center h-screen w-full"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
         );
@@ -619,7 +639,34 @@ export default function ConsultancyPage() {
                     <h1 className="text-2xl sm:text-4xl font-bold text-primary text-center sm:text-left">Painel da Consultoria</h1>
                 </div>
                 <div className="flex items-center gap-2">
-                    
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <Settings className="h-5 w-5" />
+                                <span className="sr-only">Configurações</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            {isConsultant && (
+                                <UserManagementDialog>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                        <UserPlus className="mr-2 h-4 w-4" />
+                                        <span>Gerenciar Colaboradores</span>
+                                    </DropdownMenuItem>
+                                </UserManagementDialog>
+                            )}
+                            <DropdownMenuSeparator />
+                             <DropdownMenuItem onClick={() => router.push('/change-password')}>
+                                <KeyRound className="mr-2 h-4 w-4" />
+                                Alterar senha
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <Button variant="ghost" onClick={handleLogout}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Sair
+                    </Button>
                 </div>
             </div>
 
@@ -854,3 +901,4 @@ export default function ConsultancyPage() {
         </div>
     );
 }
+
