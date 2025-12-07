@@ -10,6 +10,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 const allProducts = {
   process_flow: {
@@ -42,16 +43,16 @@ export default function ProductPortalPage() {
     }
   }, [user, isLoading, router]);
 
-  // Para consultores, se tiver apenas um produto, redireciona direto
-   useEffect(() => {
-    if (isConsultant && userProfile?.products.length === 1) {
-      const singleProductKey = userProfile.products[0] as ProductKey;
-      const product = allProducts[singleProductKey];
-      if (product && product.href !== '#') {
-          router.replace(product.href);
-      }
+  // Se for um usuário cliente e tiver apenas um produto, redireciona direto
+  useEffect(() => {
+    if (!isLoading && !isConsultant && userProfile?.products?.length === 1) {
+        const singleProductKey = userProfile.products[0] as ProductKey;
+        const product = allProducts[singleProductKey];
+        if (product && product.href !== '#') {
+            router.replace(product.href);
+        }
     }
-  }, [isConsultant, userProfile, router]);
+  }, [isLoading, isConsultant, userProfile, router]);
 
 
   if (isLoading) {
@@ -62,21 +63,6 @@ export default function ProductPortalPage() {
     );
   }
   
-  // Se for um usuário cliente e tiver apenas um produto, redireciona direto
-  if (!isConsultant && userProfile?.products?.length === 1) {
-      const singleProductKey = userProfile.products[0] as ProductKey;
-      const product = allProducts[singleProductKey];
-      if (product && product.href !== '#') {
-          router.replace(product.href);
-          return ( // Retorna um loader enquanto redireciona
-             <div className="flex items-center justify-center min-h-screen w-full bg-gradient-to-br from-cyan-50 to-blue-100 dark:from-slate-900 dark:to-blue-950">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            </div>
-          );
-      }
-  }
-
-
   return (
     <div className="flex flex-col items-center justify-center min-h-screen w-full bg-gradient-to-br from-cyan-50 to-blue-100 dark:from-slate-900 dark:to-blue-950 p-4">
         <div className="text-center mb-12">
@@ -93,45 +79,53 @@ export default function ProductPortalPage() {
                 const hasAccess = isConsultant || userProfile?.products?.includes(productKey);
 
                 return (
-                    <Card 
-                        key={productKey} 
-                        className={cn(
-                          "transition-all duration-300", 
-                          hasAccess && "hover:shadow-xl hover:-translate-y-1",
-                          !hasAccess && "bg-background/50 opacity-70"
+                    <div key={productKey} className="relative">
+                        <Card 
+                            className={cn(
+                              "transition-all duration-300 h-full flex flex-col", 
+                              hasAccess && "hover:shadow-xl hover:-translate-y-1",
+                              !hasAccess && "bg-background/50 opacity-80"
+                            )}
+                        >
+                            <CardHeader>
+                                <div className="flex items-center gap-4">
+                                    <div className={cn("p-3 rounded-full", hasAccess ? "bg-primary/10" : "bg-muted")}>
+                                        {product.icon}
+                                    </div>
+                                    <div>
+                                        <CardTitle className="text-2xl">{product.name}</CardTitle>
+                                        <CardDescription>{product.description}</CardDescription>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="mt-auto">
+                                 <Button 
+                                    onClick={() => hasAccess && product.href !== '#' && router.push(product.href)} 
+                                    className="w-full text-lg h-12 group"
+                                    disabled={!hasAccess || product.href === '#'}
+                                    variant={hasAccess ? 'default' : 'secondary'}
+                                 >
+                                    {hasAccess ? (
+                                      <>
+                                        Acessar
+                                        <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                                      </>
+                                    ) : (
+                                      "Saiba Mais"
+                                    )}
+                                </Button>
+                            </CardContent>
+                        </Card>
+                        {!hasAccess && (
+                            <Badge className="absolute -top-3 -right-3 text-sm px-3 py-1 bg-amber-500 text-white shadow-lg border-2 border-amber-300">
+                                Contrate
+                            </Badge>
                         )}
-                    >
-                        <CardHeader>
-                            <div className="flex items-center gap-4">
-                                <div className={cn("p-3 rounded-full", hasAccess ? "bg-primary/10" : "bg-muted")}>
-                                    {product.icon}
-                                </div>
-                                <div>
-                                    <CardTitle className="text-2xl">{product.name}</CardTitle>
-                                    <CardDescription>{product.description}</CardDescription>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                             <Button 
-                                onClick={() => hasAccess && product.href !== '#' && router.push(product.href)} 
-                                className="w-full text-lg h-12 group"
-                                disabled={!hasAccess || product.href === '#'}
-                             >
-                                {hasAccess ? (
-                                  <>
-                                    Acessar
-                                    <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-                                  </>
-                                ) : (
-                                  "Contrate"
-                                )}
-                            </Button>
-                        </CardContent>
-                    </Card>
+                    </div>
                 );
             })}
         </div>
     </div>
   );
 }
+
