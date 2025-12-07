@@ -316,7 +316,7 @@ export function UserManagementDialog({ children }: { children: React.ReactNode }
             <DialogTrigger asChild>
                 {children}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle>Gerenciar Colaboradores</DialogTitle>
                 </DialogHeader>
