@@ -55,3 +55,43 @@ export interface ConsultancyAction {
     observacoes: string;
     createdAt: Timestamp | Date;
 }
+
+
+// --- PulseCheck Types ---
+
+export interface Question {
+  id: string;
+  text: string;
+  type: 'nps' | 'likert' | 'multiple-choice' | 'open-text';
+  category: string;
+  options?: string[] | null;
+  createdBy: string; // UID of consultant
+  createdAt: Timestamp | Date;
+}
+
+export interface Survey {
+  id: string;
+  title: string;
+  description: string;
+  clientId: string;
+  status: 'draft' | 'active' | 'closed';
+  questionIds: string[];
+  isAnonymous: boolean;
+  createdAt: Timestamp | Date;
+  opensAt: Timestamp | Date;
+  closesAt: Timestamp | Date;
+}
+
+export interface Answer {
+  questionText: string;
+  answer: string | number;
+}
+
+export interface Response {
+  id: string;
+  surveyId: string;
+  clientId: string;
+  respondentId: string | null; // UID or null for anonymous
+  answers: Record<string, Answer>; // Key is questionId
+  submittedAt: Timestamp | Date;
+}
