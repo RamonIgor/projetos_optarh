@@ -74,7 +74,7 @@ export default function ConfigureQuestionsPage() {
             text: question.text,
             type: question.type,
             category: question.category,
-            options: question.options,
+            options: question.type === 'multiple-choice' ? question.options || [] : null,
             isMandatory: question.isMandatory
         };
         const newQuestions = [...selectedQuestions, newQuestion];
@@ -109,13 +109,13 @@ export default function ConfigureQuestionsPage() {
     };
 
     const handleSaveFromBuilder = (questionData: Omit<SelectedQuestion, 'id'>) => {
-        const finalQuestionData = {
-          ...questionData,
-          options:
-            questionData.type === 'multiple-choice'
-              ? (questionData.options || []).map(opt => typeof opt === 'object' ? (opt as any).value : opt)
-              : null,
-        };
+        const finalQuestionData: Omit<SelectedQuestion, 'id'> = {
+            ...questionData,
+            options:
+              questionData.type === 'multiple-choice'
+                ? (questionData.options || []).map(opt => typeof opt === 'object' ? (opt as any).value : opt)
+                : null,
+          };
 
         // If we are editing
         if (questionToEdit) {
@@ -187,6 +187,7 @@ export default function ConfigureQuestionsPage() {
                 <div className="md:col-span-4 lg:col-span-3 h-full">
                     <QuestionLibrary
                         libraryQuestions={libraryQuestions}
+                        selectedQuestions={selectedQuestions}
                         onAdd={handleAddQuestion}
                         onCreateCustom={handleOpenBuilderForCreate}
                     />
