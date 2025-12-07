@@ -88,7 +88,11 @@ export default function PulseCheckDashboard() {
 
     try {
         // First, find and delete all associated responses
-        const responsesQuery = query(collection(db, 'pulse_check_responses'), where('surveyId', '==', deletingSurveyId));
+        const responsesQuery = query(
+            collection(db, 'pulse_check_responses'), 
+            where('clientId', '==', clientId),
+            where('surveyId', '==', deletingSurveyId)
+        );
         const responseSnapshot = await getDocs(responsesQuery);
         const batch = responseSnapshot.docs.map(doc => deleteDoc(doc.ref));
         await Promise.all(batch);
