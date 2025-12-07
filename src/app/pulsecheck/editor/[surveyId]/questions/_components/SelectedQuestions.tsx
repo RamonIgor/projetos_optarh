@@ -1,6 +1,6 @@
 "use client";
 
-import { DragDropContext, Droppable, type DropResult } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, type DropResult } from '@hello-pangea/dnd';
 import { type SelectedQuestion } from '@/types/activity';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { DraggableQuestionItem } from './DraggableQuestionItem';
@@ -27,7 +27,7 @@ export function SelectedQuestions({ questions, onReorder, onUpdate, onRemove, on
       </CardHeader>
       <CardContent>
         <DragDropContext onDragEnd={handleOnDragEnd}>
-          <Droppable droppableId="selected-questions" isDropDisabled={false}>
+          <Droppable droppableId="selected-questions">
             {(provided) => (
               <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
                 {questions.length > 0 ? (
