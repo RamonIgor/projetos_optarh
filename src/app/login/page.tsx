@@ -12,10 +12,12 @@ import { useUser } from '@/firebase/auth/use-user';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, ArrowRight } from 'lucide-react';
+import { Loader2, LogIn } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
 
 const isFirstLogin = (user: User) => {
     const { creationTime, lastSignInTime } = user.metadata;
@@ -110,86 +112,70 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="w-full flex flex-col lg:grid lg:grid-cols-2 min-h-screen">
-       <div className="bg-gradient-to-br from-primary to-purple-600 flex flex-col items-center justify-center p-12 text-center relative overflow-hidden lg:min-h-screen">
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="z-10 flex flex-col items-center"
-          >
-            <Image src="/optarh-logo.png" alt="OptaRH Logo" width={240} height={80} unoptimized />
-            <h1 className="text-4xl font-bold text-white mt-4">ProcessFlow</h1>
-            <p className="mt-2 text-lg text-white/80">
-              Estruture o fluxo de trabalho do seu time, da ideia à rotina.
-            </p>
-          </motion.div>
-          <div className="absolute bottom-8 left-8 right-8 z-10 text-white/70 text-sm hidden lg:block">
-             Painel de gerenciamento de tarefas para equipes de DP e RH.
-          </div>
-      </div>
-      <div className="flex flex-1 items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="w-full max-w-md space-y-8">
-          <motion.div
-             initial={{ opacity: 0, y: 20 }}
-             animate={{ opacity: 1, y: 0 }}
-             transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            <div className="text-center">
-              <h2 className="text-3xl font-bold tracking-tight text-foreground">
-                Acesse sua conta
-              </h2>
-              <p className="mt-2 text-muted-foreground">
-                Bem-vindo(a) de volta!
-              </p>
-            </div>
-            
-            <form className="mt-8 space-y-6" onSubmit={handleSignIn}>
-              <div className="space-y-4 rounded-md">
-                <div>
-                  <Label htmlFor="email-login" className="sr-only">Email</Label>
-                  <Input 
-                    id="email-login"
-                    type="email" 
-                    autoComplete="email"
-                    required
-                    placeholder="seu@email.com" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="h-12 text-base"
-                   />
-                </div>
-                <div>
-                  <Label htmlFor="password-login" className="sr-only">Senha</Label>
-                  <Input 
-                    id="password-login" 
-                    type="password" 
-                    autoComplete="current-password"
-                    required 
-                    value={password} 
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Sua senha"
-                    className="h-12 text-base"
-                  />
-                </div>
+    <div className="flex flex-col items-center justify-center min-h-screen w-full bg-gradient-to-br from-cyan-50 to-blue-100 dark:from-slate-900 dark:to-blue-950 p-4">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="text-center mb-8"
+      >
+        <Image src="/optarh-logo.png" alt="OptaRH Logo" width={180} height={60} className="mx-auto" unoptimized />
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+        className="w-full max-w-sm"
+      >
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">Bem-vindo(a) de volta!</CardTitle>
+            <CardDescription>Acesse o portal de soluções.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-6" onSubmit={handleSignIn}>
+              <div className="space-y-2">
+                <Label htmlFor="email-login">Email</Label>
+                <Input
+                  id="email-login"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-11 text-base"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password-login">Senha</Label>
+                <Input
+                  id="password-login"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Sua senha"
+                  className="h-11 text-base"
+                />
               </div>
 
               <div>
-                <Button type="submit" className="group relative flex w-full justify-center py-3 text-lg" disabled={isSubmitting}>
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3">
-                    {isSubmitting ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                        <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-                    )}
-                  </span>
+                <Button type="submit" className="w-full h-12 text-lg" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  ) : (
+                    <LogIn className="mr-2 h-5 w-5" />
+                  )}
                   Entrar
                 </Button>
               </div>
             </form>
-          </motion.div>
-        </div>
-      </div>
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   );
 }
