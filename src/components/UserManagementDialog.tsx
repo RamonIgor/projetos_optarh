@@ -7,15 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { Loader2, UserPlus } from 'lucide-react';
+import { Loader2, UserPlus, RefreshCw } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
-import { getFirestore, setDoc, doc, collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { getFirestore, setDoc, doc, collection, getDocs, orderBy, query, updateDoc } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 import { useFirestore as useDb } from '@/firebase';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { type Client } from '@/types/activity';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from './ui/scroll-area';
 
 // This function creates a secondary, temporary Firebase app instance
 // to handle user creation without affecting the current user's session.
@@ -160,6 +162,129 @@ function CreateUserForm({ onFinished, clients, isLoadingClients }: { onFinished:
     );
 }
 
+interface LegacyUser {
+    id: string;
+    clientId: string;
+    isConsultant: boolean;
+    // email is not stored in firestore, we might need to fetch it from Auth
+    // For now, let's just use the UID
+}
+
+function MigrateUsersForm({ onFinished }: { onFinished: () => void }) {
+    const db = useDb();
+    const { toast } = useToast();
+    const [legacyUsers, setLegacyUsers] = useState<LegacyUser[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isMigrating, setIsMigrating] = useState<string | null>(null);
+    const [selectedProducts, setSelectedProducts] = useState<Record<string, string[]>>({});
+
+    const fetchLegacyUsers = async () => {
+        if (!db) return;
+        setIsLoading(true);
+        try {
+            const usersQuery = query(collection(db, 'users'));
+            const snapshot = await getDocs(usersQuery);
+            const allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as (LegacyUser & { products?: any[] })[];
+            const filteredUsers = allUsers.filter(user => !user.hasOwnProperty('products'));
+            setLegacyUsers(filteredUsers);
+        } catch (error) {
+            console.error("Error fetching legacy users:", error);
+            toast({ title: "Erro ao buscar usuários antigos", variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    useEffect(() => {
+        fetchLegacyUsers();
+    }, [db]);
+
+    const handleProductChange = (userId: string, productId: string, checked: boolean) => {
+        setSelectedProducts(prev => {
+            const userProducts = prev[userId] || [];
+            const newUserProducts = checked 
+                ? [...userProducts, productId] 
+                : userProducts.filter(id => id !== productId);
+            return { ...prev, [userId]: newUserProducts };
+        });
+    };
+
+    const handleMigrateUser = async (userId: string) => {
+        if (!db || !selectedProducts[userId] || selectedProducts[userId].length === 0) {
+            toast({ title: "Selecione ao menos um produto", variant: "destructive" });
+            return;
+        }
+        setIsMigrating(userId);
+        try {
+            const userDocRef = doc(db, 'users', userId);
+            await updateDoc(userDocRef, {
+                products: selectedProducts[userId]
+            });
+            toast({ title: "Usuário atualizado com sucesso!" });
+            // Refetch users to remove the migrated one from the list
+            fetchLegacyUsers();
+        } catch (error) {
+             console.error("Error migrating user:", error);
+             toast({ title: "Erro ao migrar usuário", variant: "destructive" });
+        } finally {
+            setIsMigrating(null);
+        }
+    }
+
+
+    return (
+        <div className="py-4 space-y-4">
+            <p className="text-sm text-muted-foreground">
+                A lista abaixo mostra usuários criados antes da atualização de multi-produtos. Atualize-os para garantir o acesso correto.
+            </p>
+            <ScrollArea className="h-72 border rounded-md">
+                 <div className="p-4 space-y-4">
+                {isLoading ? (
+                    <div className="flex justify-center items-center h-24">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                    </div>
+                ) : legacyUsers.length > 0 ? (
+                    legacyUsers.map(user => (
+                        <div key={user.id} className="p-3 border rounded-lg">
+                            <p className="font-semibold text-sm truncate" title={user.id}>{user.id}</p>
+                            <p className="text-xs text-muted-foreground">Cliente ID: {user.clientId}</p>
+                            <div className="my-2 space-y-1">
+                                {productsAvailable.map(product => (
+                                    <div key={product.id} className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id={`migrate-${user.id}-${product.id}`}
+                                            checked={selectedProducts[user.id]?.includes(product.id) || false}
+                                            onCheckedChange={(checked) => handleProductChange(user.id, product.id, !!checked)}
+                                        />
+                                        <Label htmlFor={`migrate-${user.id}-${product.id}`} className="font-normal text-sm">{product.label}</Label>
+                                    </div>
+                                ))}
+                            </div>
+                            <Button 
+                                size="sm" 
+                                className="w-full mt-2" 
+                                disabled={isMigrating === user.id || !selectedProducts[user.id]?.length}
+                                onClick={() => handleMigrateUser(user.id)}
+                            >
+                                {isMigrating === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                                Atualizar Usuário
+                            </Button>
+                        </div>
+                    ))
+                ) : (
+                    <div className="text-center py-10">
+                        <p className="text-muted-foreground">Nenhum usuário antigo encontrado.</p>
+                    </div>
+                )}
+                 </div>
+            </ScrollArea>
+             <DialogFooter className="!mt-6">
+                <Button variant="outline" onClick={onFinished}>Fechar</Button>
+            </DialogFooter>
+        </div>
+    );
+}
+
 export function UserManagementDialog({ children }: { children: React.ReactNode }) {
     const [open, setOpen] = useState(false);
     const db = useDb();
@@ -194,13 +319,19 @@ export function UserManagementDialog({ children }: { children: React.ReactNode }
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Gerenciar Colaboradores</DialogTitle>
-                    <DialogDescription>
-                        Crie novas contas para colaboradores e vincule-as a um cliente e seus produtos.
-                    </DialogDescription>
                 </DialogHeader>
-
-                <CreateUserForm onFinished={() => setOpen(false)} clients={clients} isLoadingClients={isLoadingClients} />
-
+                <Tabs defaultValue="create">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="create">Criar Novo</TabsTrigger>
+                        <TabsTrigger value="migrate">Migrar Antigos</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="create">
+                         <CreateUserForm onFinished={() => setOpen(false)} clients={clients} isLoadingClients={isLoadingClients} />
+                    </TabsContent>
+                    <TabsContent value="migrate">
+                        <MigrateUsersForm onFinished={() => setOpen(false)} />
+                    </TabsContent>
+                </Tabs>
             </DialogContent>
         </Dialog>
     );
