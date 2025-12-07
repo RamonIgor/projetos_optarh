@@ -5,14 +5,13 @@ import { collection, onSnapshot, query, where, orderBy, deleteDoc, doc, getDocs 
 import { useFirestore, useClient } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { type Survey, type Response as SurveyResponse } from '@/types/activity';
-import PulseCheckLayout from './layout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Loader2, PlusCircle, Inbox } from 'lucide-react';
 import { SurveyCard } from './_components/SurveyCard';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-
+import { motion } from 'framer-motion';
 
 export default function PulseCheckDashboard() {
   const db = useFirestore();
@@ -91,7 +90,6 @@ export default function PulseCheckDashboard() {
     try {
         await deleteDoc(doc(db, 'clients', clientId, 'surveys', deletingSurveyId));
         
-        // Optional: Delete all related responses
         const responsesQuery = query(collection(db, 'pulse_check_responses'), where('surveyId', '==', deletingSurveyId));
         const responseSnapshot = await getDocs(responsesQuery);
         const batch = responseSnapshot.docs.map(doc => deleteDoc(doc.ref));
@@ -107,64 +105,69 @@ export default function PulseCheckDashboard() {
   };
 
   const EmptyState = () => (
-    <div className="text-center py-20">
-      <div className="flex justify-center items-center mb-6">
-        <Inbox className="h-16 w-16 text-muted-foreground" />
-      </div>
-      <h2 className="text-2xl font-bold">Nenhuma pesquisa criada ainda</h2>
-      <p className="mt-2 text-muted-foreground">Comece a medir o clima da sua equipe criando sua primeira pesquisa.</p>
-      <Button className="mt-6" size="lg" onClick={() => router.push('/pulsecheck/editor')}>
-        <PlusCircle className="mr-2 h-5 w-5" />
-        Criar Nova Pesquisa
-      </Button>
-    </div>
+    <Card className="mt-8 shadow-lg dark:shadow-black/20">
+      <CardContent className="text-center py-20">
+        <div className="flex justify-center items-center mb-6">
+          <Inbox className="h-16 w-16 text-muted-foreground" />
+        </div>
+        <h2 className="text-2xl font-bold">Nenhuma pesquisa criada ainda</h2>
+        <p className="mt-2 text-muted-foreground">Comece a medir o clima da sua equipe criando sua primeira pesquisa.</p>
+      </CardContent>
+    </Card>
   );
   
   const NoClientState = () => (
-     <div className="text-center py-20">
-      <div className="flex justify-center items-center mb-6">
-        <Inbox className="h-16 w-16 text-muted-foreground" />
-      </div>
-      <h2 className="text-2xl font-bold">Nenhum cliente selecionado</h2>
-      <p className="mt-2 text-muted-foreground">Vá ao Painel de Consultoria para selecionar um cliente e visualizar suas pesquisas.</p>
-      <Button className="mt-6" size="lg" onClick={() => router.push('/consultoria')}>
-        Ir para o Painel
-      </Button>
-    </div>
+     <Card className="mt-8 shadow-lg dark:shadow-black/20">
+        <CardContent className="text-center py-20">
+            <div className="flex justify-center items-center mb-6">
+                <Inbox className="h-16 w-16 text-muted-foreground" />
+            </div>
+            <h2 className="text-2xl font-bold">Nenhum cliente selecionado</h2>
+            <p className="mt-2 text-muted-foreground">Vá ao Painel de Consultoria para selecionar um cliente e visualizar suas pesquisas.</p>
+            <Button className="mt-6" size="lg" onClick={() => router.push('/consultoria')}>
+                Ir para o Painel
+            </Button>
+        </CardContent>
+    </Card>
   );
 
   return (
-    <PulseCheckLayout>
-      <div className="w-full">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold tracking-tight text-foreground">Minhas Pesquisas</h1>
-          <Button size="lg" onClick={() => router.push('/pulsecheck/editor')} disabled={!clientId}>
-            <PlusCircle className="mr-2 h-5 w-5" />
-            Nova Pesquisa
-          </Button>
-        </div>
+      <div className="max-w-7xl mx-auto w-full">
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <div className="flex justify-between items-center">
+             <div>
+                <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">Minhas Pesquisas</h1>
+                <p className="mt-4 text-lg text-muted-foreground">Visualize, edite e acompanhe o resultado das suas pesquisas de clima.</p>
+             </div>
+              <Button size="lg" onClick={() => router.push('/pulsecheck/editor')} disabled={!clientId}>
+                <PlusCircle className="mr-2 h-5 w-5" />
+                Nova Pesquisa
+              </Button>
+          </div>
+        </motion.div>
 
-        {isLoadingPage ? (
-          <div className="flex justify-center items-center h-64">
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          </div>
-        ) : !clientId && isConsultant ? (
-          <NoClientState />
-        ) : surveys.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {surveys.map(survey => (
-              <SurveyCard 
-                key={survey.id} 
-                survey={survey} 
-                responses={responses[survey.id] || []}
-                onDelete={() => setDeletingSurveyId(survey.id)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+        <div className="mt-8">
+            {isLoadingPage ? (
+            <div className="flex justify-center items-center h-64">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
+            ) : !clientId && isConsultant ? (
+            <NoClientState />
+            ) : surveys.length === 0 ? (
+            <EmptyState />
+            ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {surveys.map(survey => (
+                <SurveyCard 
+                    key={survey.id} 
+                    survey={survey} 
+                    responses={responses[survey.id] || []}
+                    onDelete={() => setDeletingSurveyId(survey.id)}
+                />
+                ))}
+            </div>
+            )}
+        </div>
 
        <AlertDialog open={!!deletingSurveyId} onOpenChange={(open) => !open && setDeletingSurveyId(null)}>
             <AlertDialogContent>
@@ -180,6 +183,6 @@ export default function PulseCheckDashboard() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
-    </PulseCheckLayout>
+    </div>
   );
 }
