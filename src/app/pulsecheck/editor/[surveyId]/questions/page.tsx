@@ -79,7 +79,7 @@ export default function ConfigureQuestionsPage() {
             text: question.text,
             type: question.type,
             category: question.category,
-            options: question.type === 'multiple-choice' ? question.options || [] : null,
+            options: question.type === 'multiple-choice' ? (question.options || []) : null,
             isMandatory: question.isMandatory
         };
         const newQuestions = [...selectedQuestions, newQuestion];
@@ -120,23 +120,24 @@ export default function ConfigureQuestionsPage() {
         setIsBuilderOpen(true);
     };
 
-    const handleSaveFromBuilder = useCallback(async (questionData: Omit<SelectedQuestion, 'id'>) => {
+    const handleSaveFromBuilder = useCallback(async (questionData: Omit<SelectedQuestion, 'id' | 'questionId'>) => {
         let newQuestions: SelectedQuestion[];
 
         const finalQuestionData = {
             ...questionData,
             options: questionData.type === 'multiple-choice' 
-                ? (questionData.options || []).map(opt => typeof opt === 'object' ? (opt as any).value : opt)
+                ? (questionData.options || [])
                 : null,
           };
 
         if (questionToEdit) { // Editing existing question
             newQuestions = selectedQuestions.map(q => 
-                q.id === questionToEdit.id ? { ...q, ...finalQuestionData, id: q.id } as SelectedQuestion : q
+                q.id === questionToEdit.id ? { ...q, ...finalQuestionData, id: q.id, questionId: (q as any).questionId || 'custom' } as SelectedQuestion : q
             );
         } else { // Creating a new custom question
             const newCustomQuestion: SelectedQuestion = {
                 id: `custom-${Date.now()}`,
+                questionId: `custom-${Date.now()}`,
                 ...finalQuestionData,
             };
             newQuestions = [...selectedQuestions, newCustomQuestion];
@@ -184,7 +185,7 @@ export default function ConfigureQuestionsPage() {
             </motion.div>
             
             <div className="mt-8 grid md:grid-cols-12 gap-6 flex-grow min-h-0">
-                <div className="md:col-span-4 lg:col-span-3 h-full">
+                <div className="md:col-span-5 lg:col-span-4 h-full flex flex-col">
                     <QuestionLibrary
                         libraryQuestions={libraryQuestions}
                         selectedQuestions={selectedQuestions}
@@ -192,7 +193,7 @@ export default function ConfigureQuestionsPage() {
                         onCreateCustom={handleOpenBuilderForCreate}
                     />
                 </div>
-                <div className="md:col-span-8 lg:col-span-9 h-full">
+                <div className="md:col-span-7 lg:col-span-8 h-full flex flex-col">
                     <SelectedQuestions
                         questions={selectedQuestions}
                         onReorder={handleReorderQuestions}

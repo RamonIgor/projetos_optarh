@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { type Question, type SelectedQuestion } from '@/types/activity';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -57,9 +57,9 @@ export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, on
         <CardTitle className="whitespace-nowrap">Biblioteca de Perguntas</CardTitle>
         <CardDescription>Adicione perguntas prontas ou crie a sua.</CardDescription>
       </CardHeader>
-      <ScrollArea className="flex-grow">
-        <div className="px-6">
-            <Accordion type="multiple" defaultValue={['DEMOGRAFIA', 'eNPS']}>
+      <CardContent className="flex-grow overflow-hidden p-0">
+        <ScrollArea className="h-full">
+            <Accordion type="multiple" defaultValue={['DEMOGRAFIA', 'eNPS']} className="px-6">
             {categories.map(category => (
                 <AccordionItem key={category} value={category}>
                 <AccordionTrigger>{category}</AccordionTrigger>
@@ -68,13 +68,13 @@ export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, on
                     {groupedQuestions[category].sort((a, b) => a.order - b.order).map(q => {
                         const isAdded = selectedQuestionIds.has(q.id);
                         return (
-                            <div key={q.id} className="flex items-center justify-between gap-2 p-2 rounded-md hover:bg-muted">
+                            <div key={q.id} className="flex items-start gap-2 p-2 rounded-md hover:bg-muted">
                                 <p className="text-sm text-muted-foreground flex-1 pt-1.5">{q.text}</p>
                                 <Button 
                                     variant={isAdded ? 'outline' : 'ghost'} 
                                     size="sm" 
                                     onClick={() => onAdd(q)} 
-                                    className={cn("shrink-0", isAdded && "text-green-600 border-green-600 hover:text-green-700")}
+                                    className={cn("shrink-0 w-[110px]", isAdded && "text-green-600 border-green-600 hover:text-green-700")}
                                     disabled={isAdded}
                                 >
                                     {isAdded ? (
@@ -92,14 +92,14 @@ export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, on
                 </AccordionItem>
             ))}
             </Accordion>
-        </div>
-      </ScrollArea>
-      <div className="p-4 border-t">
+        </ScrollArea>
+      </CardContent>
+      <CardFooter className="p-4 border-t">
         <Button className="w-full" variant="outline" onClick={onCreateCustom}>
             <PlusCircle className="mr-2 h-4 w-4"/>
             Criar Pergunta Personalizada
         </Button>
-      </div>
+      </CardFooter>
     </Card>
   );
 }

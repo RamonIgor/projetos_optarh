@@ -4,6 +4,8 @@ import { DragDropContext, Droppable, type DropResult } from '@hello-pangea/dnd';
 import { type SelectedQuestion } from '@/types/activity';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { DraggableQuestionItem } from './DraggableQuestionItem';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
 
 interface SelectedQuestionsProps {
   questions: SelectedQuestion[];
@@ -20,38 +22,40 @@ export function SelectedQuestions({ questions, onReorder, onUpdate, onRemove, on
   };
 
   return (
-    <Card className="h-full">
+    <Card className="h-full flex flex-col">
       <CardHeader>
         <CardTitle>Perguntas Selecionadas ({questions.length})</CardTitle>
         <CardDescription>Arraste para reordenar. Edite ou remova as perguntas conforme necessário.</CardDescription>
       </CardHeader>
-      <CardContent>
-        <DragDropContext onDragEnd={handleOnDragEnd}>
-          <Droppable droppableId="selected-questions">
-            {(provided) => (
-              <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
-                {questions.length > 0 ? (
-                    questions.map((q, index) => (
-                        <DraggableQuestionItem
-                            key={q.id}
-                            question={q}
-                            index={index}
-                            onUpdate={onUpdate}
-                            onRemove={onRemove}
-                            onEdit={onEdit}
-                        />
-                    ))
-                ) : (
-                    <div className="text-center py-16 border-2 border-dashed rounded-lg">
-                        <h3 className="text-lg font-semibold">Nenhuma pergunta adicionada</h3>
-                        <p className="text-muted-foreground mt-1">Adicione perguntas da biblioteca ao lado.</p>
-                    </div>
-                )}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
+      <CardContent className="flex-grow overflow-hidden">
+        <ScrollArea className="h-full">
+          <DragDropContext onDragEnd={handleOnDragEnd}>
+            <Droppable droppableId="selected-questions">
+              {(provided) => (
+                <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3 pr-4">
+                  {questions.length > 0 ? (
+                      questions.map((q, index) => (
+                          <DraggableQuestionItem
+                              key={q.id}
+                              question={q}
+                              index={index}
+                              onUpdate={onUpdate}
+                              onRemove={onRemove}
+                              onEdit={onEdit}
+                          />
+                      ))
+                  ) : (
+                      <div className="text-center py-16 border-2 border-dashed rounded-lg">
+                          <h3 className="text-lg font-semibold">Nenhuma pergunta adicionada</h3>
+                          <p className="text-muted-foreground mt-1">Adicione perguntas da biblioteca ao lado.</p>
+                      </div>
+                  )}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
+        </ScrollArea>
       </CardContent>
     </Card>
   );
