@@ -1,11 +1,10 @@
-
 "use client";
 
 import { signOut } from 'firebase/auth';
 import { useAuth, useUser, useClient } from '@/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { LogOut, LayoutGrid, ListTodo, BarChart3, Shuffle, PlayCircle, Settings, Rows, Menu, UserPlus, KeyRound } from 'lucide-react';
+import { LogOut, LayoutGrid, ListTodo, BarChart3, Shuffle, PlayCircle, Settings, Rows, Menu, UserPlus, KeyRound, Workflow } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
@@ -33,17 +32,97 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { onSnapshot, query, collection } from "firebase/firestore";
+import { useFirestore } from "@/firebase";
+import { type Activity } from "@/types/activity";
+
+
+const ProcessFlowNav = () => {
+  const db = useFirestore();
+  const { clientId } = useClient();
+  const pathname = usePathname();
+  const [activities, setActivities] = useState<Activity[]>([]);
+
+  useEffect(() => {
+    if (!db || !clientId) {
+      setActivities([]);
+      return;
+    }
+    const q = query(collection(db, 'clients', clientId, 'activities'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const activitiesData = snapshot.docs.map(doc => doc.data() as Activity);
+      setActivities(activitiesData);
+    });
+    return () => unsubscribe();
+  }, [db, clientId]);
+
+  const hasActivities = activities.length > 0;
+  const unclassifiedCount = useMemo(() => activities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [activities]);
+
+  const navItems = [
+    { href: '/processflow/brainstorm', label: 'Brainstorm', icon: ListTodo },
+    { href: '/processflow/classificacao', label: 'Classificação', icon: LayoutGrid, count: unclassifiedCount, disabled: !hasActivities },
+    { href: '/processflow/transicao', label: 'Transição', icon: Shuffle, disabled: !hasActivities },
+    { href: '/processflow/operacional', label: 'Operacional', icon: PlayCircle, disabled: !hasActivities },
+    { href: '/processflow/dashboard', label: 'Dashboard', icon: BarChart3, disabled: !hasActivities },
+  ];
+  
+  // Conditionally render the nav based on the pathname
+  if (!pathname.startsWith('/processflow')) {
+    return null;
+  }
+
+  const renderNavItem = (item: typeof navItems[0]) => {
+    const isActive = pathname === item.href;
+    const link = (
+      <Link
+        key={item.href}
+        href={item.disabled ? '#' : item.href}
+        className={cn(
+          "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+          isActive ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground",
+          item.disabled ? "opacity-50 cursor-not-allowed" : "",
+        )}
+        aria-disabled={item.disabled}
+        onClick={(e) => {
+          if (item.disabled) e.preventDefault();
+        }}
+      >
+        <item.icon className="h-4 w-4" />
+        <span>{item.label}</span>
+        {item.count !== undefined && item.count > 0 && (
+          <Badge variant={isActive ? "default" : "secondary"} className="rounded-full">{item.count}</Badge>
+        )}
+      </Link>
+    );
+
+    if (item.disabled) {
+      return (
+        <Tooltip key={item.href}>
+          <TooltipTrigger asChild>{link}</TooltipTrigger>
+          <TooltipContent><p>Adicione e aprove atividades para habilitar.</p></TooltipContent>
+        </Tooltip>
+      );
+    }
+    return link;
+  };
+  
+  return (
+    <nav className="hidden sm:flex p-1.5 rounded-full bg-background/50 backdrop-blur-sm border border-black/5 items-center gap-1 shadow-sm">
+      {navItems.map(renderNavItem)}
+    </nav>
+  );
+};
 
 
 interface AppLayoutProps {
   children: React.ReactNode;
-  navContent?: React.ReactNode;
-  unclassifiedCount: number;
   hasActivities: boolean;
+  unclassifiedCount: number;
 }
 
-export default function AppLayout({ children, navContent }: AppLayoutProps) {
+export default function AppLayout({ children }: AppLayoutProps) {
   const auth = useAuth();
   const { user } = useUser();
   const { isConsultant } = useClient();
@@ -57,11 +136,10 @@ export default function AppLayout({ children, navContent }: AppLayoutProps) {
     router.push('/login');
   };
   
-  const authorizedConsultants = ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'];
-  const isAuthorized = isConsultant || (user && authorizedConsultants.includes(user.email || ''));
+  const isProcessFlow = pathname.startsWith('/processflow');
 
   const consultancyButton = (
-    isAuthorized ? (
+    isConsultant ? (
         <Button variant={pathname === '/consultoria' ? 'outline' : 'ghost'} onClick={() => { router.push('/consultoria'); if(mobileMenuOpen) setMobileMenuOpen(false); }}>
             <Rows className="mr-2 h-4 w-4" />
             Painel
@@ -85,7 +163,7 @@ export default function AppLayout({ children, navContent }: AppLayoutProps) {
                 )}
             </DropdownMenuTrigger>
             <DropdownMenuContent align={isMobile ? "start" : "end"}>
-                {isAuthorized && (
+                {isConsultant && (
                      <UserManagementDialog>
                         <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                             <UserPlus className="mr-2 h-4 w-4" />
@@ -93,20 +171,10 @@ export default function AppLayout({ children, navContent }: AppLayoutProps) {
                         </DropdownMenuItem>
                     </UserManagementDialog>
                 )}
-                
-                <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>
-                        <KeyRound className="mr-2 h-4 w-4" />
-                        <span>Segurança</span>
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuPortal>
-                        <DropdownMenuSubContent>
-                            <DropdownMenuItem onClick={() => { router.push('/change-password'); setMobileMenuOpen(false); }}>
-                                Alterar minha senha
-                            </DropdownMenuItem>
-                        </DropdownMenuSubContent>
-                    </DropdownMenuPortal>
-                </DropdownMenuSub>
+                 <DropdownMenuItem onClick={() => { router.push('/change-password'); setMobileMenuOpen(false); }}>
+                    <KeyRound className="mr-2 h-4 w-4" />
+                    Alterar senha
+                </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
     );
@@ -120,13 +188,11 @@ export default function AppLayout({ children, navContent }: AppLayoutProps) {
           <Link href="/">
             <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} className="cursor-pointer" unoptimized/>
           </Link>
-          {navContent}
+          <ProcessFlowNav />
         </div>
         <div className="hidden sm:flex items-center gap-2">
             {consultancyButton}
-
             <SettingsMenu />
-            
             <Button variant="ghost" onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Sair
@@ -146,13 +212,14 @@ export default function AppLayout({ children, navContent }: AppLayoutProps) {
                     <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} className="cursor-pointer mb-8" unoptimized/>
                   </Link>
                   
-                  {/* Mobile navigation is passed here */}
-                  <div onClick={() => setMobileMenuOpen(false)}>{navContent}</div>
+                  {isProcessFlow && (
+                    <div className="flex flex-col gap-1" onClick={() => setMobileMenuOpen(false)}>
+                       <ProcessFlowNav />
+                    </div>
+                  )}
 
                   <div className="mt-8 pt-4 border-t">
-                    
                     {consultancyButton}
-                   
                     <div className="mt-2" onClick={() => setMobileMenuOpen(false)}>
                        <SettingsMenu isMobile />
                     </div>

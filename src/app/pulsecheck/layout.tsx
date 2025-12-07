@@ -5,7 +5,7 @@ import { useClient } from "@/firebase/auth/use-client";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import AppLayout from "@/components/AppLayout"; // Importa o AppLayout compartilhado
+import AppLayout from "@/components/AppLayout"; 
 
 export default function PulseCheckLayout({
   children,
@@ -44,10 +44,9 @@ export default function PulseCheckLayout({
   const canRender = user && (isConsultant || userProfile?.products?.includes("pulse_check"));
 
   if (!canRender) {
-    return null; // Ou um componente de acesso negado
+    return null;
   }
-
-  // Utiliza o AppLayout para manter a consistência visual, mas não passa itens de navegação.
+  
   return (
     <AppLayout hasActivities={false} unclassifiedCount={0}>
       <div className="w-full">
