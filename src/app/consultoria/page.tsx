@@ -619,16 +619,6 @@ export default function ConsultancyPage() {
                     <h1 className="text-2xl sm:text-4xl font-bold text-primary text-center sm:text-left">Painel da Consultoria</h1>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <Button variant="outline"><Wrench className="mr-2 h-4 w-4" /> Ferramentas</Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                             <DialogHeader>
-                                <DialogTitle>Ferramentas do Sistema</DialogTitle>
-                             </DialogHeader>
-                        </DialogContent>
-                    </Dialog>
                     
                 </div>
             </div>
