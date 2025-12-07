@@ -11,7 +11,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { type ConsultancyAction, type Activity, type Client } from '@/types/activity';
 
-import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -24,7 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, CalendarIcon, Trash2, Edit, BarChart, LineChart, FileText, CheckSquare, PieChart as PieChartIcon, Shuffle, Clock, Building, Wrench } from 'lucide-react';
+import { Loader2, PlusCircle, CalendarIcon, Trash2, Edit, BarChart, LineChart, FileText, CheckSquare, PieChart as PieChartIcon, Shuffle, Clock, Building, Wrench, LogOut, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -36,7 +35,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import dynamic from 'next/dynamic';
 import type { CategoryChartData } from '@/components/CategoryChart';
-import { UserManagementDialog } from '@/components/UserManagementDialog';
+import Image from 'next/image';
 
 const CategoryChart = dynamic(() => import('@/components/CategoryChart'), {
     ssr: false,
@@ -407,8 +406,6 @@ export default function ConsultancyPage() {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingAction, setEditingAction] = useState<ConsultancyAction | null>(null);
 
-    const unclassifiedCount = useMemo(() => activities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [activities]);
-    
     useEffect(() => {
         if (!userLoading && !user) {
             router.push('/login');
@@ -605,249 +602,265 @@ export default function ConsultancyPage() {
 
     if (isLoadingPage) {
         return (
-            <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0 || allClients.length > 0}>
-                <div className="flex justify-center items-center h-[80vh] w-full"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
-            </AppLayout>
+            <div className="flex justify-center items-center h-screen w-full"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
         );
     }
     
     return (
-        <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0 || allClients.length > 0}>
-            <div className="space-y-8 max-w-7xl mx-auto w-full">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <h1 className="text-4xl font-bold text-primary">Painel da Consultoria</h1>
-                        <div className="mt-4">
-                           {isConsultant && renderClientSelector()}
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        
-                         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button onClick={handleAddNew} disabled={!selectedClientId}>
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    Adicionar Ação
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-2xl max-h-[90vh]">
-                                 <DialogHeader>
-                                    <DialogTitle>{editingAction ? 'Editar Ação' : 'Adicionar Nova Ação'}</DialogTitle>
-                                    <DialogDescription>{editingAction ? `Editando a ação: "${editingAction.acao}"` : 'Preencha os detalhes da nova ação do plano.'}</DialogDescription>
-                                </DialogHeader>
-                                <ScrollArea className="max-h-[70vh] pr-6 -mr-6">
-                                  <div className="pr-1">
-                                    {selectedClientId && <ActionForm action={editingAction} onFinished={onFormFinished} clientId={selectedClientId} />}
-                                  </div>
-                                </ScrollArea>
-                            </DialogContent>
-                        </Dialog>
-                    </div>
+        <div className="container mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <div className="flex items-center gap-4">
+                    <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} unoptimized />
+                     <Button variant="outline" size="icon" onClick={() => router.push('/')}>
+                        <ArrowLeft className="h-4 w-4" />
+                     </Button>
                 </div>
-            
-                {!selectedClientId && isConsultant ? (
-                     <Card className="mt-8">
+                 <div>
+                    <h1 className="text-2xl sm:text-4xl font-bold text-primary text-center sm:text-left">Painel da Consultoria</h1>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button variant="outline"><Wrench className="mr-2 h-4 w-4" /> Ferramentas</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                             <DialogHeader>
+                                <DialogTitle>Ferramentas do Sistema</DialogTitle>
+                             </DialogHeader>
+                        </DialogContent>
+                    </Dialog>
+                    
+                </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="w-full sm:w-auto">
+                    {isConsultant && renderClientSelector()}
+                </div>
+                 <div className="w-full sm:w-auto">
+                    <Button onClick={handleAddNew} disabled={!selectedClientId} className="w-full">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Adicionar Ação ao Plano
+                    </Button>
+                 </div>
+            </div>
+
+             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogContent className="sm:max-w-2xl max-h-[90vh]">
+                        <DialogHeader>
+                        <DialogTitle>{editingAction ? 'Editar Ação' : 'Adicionar Nova Ação'}</DialogTitle>
+                        <DialogDescription>{editingAction ? `Editando a ação: "${editingAction.acao}"` : 'Preencha os detalhes da nova ação do plano.'}</DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-[70vh] pr-6 -mr-6">
+                        <div className="pr-1">
+                        {selectedClientId && <ActionForm action={editingAction} onFinished={onFormFinished} clientId={selectedClientId} />}
+                        </div>
+                    </ScrollArea>
+                </DialogContent>
+            </Dialog>
+        
+            {!selectedClientId && isConsultant ? (
+                    <Card className="mt-8">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-3 text-2xl">
+                            <Building className="h-8 w-8 text-muted-foreground" />
+                            Selecione um cliente
+                        </CardTitle>
+                        <CardDescription>
+                            Escolha um cliente na lista acima para ver o painel de ações e o resumo das atividades.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {isLoadingClients ? <Loader2 className="h-6 w-6 animate-spin" /> : (
+                            allClients.length === 0 && (
+                                <p className="text-muted-foreground">Nenhum cliente cadastrado. Adicione o primeiro para começar.</p>
+                            )
+                        )}
+                    </CardContent>
+                    </Card>
+            ) : isLoadingData ? (
+                <div className="flex justify-center items-center h-[50vh]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
+            ) : (
+            <>
+                <Card>
+                <CardHeader>
+                    <CardTitle className="text-2xl">Visão Geral do Cliente</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                    <StatCard title="Progresso do Levantamento" value={clientStats.total} icon={<FileText />}>
+                        <p className="text-xs text-muted-foreground mt-2">
+                            {clientStats.classified} classificadas, {clientStats.approved} aprovadas.
+                        </p>
+                        <Progress value={(clientStats.approved / (clientStats.total || 1)) * 100} className="mt-2 h-2" />
+                    </StatCard>
+                        <Card className="shadow-lg">
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-3 text-2xl">
-                                <Building className="h-8 w-8 text-muted-foreground" />
-                                Selecione um cliente
-                            </CardTitle>
-                            <CardDescription>
-                                Escolha um cliente na lista acima para ver o painel de ações e o resumo das atividades.
-                            </CardDescription>
+                            <CardTitle className="text-md font-medium text-muted-foreground flex items-center gap-2"><PieChartIcon className="h-5 w-5" />Divisão por Categoria</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            {isLoadingClients ? <Loader2 className="h-6 w-6 animate-spin" /> : (
-                                allClients.length === 0 && (
-                                    <p className="text-muted-foreground">Nenhum cliente cadastrado. Adicione o primeiro para começar.</p>
-                                )
-                            )}
-                        </CardContent>
-                     </Card>
-                ) : isLoadingData ? (
-                    <div className="flex justify-center items-center h-[50vh]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
-                ) : (
-                <>
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-2xl">Visão Geral do Cliente</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                        <StatCard title="Progresso do Levantamento" value={clientStats.total} icon={<FileText />}>
-                            <p className="text-xs text-muted-foreground mt-2">
-                                {clientStats.classified} classificadas, {clientStats.approved} aprovadas.
-                            </p>
-                            <Progress value={(clientStats.approved / (clientStats.total || 1)) * 100} className="mt-2 h-2" />
-                        </StatCard>
-                         <Card className="shadow-lg">
-                            <CardHeader>
-                                <CardTitle className="text-md font-medium text-muted-foreground flex items-center gap-2"><PieChartIcon className="h-5 w-5" />Divisão por Categoria</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                {clientCategoryChartData.length > 0 ? (
-                                     <ResponsiveContainer width="100%" height={150}>
-                                        <PieChart>
-                                            <Pie 
-                                                data={clientCategoryChartData} 
-                                                dataKey="value" 
-                                                nameKey="name" 
-                                                cx="50%" 
-                                                cy="45%" 
-                                                outerRadius={50} 
-                                                labelLine={false} 
-                                                label={({ cx, cy, midAngle, innerRadius, outerRadius, value, index }) => {
-                                                    const RADIAN = Math.PI / 180;
-                                                    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                                                    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                                                    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                                                    return value > 0 ? (
-                                                        <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={12}>
-                                                            {value}
-                                                        </text>
-                                                    ) : null;
-                                                }}>
-                                                {clientCategoryChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
-                                            </Pie>
-                                            <Tooltip />
-                                            <Legend iconSize={10} />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                ) : <p className="text-center text-sm text-muted-foreground py-10">Nenhuma atividade categorizada</p>}
-                            </CardContent>
-                        </Card>
-                        <StatCard title="Status de Aprovação" value={clientStats.approved} icon={<CheckSquare />} className="text-green-500">
-                            <p className="text-xs text-muted-foreground mt-2">
-                                <span className="text-yellow-500">{clientStats.byStatus['aguardando_consenso'] || 0} aguardando</span>, {' '}
-                                <span className="text-gray-500">{clientStats.byStatus['brainstorm'] || 0} não classificadas</span>
-                            </p>
-                        </StatCard>
-                        <StatCard title="Progresso da Transição" value={`${clientStats.byTransitionStatus['em_transicao'] || 0}`} icon={<Shuffle />}>
-                             <p className="text-xs text-muted-foreground mt-2">
-                                <span className="text-green-500">{clientStats.byTransitionStatus['concluida'] || 0} concluídas</span>, {' '}
-                                <span className="text-gray-500">{clientStats.byTransitionStatus['a_transferir'] || 0} aguardando</span>
-                            </p>
-                        </StatCard>
-                    </CardContent>
-                </Card>
-
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-2xl">Plano de Ação da Consultoria</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <Card className="lg:col-span-1">
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Status das Ações</CardTitle>
-                                    <BarChart className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    {actions.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height={250}>
-                                        <PieChart>
-                                            <Pie data={actionChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} labelLine={false} label={({ cx, cy, midAngle, innerRadius, outerRadius, value, index }) => {
+                            {clientCategoryChartData.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height={150}>
+                                    <PieChart>
+                                        <Pie 
+                                            data={clientCategoryChartData} 
+                                            dataKey="value" 
+                                            nameKey="name" 
+                                            cx="50%" 
+                                            cy="45%" 
+                                            outerRadius={50} 
+                                            labelLine={false} 
+                                            label={({ cx, cy, midAngle, innerRadius, outerRadius, value, index }) => {
                                                 const RADIAN = Math.PI / 180;
                                                 const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
                                                 const x = cx + radius * Math.cos(-midAngle * RADIAN);
                                                 const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                                                return (
-                                                    <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+                                                return value > 0 ? (
+                                                    <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={12}>
                                                         {value}
                                                     </text>
-                                                );
+                                                ) : null;
                                             }}>
-                                                {actionChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
-                                            </Pie>
-                                            <Tooltip />
-                                            <Legend />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                    ) : <p className="text-sm text-muted-foreground text-center pt-10">Sem dados para exibir.</p>}
-                                </CardContent>
-                            </Card>
-                            <Card className="lg:col-span-2">
-                                <CardHeader className='pb-2'>
-                                    <CardTitle className="text-sm font-medium flex items-center justify-between">
-                                        <span>Análise de Desempenho (% Concluído)</span>
-                                        <LineChart className="h-4 w-4 text-muted-foreground" />
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    {actions.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height={250}>
-                                        <ComposedChart data={actionPerformanceData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" />
-                                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 10 }} />
-                                            <YAxis />
-                                            <Tooltip />
-                                            <Legend />
-                                            <Bar dataKey="concluido" name="% Concluído" barSize={20} fill="#48BB78" />
-                                        </ComposedChart>
-                                    </ResponsiveContainer>
-                                    ) : <p className="text-sm text-muted-foreground text-center pt-10">Sem dados para exibir.</p>}
-                                </CardContent>
-                            </Card>
-                        </div>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-[30%]">Ação</TableHead>
-                                    <TableHead>Responsável</TableHead>
-                                    <TableHead>Período</TableHead>
-                                    <TableHead>% Concluído</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Ações</TableHead>
+                                            {clientCategoryChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                                        </Pie>
+                                        <Tooltip />
+                                        <Legend iconSize={10} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            ) : <p className="text-center text-sm text-muted-foreground py-10">Nenhuma atividade categorizada</p>}
+                        </CardContent>
+                    </Card>
+                    <StatCard title="Status de Aprovação" value={clientStats.approved} icon={<CheckSquare />} className="text-green-500">
+                        <p className="text-xs text-muted-foreground mt-2">
+                            <span className="text-yellow-500">{clientStats.byStatus['aguardando_consenso'] || 0} aguardando</span>, {' '}
+                            <span className="text-gray-500">{clientStats.byStatus['brainstorm'] || 0} não classificadas</span>
+                        </p>
+                    </StatCard>
+                    <StatCard title="Progresso da Transição" value={`${clientStats.byTransitionStatus['em_transicao'] || 0}`} icon={<Shuffle />}>
+                            <p className="text-xs text-muted-foreground mt-2">
+                            <span className="text-green-500">{clientStats.byTransitionStatus['concluida'] || 0} concluídas</span>, {' '}
+                            <span className="text-gray-500">{clientStats.byTransitionStatus['a_transferir'] || 0} aguardando</span>
+                        </p>
+                    </StatCard>
+                </CardContent>
+            </Card>
+
+                <Card>
+                <CardHeader>
+                    <CardTitle className="text-2xl">Plano de Ação da Consultoria</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <Card className="lg:col-span-1">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Status das Ações</CardTitle>
+                                <BarChart className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                {actions.length > 0 ? (
+                                <ResponsiveContainer width="100%" height={250}>
+                                    <PieChart>
+                                        <Pie data={actionChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} labelLine={false} label={({ cx, cy, midAngle, innerRadius, outerRadius, value, index }) => {
+                                            const RADIAN = Math.PI / 180;
+                                            const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                                            const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                                            const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                                            return (
+                                                <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+                                                    {value}
+                                                </text>
+                                            );
+                                        }}>
+                                            {actionChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                                        </Pie>
+                                        <Tooltip />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                ) : <p className="text-sm text-muted-foreground text-center pt-10">Sem dados para exibir.</p>}
+                            </CardContent>
+                        </Card>
+                        <Card className="lg:col-span-2">
+                            <CardHeader className='pb-2'>
+                                <CardTitle className="text-sm font-medium flex items-center justify-between">
+                                    <span>Análise de Desempenho (% Concluído)</span>
+                                    <LineChart className="h-4 w-4 text-muted-foreground" />
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {actions.length > 0 ? (
+                                <ResponsiveContainer width="100%" height={250}>
+                                    <ComposedChart data={actionPerformanceData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 10 }} />
+                                        <YAxis />
+                                        <Tooltip />
+                                        <Legend />
+                                        <Bar dataKey="concluido" name="% Concluído" barSize={20} fill="#48BB78" />
+                                    </ComposedChart>
+                                </ResponsiveContainer>
+                                ) : <p className="text-sm text-muted-foreground text-center pt-10">Sem dados para exibir.</p>}
+                            </CardContent>
+                        </Card>
+                    </div>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[30%]">Ação</TableHead>
+                                <TableHead>Responsável</TableHead>
+                                <TableHead>Período</TableHead>
+                                <TableHead>% Concluído</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="text-right">Ações</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {actions.length > 0 ? actions.map(action => (
+                                <TableRow key={action.id}>
+                                    <TableCell className="font-medium">{action.acao}</TableCell>
+                                    <TableCell>{action.responsavel}</TableCell>
+                                    <TableCell>
+                                        {format(action.data_inicio as Date, 'dd/MM/yy')} - {format(action.data_termino as Date, 'dd/MM/yy')}
+                                    </TableCell>
+                                    <TableCell>{action.percentual_concluido}%</TableCell>
+                                    <TableCell>
+                                        <span className={cn("px-2 py-1 text-xs rounded-full text-white", statusConfig[action.status].color)}>
+                                            {statusConfig[action.status].label}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="ghost" size="icon" onClick={() => handleEdit(action)}>
+                                            <Edit className="h-4 w-4" />
+                                        </Button>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" disabled={isDeleting}>
+                                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                                    <AlertDialogDescription>Essa ação não pode ser desfeita. Isso excluirá permanentemente a ação.</AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDelete(action.id)}>Excluir</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </TableCell>
                                 </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {actions.length > 0 ? actions.map(action => (
-                                    <TableRow key={action.id}>
-                                        <TableCell className="font-medium">{action.acao}</TableCell>
-                                        <TableCell>{action.responsavel}</TableCell>
-                                        <TableCell>
-                                            {format(action.data_inicio as Date, 'dd/MM/yy')} - {format(action.data_termino as Date, 'dd/MM/yy')}
-                                        </TableCell>
-                                        <TableCell>{action.percentual_concluido}%</TableCell>
-                                        <TableCell>
-                                            <span className={cn("px-2 py-1 text-xs rounded-full text-white", statusConfig[action.status].color)}>
-                                                {statusConfig[action.status].label}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon" onClick={() => handleEdit(action)}>
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button variant="ghost" size="icon" disabled={isDeleting}>
-                                                        <Trash2 className="h-4 w-4 text-red-500" />
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                                                        <AlertDialogDescription>Essa ação não pode ser desfeita. Isso excluirá permanentemente a ação.</AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDelete(action.id)}>Excluir</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </TableCell>
-                                    </TableRow>
-                                )) : (
-                                    <TableRow>
-                                        <TableCell colSpan={6} className="h-24 text-center">Nenhuma ação cadastrada ainda.</TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                 </Card>
-                 </>
-                )}
-            </div>
-        </AppLayout>
+                            )) : (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="h-24 text-center">Nenhuma ação cadastrada ainda.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+                </Card>
+                </>
+            )}
+        </div>
     );
 }
