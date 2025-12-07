@@ -9,7 +9,8 @@ export interface Client {
 
 export interface UserProfile {
     clientId: string;
-    role: 'client_user' | 'consultant';
+    products: string[];
+    isConsultant: boolean;
 }
 
 export interface ActivityComment {

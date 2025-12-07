@@ -2,7 +2,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, getDoc } from 'firebase/firestore';
 import { useUser } from './use-user';
 import { useFirestore } from '../provider';
 import type { UserProfile } from '@/types/activity';
@@ -57,18 +57,34 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
         }
 
         const userDocRef = doc(db, 'users', user.uid);
-        const unsubscribe = onSnapshot(userDocRef, (doc) => {
-            if (doc.exists()) {
-                const profile = doc.data() as UserProfile;
-                setUserProfile(profile);
-                if (profile.isConsultant) {
+
+        const handleUserProfile = async (profileData: UserProfile | undefined) => {
+            if (profileData) {
+                // Check for legacy users who don't have the 'products' field.
+                if (!profileData.hasOwnProperty('products')) {
+                    const migratedProfile: UserProfile = { ...profileData, products: ['process_flow'] };
+                    setUserProfile(migratedProfile);
+
+                    // Update the document in the background to migrate the user.
+                    try {
+                        await updateDoc(userDocRef, { products: ['process_flow'] });
+                    } catch (e) {
+                        console.error("Failed to migrate user profile:", e);
+                    }
+
+                } else {
+                    setUserProfile(profileData);
+                }
+
+                if (profileData.isConsultant) {
                     setUserNativeClientId(null);
                 } else {
-                    setUserNativeClientId(profile.clientId);
+                    setUserNativeClientId(profileData.clientId);
                 }
+
             } else {
-                const authorizedConsultants = ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'];
-                if (user.email && authorizedConsultants.includes(user.email)) {
+                 const authorizedConsultants = ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'];
+                 if (user.email && authorizedConsultants.includes(user.email)) {
                     setUserProfile({ clientId: '', products: [], isConsultant: true });
                     setUserNativeClientId(null);
                 } else {
@@ -78,9 +94,20 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
                 }
             }
             setClientLoading(false);
-        }, (error) => {
-            console.error("Error fetching user profile:", error);
-            setClientLoading(false);
+        }
+
+
+        const unsubscribe = onSnapshot(userDocRef, async (docSnapshot) => {
+            await handleUserProfile(docSnapshot.data() as UserProfile | undefined);
+        }, async (error) => {
+            console.error("Error with onSnapshot, trying getDoc as fallback:", error);
+            try {
+                const docSnapshot = await getDoc(userDocRef);
+                await handleUserProfile(docSnapshot.data() as UserProfile | undefined);
+            } catch (getDocError) {
+                 console.error("Error fetching user profile with getDoc:", getDocError);
+                 setClientLoading(false);
+            }
         });
 
         return () => unsubscribe();
@@ -118,5 +145,3 @@ export const useClient = () => {
     }
     return context;
 };
-
-    
