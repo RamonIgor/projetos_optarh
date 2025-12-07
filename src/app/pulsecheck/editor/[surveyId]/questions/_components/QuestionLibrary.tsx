@@ -14,6 +14,20 @@ interface QuestionLibraryProps {
   onCreateCustom: () => void;
 }
 
+const categoryOrder = [
+  'DEMOGRAFIA',
+  'eNPS',
+  'LEADERSHIP NPS',
+  'DESENVOLVIMENTO PROFISSIONAL',
+  'RECONHECIMENTO E REMUNERAÇÃO',
+  'AMBIENTE DE TRABALHO',
+  'INFRAESTRUTURA',
+  'LIDERANÇA - COMUNICAÇÃO',
+  'LIDERANÇA - CULTURA',
+  'LIDERANÇA - FEEDBACK',
+  'FEEDBACK ABERTO'
+];
+
 export function QuestionLibrary({ libraryQuestions, onAdd, onCreateCustom }: QuestionLibraryProps) {
   const groupedQuestions = useMemo(() => {
     return libraryQuestions.reduce((acc, q) => {
@@ -25,7 +39,10 @@ export function QuestionLibrary({ libraryQuestions, onAdd, onCreateCustom }: Que
     }, {} as Record<string, Question[]>);
   }, [libraryQuestions]);
 
-  const categories = Object.keys(groupedQuestions).sort();
+  const categories = useMemo(() => {
+    const existingCategories = Object.keys(groupedQuestions);
+    return categoryOrder.filter(cat => existingCategories.includes(cat));
+  }, [groupedQuestions]);
 
   return (
     <Card className="flex flex-col h-full">
@@ -35,13 +52,13 @@ export function QuestionLibrary({ libraryQuestions, onAdd, onCreateCustom }: Que
       </CardHeader>
       <ScrollArea className="flex-grow">
         <div className="px-6">
-            <Accordion type="multiple" defaultValue={categories.slice(0,2)}>
+            <Accordion type="multiple" defaultValue={['DEMOGRAFIA', 'eNPS']}>
             {categories.map(category => (
                 <AccordionItem key={category} value={category}>
                 <AccordionTrigger>{category}</AccordionTrigger>
                 <AccordionContent>
                     <div className="space-y-2">
-                    {groupedQuestions[category].map(q => (
+                    {groupedQuestions[category].sort((a, b) => a.order - b.order).map(q => (
                         <div key={q.id} className="flex items-center justify-between gap-2 p-2 rounded-md hover:bg-muted">
                         <p className="text-sm text-muted-foreground flex-1">{q.text}</p>
                         <Button variant="ghost" size="sm" onClick={() => onAdd(q)}>
