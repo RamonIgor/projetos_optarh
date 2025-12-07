@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase/auth/use-user';
 import { useClient } from '@/firebase/auth/use-client';
@@ -39,11 +39,13 @@ export default function ProductPortalPage() {
   const auth = useAuth();
   const { user, loading: userLoading } = useUser();
   const { userProfile, isClientLoading, isConsultant } = useClient();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const isLoading = userLoading || isClientLoading;
   
   const handleLogout = async () => {
     if (!auth) return;
+    setIsLoggingOut(true);
     await signOut(auth);
     router.push('/login');
   };
@@ -65,7 +67,7 @@ export default function ProductPortalPage() {
   }, [isLoading, userProfile, isConsultant, router]);
 
 
-  if (isLoading) {
+  if (isLoading || isLoggingOut) {
     return (
       <div className="flex items-center justify-center min-h-screen w-full bg-gradient-to-br from-cyan-50 to-blue-100 dark:from-slate-900 dark:to-blue-950">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -134,7 +136,7 @@ export default function ProductPortalPage() {
                             </CardHeader>
                             <CardContent className="mt-auto">
                                  <Button 
-                                    onClick={() => handleCtaClick(hasAccess, product)} 
+                                    onClick={() => handleCtaClick(!!hasAccess, product)} 
                                     className="w-full text-lg h-12"
                                     variant={hasAccess ? 'default' : 'default'}
                                  >
@@ -157,3 +159,4 @@ export default function ProductPortalPage() {
     </div>
   );
 }
+
