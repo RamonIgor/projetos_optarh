@@ -74,6 +74,17 @@ export default function ProductPortalPage() {
     );
   }
   
+  const handleCtaClick = (hasAccess: boolean, product: (typeof allProducts)[ProductKey]) => {
+    if (hasAccess) {
+        if (product.href !== '#') {
+            router.push(product.href);
+        }
+    } else {
+        const whatsappUrl = `https://wa.me/5518981140305`;
+        window.open(whatsappUrl, '_blank');
+    }
+  }
+
   return (
     <div className="flex flex-col min-h-screen w-full bg-gradient-to-br from-cyan-50 to-blue-100 dark:from-slate-900 dark:to-blue-950">
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
@@ -110,7 +121,7 @@ export default function ProductPortalPage() {
                                     <div className="flex items-center gap-4">
                                         <div className={cn(
                                             "p-3 rounded-full", 
-                                            hasAccess ? `bg-${product.color}/10` : 'bg-muted'
+                                            hasAccess ? 'bg-primary/10' : product.color === 'amber' ? 'bg-amber-100' : 'bg-muted'
                                         )}>
                                             {product.icon}
                                         </div>
@@ -128,13 +139,12 @@ export default function ProductPortalPage() {
                             </CardHeader>
                             <CardContent className="mt-auto">
                                  <Button 
-                                    onClick={() => hasAccess && product.href !== '#' && router.push(product.href)} 
+                                    onClick={() => handleCtaClick(hasAccess, product)} 
                                     className={cn(
                                         "w-full text-lg h-12",
-                                        hasAccess && `bg-${product.color} hover:bg-${product.color}/90 text-white`
+                                        hasAccess && `bg-primary hover:bg-primary/90 text-primary-foreground`
                                     )}
-                                    disabled={!hasAccess || product.href === '#'}
-                                    variant={hasAccess ? 'default' : 'secondary'}
+                                    variant={hasAccess ? 'default' : 'outline'}
                                  >
                                     {hasAccess ? (
                                       <>
@@ -142,7 +152,7 @@ export default function ProductPortalPage() {
                                         <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                                       </>
                                     ) : (
-                                      "Saiba Mais"
+                                      "Falar com Consultor"
                                     )}
                                 </Button>
                             </CardContent>
