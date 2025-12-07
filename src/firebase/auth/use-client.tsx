@@ -36,7 +36,7 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
     const [userNativeClientId, setUserNativeClientId] = useState<string | null>(null);
     const [consultantSelectedClientId, setConsultantSelectedClientId] = useState<string | null>(null);
 
-    const isConsultant = userProfile?.role === 'consultant';
+    const isConsultant = userProfile?.isConsultant || false;
 
     useEffect(() => {
         if (!user) {
@@ -61,7 +61,7 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
             if (doc.exists()) {
                 const profile = doc.data() as UserProfile;
                 setUserProfile(profile);
-                if (profile.role === 'consultant') {
+                if (profile.isConsultant) {
                     setUserNativeClientId(null);
                 } else {
                     setUserNativeClientId(profile.clientId);
@@ -69,7 +69,7 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
             } else {
                 const authorizedConsultants = ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'];
                 if (user.email && authorizedConsultants.includes(user.email)) {
-                    setUserProfile({ role: 'consultant', clientId: '' });
+                    setUserProfile({ clientId: '', products: [], isConsultant: true });
                     setUserNativeClientId(null);
                 } else {
                     console.warn(`User profile not found for uid: ${user.uid}`);

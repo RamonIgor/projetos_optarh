@@ -14,6 +14,7 @@ import { getFirestore, setDoc, doc, collection, getDocs, orderBy, query } from '
 import { firebaseConfig } from '@/firebase/config';
 import { useFirestore as useDb } from '@/firebase';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { type Client } from '@/types/activity';
 
 // This function creates a secondary, temporary Firebase app instance
@@ -30,18 +31,30 @@ const createSecondaryAuth = () => {
     }
 };
 
+const productsAvailable = [
+    { id: 'process_flow', label: 'ProcessFlow' },
+    { id: 'pesquisa_clima', label: 'Pesquisa de Clima' },
+]
+
 function CreateUserForm({ onFinished, clients, isLoadingClients }: { onFinished: () => void, clients: Client[], isLoadingClients: boolean }) {
     const { toast } = useToast();
     const db = useDb();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [selectedClientId, setSelectedClientId] = useState('');
+    const [selectedProducts, setSelectedProducts] = useState<string[]>(['process_flow']);
     const [isSubmitting, startTransition] = useTransition();
+
+    const handleProductChange = (productId: string, checked: boolean) => {
+        setSelectedProducts(prev => 
+            checked ? [...prev, productId] : prev.filter(id => id !== productId)
+        );
+    }
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!email || !password || !selectedClientId) {
-            toast({ title: "Preencha todos os campos", description: "Email, senha e cliente são obrigatórios.", variant: "destructive"});
+        if (!email || !password || !selectedClientId || selectedProducts.length === 0) {
+            toast({ title: "Preencha todos os campos", description: "Email, senha, cliente e ao menos um produto são obrigatórios.", variant: "destructive"});
             return;
         }
 
@@ -56,12 +69,13 @@ function CreateUserForm({ onFinished, clients, isLoadingClients }: { onFinished:
                 // This ensures the write operation is performed by the logged-in consultant
                 await setDoc(doc(db, "users", newUser.uid), {
                     clientId: selectedClientId,
-                    role: 'client_user'
+                    products: selectedProducts,
+                    isConsultant: false,
                 });
 
                 toast({
                     title: "Usuário Criado e Associado!",
-                    description: `${email} foi criado e vinculado ao cliente.`,
+                    description: `${email} foi criado e vinculado ao cliente com os produtos selecionados.`,
                 });
                 
                 onFinished();
@@ -115,12 +129,29 @@ function CreateUserForm({ onFinished, clients, isLoadingClients }: { onFinished:
                     </SelectContent>
                 </Select>
             </div>
+             <div className="grid gap-2">
+                <Label>Produtos Acessíveis</Label>
+                <div className="space-y-2 rounded-md border p-2">
+                    {productsAvailable.map(product => (
+                         <div key={product.id} className="flex items-center space-x-2">
+                            <Checkbox 
+                                id={`product-${product.id}`}
+                                checked={selectedProducts.includes(product.id)}
+                                onCheckedChange={(checked) => handleProductChange(product.id, !!checked)}
+                            />
+                            <Label htmlFor={`product-${product.id}`} className="font-normal cursor-pointer">
+                                {product.label}
+                            </Label>
+                        </div>
+                    ))}
+                </div>
+            </div>
              <p className="text-sm text-muted-foreground !mt-2">
-                O usuário será criado e vinculado. Deverá alterar a senha no primeiro acesso.
+                O usuário deverá alterar a senha no primeiro acesso.
             </p>
             <DialogFooter className="!mt-6">
                 <Button type="button" variant="outline" onClick={onFinished}>Fechar</Button>
-                <Button type="submit" disabled={isSubmitting || !email || !password || !selectedClientId}>
+                <Button type="submit" disabled={isSubmitting || !email || !password || !selectedClientId || selectedProducts.length === 0}>
                     {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
                     Criar e Associar
                 </Button>
@@ -164,7 +195,7 @@ export function UserManagementDialog({ children }: { children: React.ReactNode }
                 <DialogHeader>
                     <DialogTitle>Gerenciar Colaboradores</DialogTitle>
                     <DialogDescription>
-                        Crie novas contas para colaboradores e vincule-as a um cliente.
+                        Crie novas contas para colaboradores e vincule-as a um cliente e seus produtos.
                     </DialogDescription>
                 </DialogHeader>
 
