@@ -20,11 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuPortal
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import { UserManagementDialog } from './UserManagementDialog';
 import Image from 'next/image';
 import {
@@ -235,7 +231,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           {productName && (
               <div className="hidden sm:flex items-center gap-2 text-muted-foreground">
                   <span className="text-lg">/</span>
-                  <span className="font-medium text-foreground">{productName}</span>
+                  <span className="font-bold text-foreground">{productName}</span>
               </div>
           )}
           <div className="flex-1 flex justify-center">
