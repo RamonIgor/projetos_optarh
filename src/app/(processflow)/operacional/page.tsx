@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useTransition } from 'react';
@@ -353,7 +352,7 @@ export default function OperationalPage() {
             <div className="text-center py-20">
               <h1 className="mt-4 text-3xl font-bold">Nenhuma atividade aprovada</h1>
               <p className="mt-2 text-lg text-muted-foreground">Classifique e aprove atividades para popular o checklist operacional.</p>
-              <Button onClick={() => router.push('/classificacao')} className="mt-6">
+              <Button onClick={() => router.push('/processflow/classificacao')} className="mt-6">
                 Ir para Classificação
               </Button>
             </div>
@@ -440,4 +439,6 @@ export default function OperationalPage() {
 }
 
     
+
+
 

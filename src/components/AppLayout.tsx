@@ -1,4 +1,3 @@
-
 "use client";
 
 import { signOut } from 'firebase/auth';
@@ -35,6 +34,7 @@ import {
 } from "@/components/ui/sheet";
 import { useState } from 'react';
 
+
 interface AppLayoutProps {
   children: React.ReactNode;
   unclassifiedCount: number;
@@ -56,11 +56,11 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
   };
 
   const navItems = [
-    { href: '/', label: 'Brainstorm', icon: ListTodo },
-    { href: '/classificacao', label: 'Classificação', icon: LayoutGrid, count: unclassifiedCount, disabled: !hasActivities },
-    { href: '/dashboard', label: 'Dashboard', icon: BarChart3, disabled: !hasActivities },
-    { href: '/transicao', label: 'Transição', icon: Shuffle, disabled: !hasActivities },
-    { href: '/operacional', label: 'Operacional', icon: PlayCircle, disabled: !hasActivities },
+    { href: '/processflow', label: 'Brainstorm', icon: ListTodo },
+    { href: '/processflow/classificacao', label: 'Classificação', icon: LayoutGrid, count: unclassifiedCount, disabled: !hasActivities },
+    { href: '/processflow/dashboard', label: 'Dashboard', icon: BarChart3, disabled: !hasActivities },
+    { href: '/processflow/transicao', label: 'Transição', icon: Shuffle, disabled: !hasActivities },
+    { href: '/processflow/operacional', label: 'Operacional', icon: PlayCircle, disabled: !hasActivities },
   ];
   
   const authorizedConsultants = ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'];
@@ -68,7 +68,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
 
   const consultancyButton = (
     isAuthorized ? (
-        <Button variant={pathname === '/consultoria' ? 'outline' : 'ghost'} onClick={() => router.push('/consultoria')}>
+        <Button variant={pathname === '/consultoria' ? 'outline' : 'ghost'} onClick={() => { router.push('/consultoria'); setMobileMenuOpen(false); }}>
             <Rows className="mr-2 h-4 w-4" />
             Painel
         </Button>
@@ -171,7 +171,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
         </div>
         <div className="hidden sm:flex items-center gap-2">
             {consultancyButton}
-           
+
             <SettingsMenu />
             
             <Button variant="ghost" onClick={handleLogout}>
@@ -196,9 +196,9 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
                     {navItems.map(renderNavItem)}
                   </nav>
                   <div className="mt-8 pt-4 border-t">
-                    {consultancyButton && (
-                       <div onClick={() => setMobileMenuOpen(false)}>{consultancyButton}</div>
-                    )}
+                    
+                    {consultancyButton}
+                   
                     <div className="mt-2" onClick={() => setMobileMenuOpen(false)}>
                        <SettingsMenu isMobile />
                     </div>

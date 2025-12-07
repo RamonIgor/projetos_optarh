@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -347,7 +346,7 @@ export default function ClassificationPage() {
         <div className="text-center py-20">
           <h1 className="mt-4 text-3xl font-bold">Nenhuma atividade encontrada</h1>
           <p className="mt-2 text-lg text-muted-foreground">Vá para a tela de Brainstorm para adicionar novas atividades.</p>
-          <Button onClick={() => router.push('/')} className="mt-6">
+          <Button onClick={() => router.push('/processflow')} className="mt-6">
             Ir para Brainstorm
           </Button>
         </div>
@@ -662,10 +661,10 @@ function SummaryScreen({ stats, onReviewPending, onReviewApproved }: { stats: { 
            <Button size="lg" variant="outline" className="h-16 text-lg" onClick={onReviewApproved} disabled={stats.approved === 0}>
               Revisar Aprovadas
           </Button>
-          <Button size="lg" variant="outline" className="h-16 text-lg" onClick={() => router.push('/dashboard')}>
+          <Button size="lg" variant="outline" className="h-16 text-lg" onClick={() => router.push('/processflow/dashboard')}>
               Ir para o Dashboard
           </Button>
-          <Button size="lg" variant="outline" className="h-16 text-lg" onClick={() => router.push('/')}>
+          <Button size="lg" variant="outline" className="h-16 text-lg" onClick={() => router.push('/processflow')}>
               Voltar ao Brainstorm
           </Button>
         </div>
