@@ -61,15 +61,20 @@ export default function ConfigureQuestionsPage() {
 
     }, [surveyId, clientId, db, router, toast]);
 
-    const updateSurveyQuestions = async (newQuestions: SelectedQuestion[]) => {
+    const updateSurveyQuestions = useCallback(async (newQuestions: SelectedQuestion[]) => {
         if (!clientId || !db) return;
         const surveyDocRef = doc(db, 'clients', clientId, 'surveys', surveyId as string);
-        await updateDoc(surveyDocRef, { questions: newQuestions });
-    };
+        try {
+            await updateDoc(surveyDocRef, { questions: newQuestions });
+        } catch (error) {
+            console.error("Error updating survey questions: ", error);
+            toast({ title: "Erro ao salvar", description: "Não foi possível salvar as alterações no banco de dados.", variant: "destructive"});
+        }
+    }, [clientId, db, surveyId, toast]);
 
-    const handleAddQuestion = (question: Question) => {
+    const handleAddQuestion = useCallback(async (question: Question) => {
         const newQuestion: SelectedQuestion = {
-            id: `${question.id}-${Date.now()}`, // Create a unique ID for the list
+            id: `${question.id}-${Date.now()}`,
             questionId: question.id,
             text: question.text,
             type: question.type,
@@ -79,24 +84,31 @@ export default function ConfigureQuestionsPage() {
         };
         const newQuestions = [...selectedQuestions, newQuestion];
         setSelectedQuestions(newQuestions);
-    };
+        await updateSurveyQuestions(newQuestions);
+        toast({ title: "Pergunta adicionada!", duration: 2000 });
+    }, [selectedQuestions, updateSurveyQuestions, toast]);
     
-    const handleRemoveQuestion = (idToRemove: string) => {
+    const handleRemoveQuestion = useCallback(async (idToRemove: string) => {
         const newQuestions = selectedQuestions.filter(q => q.id !== idToRemove);
         setSelectedQuestions(newQuestions);
-    };
+        await updateSurveyQuestions(newQuestions);
+        toast({ title: "Pergunta removida.", duration: 2000 });
+    }, [selectedQuestions, updateSurveyQuestions, toast]);
 
-    const handleReorderQuestions = (startIndex: number, endIndex: number) => {
+    const handleReorderQuestions = useCallback(async (startIndex: number, endIndex: number) => {
         const result = Array.from(selectedQuestions);
         const [removed] = result.splice(startIndex, 1);
         result.splice(endIndex, 0, removed);
         setSelectedQuestions(result);
-    };
+        await updateSurveyQuestions(result);
+        toast({ title: "Ordem das perguntas atualizada.", duration: 2000 });
+    }, [selectedQuestions, updateSurveyQuestions, toast]);
 
-    const handleUpdateQuestion = (id: string, updates: Partial<SelectedQuestion>) => {
+    const handleUpdateQuestion = useCallback(async (id: string, updates: Partial<SelectedQuestion>) => {
         const newQuestions = selectedQuestions.map(q => q.id === id ? { ...q, ...updates } : q);
         setSelectedQuestions(newQuestions);
-    };
+        await updateSurveyQuestions(newQuestions);
+    }, [selectedQuestions, updateSurveyQuestions]);
 
     const handleOpenBuilderForEdit = (question: SelectedQuestion) => {
         setQuestionToEdit(question);
@@ -108,8 +120,10 @@ export default function ConfigureQuestionsPage() {
         setIsBuilderOpen(true);
     };
 
-    const handleSaveFromBuilder = (questionData: Omit<SelectedQuestion, 'id'>) => {
-        const finalQuestionData: Omit<SelectedQuestion, 'id'> = {
+    const handleSaveFromBuilder = useCallback(async (questionData: Omit<SelectedQuestion, 'id'>) => {
+        let newQuestions: SelectedQuestion[];
+
+        const finalQuestionData = {
             ...questionData,
             options:
               questionData.type === 'multiple-choice'
@@ -117,35 +131,30 @@ export default function ConfigureQuestionsPage() {
                 : null,
           };
 
-        // If we are editing
-        if (questionToEdit) {
-            const updatedQuestions = selectedQuestions.map(q => 
+        if (questionToEdit) { // Editing existing question
+            newQuestions = selectedQuestions.map(q => 
                 q.id === questionToEdit.id ? { ...q, ...finalQuestionData, id: q.id } as SelectedQuestion : q
             );
-            setSelectedQuestions(updatedQuestions);
-        } else { // If we are creating a new one
+        } else { // Creating a new custom question
             const newCustomQuestion: SelectedQuestion = {
                 id: `custom-${Date.now()}`,
                 ...finalQuestionData,
             };
-            setSelectedQuestions([...selectedQuestions, newCustomQuestion]);
+            newQuestions = [...selectedQuestions, newCustomQuestion];
         }
-    };
-    
-    const handleSaveChanges = async () => {
-         await updateSurveyQuestions(selectedQuestions);
-         toast({ title: "Alterações salvas!", description: "A lista de perguntas foi atualizada."});
-    };
+        
+        setSelectedQuestions(newQuestions);
+        await updateSurveyQuestions(newQuestions);
+        toast({ title: "Pergunta salva!", duration: 2000 });
+
+    }, [questionToEdit, selectedQuestions, updateSurveyQuestions, toast]);
     
     const handlePublish = async () => {
         if(selectedQuestions.length === 0) {
             toast({ title: "Nenhuma pergunta selecionada", description: "Adicione ao menos uma pergunta para publicar.", variant: "destructive"});
             return;
         }
-        await updateSurveyQuestions(selectedQuestions);
-        
-        // In a real scenario, you'd navigate to a "Review and Publish" (Step 3) screen.
-        // For now, we'll just show a toast.
+        // Questions are already saved, just navigate
         toast({ title: "Pesquisa Pronta para Publicar!", description: "O próximo passo seria revisar e enviar."});
         router.push('/pulsecheck');
     };
@@ -177,7 +186,7 @@ export default function ConfigureQuestionsPage() {
                         </Button>
                         <Button onClick={handlePublish}>
                             <Send className="mr-2 h-4 w-4" />
-                            Salvar e Publicar
+                            Publicar
                         </Button>
                     </div>
                 </div>
