@@ -44,9 +44,9 @@ export default function LoginPage() {
   useEffect(() => {
     if (!loading && user) {
         if(isFirstLogin(user)) {
-            router.push('/change-password');
+            router.replace('/change-password');
         } else {
-            router.push('/');
+            router.replace('/');
         }
     }
   }, [user, loading, router]);
@@ -91,11 +91,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      if (isFirstLogin(userCredential.user)) {
-          router.push('/change-password');
-      } else {
-          router.push('/');
-      }
+      // The useEffect will handle the redirection, no need to do it here.
     } catch (error) {
       handleAuthError(error as AuthError);
     } finally {
