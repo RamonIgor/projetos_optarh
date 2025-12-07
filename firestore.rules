@@ -91,8 +91,9 @@ service cloud.firestore {
          resource.data.clientId == getUserData(request.auth.uid).clientId &&
          hasProductAccess('pulse_check')
        );
-       // Nobody can update or delete responses once submitted.
-       allow update, delete: if false;
+       // Consultants can delete responses, but no one can update them.
+       allow update: if false;
+       allow delete: if isConsultant();
     }
   }
 }
