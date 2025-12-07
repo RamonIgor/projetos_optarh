@@ -38,11 +38,12 @@ import { useState } from 'react';
 
 interface AppLayoutProps {
   children: React.ReactNode;
+  navContent?: React.ReactNode;
   unclassifiedCount: number;
   hasActivities: boolean;
 }
 
-export default function AppLayout({ children, unclassifiedCount, hasActivities }: AppLayoutProps) {
+export default function AppLayout({ children, navContent }: AppLayoutProps) {
   const auth = useAuth();
   const { user } = useUser();
   const { isConsultant } = useClient();
@@ -55,14 +56,6 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
     await signOut(auth);
     router.push('/login');
   };
-
-  const navItems = [
-    { href: '/processflow/brainstorm', label: 'Brainstorm', icon: ListTodo },
-    { href: '/processflow/classificacao', label: 'Classificação', icon: LayoutGrid, count: unclassifiedCount, disabled: !hasActivities },
-    { href: '/processflow/dashboard', label: 'Dashboard', icon: BarChart3, disabled: !hasActivities },
-    { href: '/processflow/transicao', label: 'Transição', icon: Shuffle, disabled: !hasActivities },
-    { href: '/processflow/operacional', label: 'Operacional', icon: PlayCircle, disabled: !hasActivities },
-  ];
   
   const authorizedConsultants = ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'];
   const isAuthorized = isConsultant || (user && authorizedConsultants.includes(user.email || ''));
@@ -75,45 +68,6 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
         </Button>
     ) : null
   );
-
-  const renderNavItem = (item: typeof navItems[0]) => {
-    const isActive = pathname === item.href;
-    const link = (
-      <Link
-        key={item.href}
-        href={item.disabled ? '#' : item.href}
-        className={cn(
-          "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
-          isActive ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground",
-          item.disabled ? "opacity-50 cursor-not-allowed" : "",
-          "sm:flex"
-        )}
-        aria-disabled={item.disabled}
-        onClick={(e) => {
-          if (item.disabled) e.preventDefault();
-          else setMobileMenuOpen(false);
-        }}
-      >
-        <item.icon className="h-4 w-4" />
-        <span>{item.label}</span>
-        {item.count !== undefined && item.count > 0 && (
-          <Badge variant={isActive ? "default" : "secondary"} className="rounded-full">{item.count}</Badge>
-        )}
-      </Link>
-    );
-
-    if (item.disabled) {
-      const tooltipText = "Adicione e aprove atividades para habilitar esta seção.";
-
-      return (
-        <Tooltip key={item.href}>
-          <TooltipTrigger asChild>{link}</TooltipTrigger>
-          <TooltipContent><p>{tooltipText}</p></TooltipContent>
-        </Tooltip>
-      );
-    }
-    return link;
-  };
   
   const SettingsMenu = ({ isMobile = false }: { isMobile?: boolean }) => {
     const commonItemClass = "w-full justify-start";
@@ -166,9 +120,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
           <Link href="/">
             <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} className="cursor-pointer" unoptimized/>
           </Link>
-          <nav className="hidden sm:flex p-1.5 rounded-full bg-background/50 backdrop-blur-sm border border-black/5 items-center gap-1 shadow-sm">
-            {navItems.map(renderNavItem)}
-          </nav>
+          {navContent}
         </div>
         <div className="hidden sm:flex items-center gap-2">
             {consultancyButton}
@@ -193,9 +145,10 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
                   <Link href="/" onClick={() => setMobileMenuOpen(false)}>
                     <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} className="cursor-pointer mb-8" unoptimized/>
                   </Link>
-                  <nav className="flex flex-col gap-4">
-                    {navItems.map(renderNavItem)}
-                  </nav>
+                  
+                  {/* Mobile navigation is passed here */}
+                  <div onClick={() => setMobileMenuOpen(false)}>{navContent}</div>
+
                   <div className="mt-8 pt-4 border-t">
                     
                     {consultancyButton}

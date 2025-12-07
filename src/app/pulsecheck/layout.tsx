@@ -47,10 +47,9 @@ export default function PulseCheckLayout({
     return null; // Ou um componente de acesso negado
   }
 
-  // Utiliza o AppLayout para manter a consistência visual.
-  // Passamos props vazias ou padrão para a navegação, já que o PulseCheck não a tem ainda.
+  // Utiliza o AppLayout para manter a consistência visual, mas não passa itens de navegação.
   return (
-    <AppLayout unclassifiedCount={0} hasActivities={true}>
+    <AppLayout hasActivities={false} unclassifiedCount={0}>
       <div className="w-full">
          {children}
       </div>
