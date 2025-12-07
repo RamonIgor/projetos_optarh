@@ -38,6 +38,10 @@ service cloud.firestore {
       return isMemberOfClient(clientId) && hasProductAccess('process_flow');
     }
 
+    function canAccessPulseCheck(clientId) {
+      return isMemberOfClient(clientId) && hasProductAccess('pulse_check');
+    }
+
     // --- Collection Rules ---
 
     match /users/{userId} {
@@ -57,8 +61,29 @@ service cloud.firestore {
       
       match /actions/{actionId} {
         allow read: if isConsultant() || canAccessProcessFlow(clientId);
-        allow write: if isConsultant(); // Only consultants can create/edit actions.
+        allow write: if isConsultant();
       }
+      
+      // Subcollections for PulseCheck
+      match /surveys/{surveyId} {
+        allow read: if isConsultant() || canAccessPulseCheck(clientId);
+        allow write: if isConsultant();
+      }
+    }
+    
+    // --- PulseCheck Specific Collections ---
+    
+    match /pulse_check_questions/{questionId} {
+      // Questions are global templates managed only by consultants
+      allow read: if isSignedIn(); // Any signed-in user can read question templates
+      allow write: if isConsultant();
+    }
+    
+    match /pulse_check_responses/{responseId} {
+       // Allow anyone to submit a response. This supports anonymous submissions.
+       // They cannot read, update, or delete any responses.
+       allow create: if true; 
+       allow read, update, delete: if false;
     }
 
     // --- Deprecated Collections (for migration if needed) ---

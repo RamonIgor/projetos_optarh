@@ -218,6 +218,59 @@
         }
       },
       "required": ["acao", "responsavel", "data_inicio", "data_termino", "percentual_concluido", "percentual_planejado", "status", "createdAt"]
+    },
+    "Question": {
+        "title": "Question",
+        "description": "A single question that can be used in a survey.",
+        "type": "object",
+        "properties": {
+            "text": { "type": "string", "description": "The question text." },
+            "type": { "type": "string", "enum": ["nps", "likert", "multiple-choice", "open-text"] },
+            "category": { "type": "string", "description": "Category of the question (e.g., Leadership)." },
+            "options": { "type": "array", "items": { "type": "string" }, "description": "Answer choices for multiple-choice questions." }
+        },
+        "required": ["text", "type"]
+    },
+    "Survey": {
+        "title": "Survey",
+        "description": "A specific, active survey sent to employees.",
+        "type": "object",
+        "properties": {
+            "title": { "type": "string", "description": "The title of the survey." },
+            "description": { "type": "string", "description": "A brief description of the survey." },
+            "clientId": { "type": "string", "description": "The client this survey belongs to." },
+            "status": { "type": "string", "enum": ["draft", "active", "closed"], "description": "The current status of the survey." },
+            "questions": { "type": "array", "items": { "$ref": "#/entities/Question" }, "description": "A list of questions included in the survey." },
+            "isAnonymous": { "type": "boolean", "description": "Whether the survey responses are anonymous." },
+            "createdAt": { "type": "string", "format": "date-time" },
+            "opensAt": { "type": "string", "format": "date-time", "description": "When the survey becomes available for responses." },
+            "closesAt": { "type": "string", "format": "date-time", "description": "When the survey closes for responses." }
+        },
+        "required": ["title", "clientId", "status", "questions", "isAnonymous", "createdAt", "opensAt", "closesAt"]
+    },
+    "Response": {
+        "title": "Response",
+        "description": "An employee's response to a survey.",
+        "type": "object",
+        "properties": {
+            "surveyId": { "type": "string" },
+            "clientId": { "type": "string" },
+            "respondentId": { "type": ["string", "null"], "description": "The user's UID if not anonymous." },
+            "answers": { 
+                "type": "object", 
+                "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                       "questionText": {"type": "string"},
+                       "answer": {"type": ["string", "number"]}
+                    },
+                    "required": ["questionText", "answer"]
+                },
+                "description": "An object where keys are question IDs and values are the answers."
+            },
+            "submittedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["surveyId", "clientId", "answers", "submittedAt"]
     }
   },
   "auth": {
@@ -225,32 +278,37 @@
   },
   "firestore": {
     "/clients/{clientId}": {
-        "schema": {
-            "$ref": "#/entities/Client"
-        },
+        "schema": { "$ref": "#/entities/Client" },
         "description": "Stores information about each client company.",
         "subcollections": {
             "activities": {
                 "path": "/clients/{clientId}/activities/{activityId}",
-                "schema": {
-                    "$ref": "#/entities/Activity"
-                },
+                "schema": { "$ref": "#/entities/Activity" },
                 "description": "Stores all activities for a specific client (ProcessFlow product)."
             },
             "actions": {
                 "path": "/clients/{clientId}/actions/{actionId}",
-                "schema": {
-                    "$ref": "#/entities/ConsultancyAction"
-                },
+                "schema": { "$ref": "#/entities/ConsultancyAction" },
                 "description": "Stores all consultancy action items for a specific client (ProcessFlow product)."
+            },
+            "surveys": {
+                "path": "/clients/{clientId}/surveys/{surveyId}",
+                "schema": { "$ref": "#/entities/Survey" },
+                "description": "Stores all surveys for a specific client (PulseCheck product)."
             }
         }
     },
     "/users/{userId}": {
-        "schema": {
-            "$ref": "#/entities/User"
-        },
+        "schema": { "$ref": "#/entities/User" },
         "description": "Maps Firebase Auth UIDs to client IDs and product access."
+    },
+    "/pulse_check_questions/{questionId}": {
+        "schema": { "$ref": "#/entities/Question" },
+        "description": "Global repository of questions for PulseCheck, managed by consultants."
+    },
+    "/pulse_check_responses/{responseId}": {
+        "schema": { "$ref": "#/entities/Response" },
+        "description": "Collection for all anonymous and identified survey responses."
     }
   }
 }
