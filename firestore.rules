@@ -84,8 +84,9 @@ service cloud.firestore {
     match /pulse_check_responses/{responseId} {
        // Allow anyone to submit a response. This supports anonymous submissions.
        allow create: if true; 
-       // Only consultants can read the collected responses.
-       allow read: if isConsultant();
+       // Consultants can read all responses.
+       // Client members can read responses for their own client ID.
+       allow read: if isConsultant() || (resource.data.clientId != null && canAccessPulseCheck(resource.data.clientId));
        // Nobody can update or delete responses once submitted.
        allow update, delete: if false;
     }
