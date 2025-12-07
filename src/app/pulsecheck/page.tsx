@@ -4,18 +4,19 @@ import { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, where, orderBy, deleteDoc, doc, getDocs } from 'firebase/firestore';
 import { useFirestore, useClient } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { type Survey, type Response as SurveyResponse } from '@/types/activity';
+import { type Survey, type Response as SurveyResponse, type Client } from '@/types/activity';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, PlusCircle, Inbox } from 'lucide-react';
+import { Loader2, PlusCircle, Inbox, Building } from 'lucide-react';
 import { SurveyCard } from './_components/SurveyCard';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { motion } from 'framer-motion';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function PulseCheckDashboard() {
   const db = useFirestore();
-  const { clientId, isClientLoading, isConsultant } = useClient();
+  const { clientId, isClientLoading, isConsultant, setSelectedClientId } = useClient();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -31,7 +32,7 @@ export default function PulseCheckDashboard() {
 
     if (!clientId) {
       if (isConsultant) {
-        // toast({ title: "Selecione um cliente", description: "Por favor, selecione um cliente no Painel de Consultoria para ver as pesquisas." });
+        // A mensagem para o consultor agora é tratada no NoClientState
       }
       setSurveys([]);
       setResponses({});
@@ -116,20 +117,59 @@ export default function PulseCheckDashboard() {
     </Card>
   );
   
-  const NoClientState = () => (
-     <Card className="mt-8 shadow-lg dark:shadow-black/20">
-        <CardContent className="text-center py-20">
-            <div className="flex justify-center items-center mb-6">
-                <Inbox className="h-16 w-16 text-muted-foreground" />
-            </div>
-            <h2 className="text-2xl font-bold">Nenhum cliente selecionado</h2>
-            <p className="mt-2 text-muted-foreground">Vá ao Painel de Consultoria para selecionar um cliente e visualizar suas pesquisas.</p>
-            <Button className="mt-6" size="lg" onClick={() => router.push('/consultoria')}>
-                Ir para o Painel
-            </Button>
-        </CardContent>
-    </Card>
-  );
+  const NoClientState = () => {
+    const [clients, setClients] = useState<Client[]>([]);
+    const [isLoadingClients, setIsLoadingClients] = useState(true);
+
+    useEffect(() => {
+        if (!db) {
+            setIsLoadingClients(false);
+            return;
+        }
+        const fetchClients = async () => {
+            setIsLoadingClients(true);
+            try {
+                const clientsQuery = query(collection(db, 'clients'), orderBy('name', 'asc'));
+                const snapshot = await getDocs(clientsQuery);
+                setClients(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Client)));
+            } catch (error) {
+                console.error("Error fetching clients:", error);
+                toast({ title: "Erro ao buscar clientes", variant: "destructive" });
+            } finally {
+                setIsLoadingClients(false);
+            }
+        };
+        fetchClients();
+    }, [db]);
+
+     return (
+        <Card className="mt-8 shadow-lg dark:shadow-black/20">
+           <CardContent className="text-center py-20">
+               <div className="flex justify-center items-center mb-6">
+                   <Building className="h-16 w-16 text-muted-foreground" />
+               </div>
+               <h2 className="text-2xl font-bold">Selecione um Cliente</h2>
+               <p className="mt-2 text-muted-foreground max-w-md mx-auto">Como consultor(a), você precisa selecionar um cliente para visualizar ou criar pesquisas.</p>
+
+               <div className="mt-6 max-w-sm mx-auto">
+                   {isLoadingClients ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : (
+                       <Select onValueChange={setSelectedClientId}>
+                           <SelectTrigger className="w-full h-12 text-lg">
+                               <SelectValue placeholder="Escolher cliente..." />
+                           </SelectTrigger>
+                           <SelectContent>
+                               {clients.map(client => (
+                                   <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                               ))}
+                           </SelectContent>
+                       </Select>
+                   )}
+               </div>
+           </CardContent>
+       </Card>
+     );
+  };
+
 
   return (
       <div className="max-w-7xl mx-auto w-full">
