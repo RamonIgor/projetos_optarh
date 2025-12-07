@@ -19,6 +19,7 @@ service cloud.firestore {
     }
 
     function isConsultant() {
+      // Check for isConsultant flag in user profile, or if user is one of the hardcoded super-admins
       let userData = getUserData(request.auth.uid);
       let isEmailConsultant = request.auth.token.email in ['igorhenriqueramon@gmail.com', 'optarh@gmail.com'];
       return (isSignedIn() && userData.isConsultant == true) || isEmailConsultant;
@@ -59,13 +60,9 @@ service cloud.firestore {
         allow read, write: if isConsultant() || canAccessProcessFlow(clientId);
       }
       
-      match /actions/{actionId} {
-        allow read: if isConsultant() || canAccessProcessFlow(clientId);
-        allow write: if isConsultant();
-      }
-      
       // Subcollections for PulseCheck
       match /surveys/{surveyId} {
+        // Consultants can manage all surveys, client members can only read them
         allow read: if isConsultant() || canAccessPulseCheck(clientId);
         allow write: if isConsultant();
       }
@@ -81,20 +78,11 @@ service cloud.firestore {
     
     match /pulse_check_responses/{responseId} {
        // Allow anyone to submit a response. This supports anonymous submissions.
-       // They cannot read, update, or delete any responses.
        allow create: if true; 
-       allow read, update, delete: if false;
-    }
-
-    // --- Deprecated Collections (for migration if needed) ---
-    match /activities/{activityId} {
-      allow read, write, delete: if isConsultant();
-    }
-    match /consultancy-actions/{actionId} {
-       allow read, write, delete: if isConsultant();
-    }
-    match /rh-dp-activities/{activityId} {
-       allow read, write, delete: if isConsultant();
+       // Only consultants can read the collected responses.
+       allow read: if isConsultant();
+       // Nobody can update or delete responses once submitted.
+       allow update, delete: if false;
     }
   }
 }
