@@ -76,8 +76,9 @@ service cloud.firestore {
     // --- PulseCheck Specific Collections ---
     
     match /pulse_check_questions/{questionId} {
-      // Questions are global templates managed only by consultants
-      allow read: if isSignedIn(); // Any signed-in user can read question templates
+      // Questions are global templates. Any signed-in user can read them to build a survey.
+      allow get, list: if isSignedIn(); 
+      // Only consultants can create, update, or delete question templates.
       allow write: if isConsultant();
     }
     
