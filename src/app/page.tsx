@@ -55,17 +55,6 @@ export default function ProductPortalPage() {
     }
   }, [user, isLoading, router]);
 
-  useEffect(() => {
-    if (!isLoading && userProfile?.products?.length === 1 && !isConsultant) {
-        const singleProductKey = userProfile.products[0] as ProductKey;
-        const product = allProducts[singleProductKey];
-        if (product && product.href !== '#') {
-            router.replace(product.href);
-        }
-    }
-  }, [isLoading, userProfile, isConsultant, router]);
-
-
   if (isLoading || isLoggingOut) {
     return (
       <div className="flex items-center justify-center min-h-screen w-full bg-gradient-to-br from-cyan-50 to-blue-100 dark:from-slate-900 dark:to-blue-950">
