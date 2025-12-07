@@ -60,16 +60,7 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
 
         const handleUserProfile = (profileData: UserProfile | undefined) => {
             if (profileData) {
-                // Check for legacy users who don't have the 'products' field.
-                if (!profileData.hasOwnProperty('products')) {
-                    // This is a legacy user. Grant them access to process_flow in memory
-                    // without writing to the database to avoid permission issues.
-                    // The consultant can later migrate this user profile.
-                    const migratedProfile: UserProfile = { ...profileData, products: ['process_flow'] };
-                    setUserProfile(migratedProfile);
-                } else {
-                    setUserProfile(profileData);
-                }
+                setUserProfile(profileData);
 
                 if (profileData.isConsultant) {
                     setUserNativeClientId(null);
