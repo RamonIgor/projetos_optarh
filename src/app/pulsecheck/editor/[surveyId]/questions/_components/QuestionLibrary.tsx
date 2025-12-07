@@ -41,13 +41,16 @@ export function QuestionLibrary({ libraryQuestions, onAdd, onCreateCustom }: Que
 
   const categories = useMemo(() => {
     const existingCategories = Object.keys(groupedQuestions);
-    return categoryOrder.filter(cat => existingCategories.includes(cat));
+    const orderedCategories = categoryOrder.filter(cat => existingCategories.includes(cat));
+    const otherCategories = existingCategories.filter(cat => !categoryOrder.includes(cat)).sort();
+    return [...orderedCategories, ...otherCategories];
   }, [groupedQuestions]);
+
 
   return (
     <Card className="flex flex-col h-full">
       <CardHeader>
-        <CardTitle>Biblioteca de Perguntas</CardTitle>
+        <CardTitle className="whitespace-nowrap">Biblioteca de Perguntas</CardTitle>
         <CardDescription>Adicione perguntas prontas ou crie a sua.</CardDescription>
       </CardHeader>
       <ScrollArea className="flex-grow">
@@ -59,12 +62,12 @@ export function QuestionLibrary({ libraryQuestions, onAdd, onCreateCustom }: Que
                 <AccordionContent>
                     <div className="space-y-2">
                     {groupedQuestions[category].sort((a, b) => a.order - b.order).map(q => (
-                        <div key={q.id} className="flex items-center justify-between gap-2 p-2 rounded-md hover:bg-muted">
-                        <p className="text-sm text-muted-foreground flex-1">{q.text}</p>
-                        <Button variant="ghost" size="sm" onClick={() => onAdd(q)}>
-                            <Plus className="h-4 w-4 mr-1" />
-                            Adicionar
-                        </Button>
+                        <div key={q.id} className="flex items-start justify-between gap-4 p-2 rounded-md hover:bg-muted">
+                            <p className="text-sm text-muted-foreground flex-1 pt-1.5">{q.text}</p>
+                            <Button variant="ghost" size="sm" onClick={() => onAdd(q)} className="shrink-0">
+                                <Plus className="h-4 w-4 mr-1" />
+                                Adicionar
+                            </Button>
                         </div>
                     ))}
                     </div>
