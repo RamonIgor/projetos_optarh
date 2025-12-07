@@ -5,7 +5,7 @@ import { signOut } from 'firebase/auth';
 import { useAuth, useUser, useClient } from '@/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { LogOut, LayoutGrid, ListTodo, BarChart3, Shuffle, PlayCircle, Settings, Rows, Menu, UserPlus, KeyRound, Workflow, AreaChart, PlusCircle } from 'lucide-react';
+import { LogOut, LayoutGrid, ListTodo, BarChart3, Shuffle, PlayCircle, Settings, Rows, Menu, UserPlus, KeyRound, Workflow, AreaChart, PlusCircle, Wrench } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
@@ -181,8 +181,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const consultancyButton = (
     isConsultant ? (
         <Button variant={pathname === '/consultoria' ? 'outline' : 'ghost'} onClick={() => { router.push('/consultoria'); if(mobileMenuOpen) setMobileMenuOpen(false); }} className="w-full justify-start">
-            <Rows className="mr-2 h-4 w-4" />
-            Painel de Consultoria
+            <Wrench className="mr-2 h-4 w-4" />
+            Painel
         </Button>
     ) : null
   );
