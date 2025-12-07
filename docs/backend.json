@@ -3,35 +3,47 @@
   "entities": {
     "Client": {
       "title": "Client",
-      "description": "Represents a client company.",
+      "description": "Representa uma empresa cliente que utiliza os produtos da OptaRH. Originalmente 'Company'.",
       "type": "object",
       "properties": {
         "name": {
           "type": "string",
-          "description": "The name of the client company."
+          "description": "O nome da empresa cliente."
         },
         "logoUrl": {
           "type": ["string", "null"],
-          "description": "URL for the client's logo."
+          "description": "URL para o logo do cliente."
         },
-        "userIds": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "List of Firebase Auth user IDs associated with this client."
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp de quando o cliente foi cadastrado."
+        },
+        "pulseCheckSettings": {
+          "type": ["object", "null"],
+          "description": "Configurações específicas para o produto PulseCheck.",
+          "properties": {
+            "allowAnonymous": {
+              "type": "boolean",
+              "description": "Define se as respostas às pesquisas podem ser anônimas."
+            },
+            "defaultSurveyDurationDays": {
+              "type": "number",
+              "description": "Duração padrão em dias para as pesquisas ativas."
+            }
+          }
         }
       },
-      "required": ["name"]
+      "required": ["name", "createdAt"]
     },
     "User": {
         "title": "User",
-        "description": "Maps a Firebase Auth user to a client and their product access.",
+        "description": "Mapeia um usuário do Firebase Auth a um cliente, seus produtos e seu papel. Unifica 'master' e 'employee' roles sob o booleano 'isConsultant' ou futuras permissões.",
         "type": "object",
         "properties": {
             "clientId": {
                 "type": "string",
-                "description": "The ID of the client this user belongs to."
+                "description": "O ID do 'Client' (empresa) ao qual este usuário pertence."
             },
             "products": {
                 "type": "array",
@@ -39,236 +51,122 @@
                     "type": "string",
                     "enum": ["process_flow", "pulse_check"]
                 },
-                "description": "List of products this user has access to."
+                "description": "Lista de produtos aos quais este usuário tem acesso."
             },
             "isConsultant": {
                 "type": "boolean",
-                "description": "Defines if the user is a consultant with broader access."
+                "description": "Define se o usuário é um consultor (master) com acesso amplo ou um usuário padrão do cliente."
+            },
+            "email": {
+              "type": "string",
+              "format": "email",
+              "description": "O email do usuário, para referência."
+            },
+            "name": {
+              "type": ["string", "null"],
+              "description": "O nome do usuário."
+            },
+            "department": {
+              "type": ["string", "null"],
+              "description": "Departamento do usuário dentro da empresa cliente."
             }
         },
-        "required": ["clientId", "products", "isConsultant"]
-    },
-    "ActivityComment": {
-      "title": "Activity Comment",
-      "description": "A comment on an activity.",
-      "type": "object",
-      "properties": {
-        "autor": {
-          "type": "string",
-          "description": "The author of the comment."
-        },
-        "texto": {
-          "type": "string",
-          "description": "The text content of the comment."
-        },
-        "data": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The timestamp when the comment was created."
-        }
-      },
-      "required": ["autor", "texto", "data"]
+        "required": ["clientId", "products", "isConsultant", "email"]
     },
     "Activity": {
       "title": "Activity",
-      "description": "Represents a task or activity for HR/DP departments.",
+      "description": "Representa uma tarefa ou atividade para o produto ProcessFlow.",
       "type": "object",
       "properties": {
-        "nome": {
-          "type": "string",
-          "description": "The name of the activity."
-        },
-        "categoria": {
-          "type": ["string", "null"],
-          "enum": ["DP", "RH", "Compartilhado", null],
-          "description": "The category the activity belongs to."
-        },
-        "justificativa": {
-          "type": ["string", "null"],
-          "description": "The justification for the activity."
-        },
-        "responsavel": {
-          "type": ["string", "null"],
-          "description": "The person or department responsible for the activity."
-        },
-        "recorrencia": {
-          "type": ["string", "null"],
-          "enum": ["Diária", "Semanal", "Mensal", "Trimestral", "Anual", "Sob demanda", null],
-          "description": "The recurrence frequency of the activity."
-        },
-        "status": {
-          "type": "string",
-          "enum": ["brainstorm", "aguardando_consenso", "aprovada"],
-          "description": "The current status of the activity."
-        },
-        "comentarios": {
-          "type": "array",
-          "items": {
-            "$ref": "#/entities/ActivityComment"
-          },
-          "description": "A list of comments on the activity."
-        },
-        "dataAprovacao": {
-          "type": ["string", "null"],
-          "format": "date-time",
-          "description": "The approval date of the activity."
-        },
-        "ultimaExecucao": {
-          "type": ["string", "null"],
-          "format": "date-time",
-          "description": "The last execution date of the activity."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The creation date of the activity."
-        },
-        "statusTransicao": {
-            "type": "string",
-            "enum": ["a_transferir", "em_transicao", "concluida"],
-            "description": "The transition status of the activity."
-        },
-        "responsavelAnterior": {
-            "type": ["string", "null"],
-            "description": "The previous responsible person for the activity."
-        },
-        "dataInicioTransicao": {
-            "type": ["string", "null"],
-            "format": "date-time",
-            "description": "The start date of the transition."
-        },
-        "dataConclusaoTransicao": {
-            "type": ["string", "null"],
-            "format": "date-time",
-            "description": "The conclusion date of the transition."
-        },
-        "prazoTransicao": {
-            "type": ["string", "null"],
-            "format": "date-time",
-            "description": "The deadline for the transition."
-        },
-        "historicoExecucoes": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "description": "A history of the last execution dates of the activity."
-        },
-        "parentId": {
-          "type": ["string", "null"],
-          "description": "The ID of the parent activity, if this is a sub-task."
-        }
+        "nome": { "type": "string" },
+        "categoria": { "type": ["string", "null"], "enum": ["DP", "RH", "Compartilhado", null] },
+        "status": { "type": "string", "enum": ["brainstorm", "aguardando_consenso", "aprovada"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "statusTransicao": { "type": "string", "enum": ["a_transferir", "em_transicao", "concluida"] },
+        "justificativa": { "type": ["string", "null"] },
+        "responsavel": { "type": ["string", "null"] },
+        "recorrencia": { "type": ["string", "null"], "enum": ["Diária", "Semanal", "Mensal", "Trimestral", "Anual", "Sob demanda", null] },
+        "dataAprovacao": { "type": ["string", "null"], "format": "date-time" },
+        "parentId": { "type": ["string", "null"] }
       },
       "required": ["nome", "status", "createdAt", "statusTransicao"]
     },
-    "ConsultancyAction": {
-      "title": "Consultancy Action",
-      "description": "Represents an action item defined by the consultancy.",
-      "type": "object",
-      "properties": {
-        "acao": {
-          "type": "string",
-          "description": "The name or title of the action."
-        },
-        "como_sera_realizada": {
-          "type": "string",
-          "description": "Description of how the action will be carried out."
-        },
-        "responsavel": {
-          "type": "string",
-          "description": "The person or department responsible for the action."
-        },
-        "data_inicio": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The start date of the action."
-        },
-        "data_termino": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The planned end date of the action."
-        },
-        "prazo_realizado": {
-          "type": ["string", "null"],
-          "format": "date-time",
-          "description": "The actual completion date of the action."
-        },
-        "percentual_concluido": {
-          "type": "number",
-          "description": "The actual percentage of completion."
-        },
-        "percentual_planejado": {
-          "type": "number",
-          "description": "The planned percentage of completion for the current date."
-        },
-        "status": {
-          "type": "string",
-          "enum": ["nao_iniciada", "em_andamento", "concluida", "atrasada", "cancelada"],
-          "description": "The current status of the action."
-        },
-        "observacoes": {
-          "type": "string",
-          "description": "General observations or notes."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The creation date of the action."
-        }
-      },
-      "required": ["acao", "responsavel", "data_inicio", "data_termino", "percentual_concluido", "percentual_planejado", "status", "createdAt"]
-    },
     "Question": {
         "title": "Question",
-        "description": "A single question that can be used in a survey.",
+        "description": "Representa uma única pergunta que pode ser reutilizada em diferentes pesquisas (surveys).",
         "type": "object",
         "properties": {
-            "text": { "type": "string", "description": "The question text." },
-            "type": { "type": "string", "enum": ["nps", "likert", "multiple-choice", "open-text"] },
-            "category": { "type": "string", "description": "Category of the question (e.g., Leadership)." },
-            "options": { "type": "array", "items": { "type": "string" }, "description": "Answer choices for multiple-choice questions." }
+            "text": { 
+              "type": "string", 
+              "description": "O texto da pergunta (e.g., 'Em uma escala de 0 a 10, o quanto você recomendaria nossa empresa...?')." 
+            },
+            "type": { 
+              "type": "string", 
+              "enum": ["nps", "likert", "multiple-choice", "open-text"],
+              "description": "O tipo de pergunta."
+            },
+            "category": { 
+              "type": "string", 
+              "description": "A categoria da pergunta para fins de agrupamento e análise (e.g., Liderança, Comunicação, Ambiente de Trabalho)." 
+            },
+            "options": { 
+              "type": ["array", "null"], 
+              "items": { "type": "string" }, 
+              "description": "Um array de strings contendo as opções de resposta para perguntas do tipo 'multiple-choice'." 
+            },
+            "createdBy": {
+              "type": "string",
+              "description": "UID do consultor que criou a pergunta."
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            }
         },
-        "required": ["text", "type"]
+        "required": ["text", "type", "category", "createdBy", "createdAt"]
     },
     "Survey": {
         "title": "Survey",
-        "description": "A specific, active survey sent to employees.",
+        "description": "Representa uma pesquisa específica e ativa, enviada a uma empresa cliente.",
         "type": "object",
         "properties": {
-            "title": { "type": "string", "description": "The title of the survey." },
-            "description": { "type": "string", "description": "A brief description of the survey." },
-            "clientId": { "type": "string", "description": "The client this survey belongs to." },
-            "status": { "type": "string", "enum": ["draft", "active", "closed"], "description": "The current status of the survey." },
-            "questions": { "type": "array", "items": { "$ref": "#/entities/Question" }, "description": "A list of questions included in the survey." },
-            "isAnonymous": { "type": "boolean", "description": "Whether the survey responses are anonymous." },
+            "title": { "type": "string", "description": "O título da pesquisa (e.g., 'Pesquisa de Clima Q3 2024')." },
+            "description": { "type": "string", "description": "Uma breve descrição sobre o objetivo da pesquisa." },
+            "clientId": { "type": "string", "description": "ID da empresa ('Client') para a qual a pesquisa se destina." },
+            "status": { "type": "string", "enum": ["draft", "active", "closed"], "description": "O estado atual da pesquisa." },
+            "questionIds": { 
+              "type": "array", 
+              "items": { "type": "string" }, 
+              "description": "Um array de IDs de perguntas, referenciando documentos da coleção 'pulse_check_questions'."
+            },
+            "isAnonymous": { "type": "boolean", "description": "Define se as respostas para esta pesquisa específica são anônimas ou identificadas." },
             "createdAt": { "type": "string", "format": "date-time" },
-            "opensAt": { "type": "string", "format": "date-time", "description": "When the survey becomes available for responses." },
-            "closesAt": { "type": "string", "format": "date-time", "description": "When the survey closes for responses." }
+            "opensAt": { "type": "string", "format": "date-time", "description": "Data e hora em que a pesquisa se torna ativa e aceita respostas." },
+            "closesAt": { "type": "string", "format": "date-time", "description": "Data e hora em que a pesquisa é fechada." }
         },
-        "required": ["title", "clientId", "status", "questions", "isAnonymous", "createdAt", "opensAt", "closesAt"]
+        "required": ["title", "clientId", "status", "questionIds", "isAnonymous", "createdAt", "opensAt", "closesAt"]
     },
     "Response": {
         "title": "Response",
-        "description": "An employee's response to a survey.",
+        "description": "Armazena a resposta de um único colaborador a uma pesquisa completa.",
         "type": "object",
         "properties": {
-            "surveyId": { "type": "string" },
-            "clientId": { "type": "string" },
-            "respondentId": { "type": ["string", "null"], "description": "The user's UID if not anonymous." },
+            "surveyId": { "type": "string", "description": "ID da pesquisa ('Survey') à qual esta resposta pertence." },
+            "clientId": { "type": "string", "description": "ID da empresa ('Client') para fácil filtragem dos resultados." },
+            "respondentId": { "type": ["string", "null"], "description": "O UID do usuário que respondeu. É 'null' se a pesquisa for anônima." },
             "answers": { 
                 "type": "object", 
                 "additionalProperties": {
                     "type": "object",
                     "properties": {
-                       "questionText": {"type": "string"},
-                       "answer": {"type": ["string", "number"]}
+                       "questionText": {"type": "string", "description": "Cópia do texto da pergunta no momento da resposta."},
+                       "answer": {"type": ["string", "number"], "description": "A resposta fornecida pelo usuário (e.g., 10, 'Concordo', 'Opção A', 'Texto livre...')."}
                     },
                     "required": ["questionText", "answer"]
                 },
-                "description": "An object where keys are question IDs and values are the answers."
+                "description": "Um objeto onde as chaves são os IDs das perguntas ('questionId') e os valores são os objetos contendo a resposta."
             },
-            "submittedAt": { "type": "string", "format": "date-time" }
+            "submittedAt": { "type": "string", "format": "date-time", "description": "Timestamp de quando a resposta foi enviada." }
         },
         "required": ["surveyId", "clientId", "answers", "submittedAt"]
     }
@@ -279,36 +177,31 @@
   "firestore": {
     "/clients/{clientId}": {
         "schema": { "$ref": "#/entities/Client" },
-        "description": "Stores information about each client company.",
+        "description": "Armazena informações sobre cada empresa cliente. Substitui a antiga 'companies'.",
         "subcollections": {
             "activities": {
                 "path": "/clients/{clientId}/activities/{activityId}",
                 "schema": { "$ref": "#/entities/Activity" },
-                "description": "Stores all activities for a specific client (ProcessFlow product)."
-            },
-            "actions": {
-                "path": "/clients/{clientId}/actions/{actionId}",
-                "schema": { "$ref": "#/entities/ConsultancyAction" },
-                "description": "Stores all consultancy action items for a specific client (ProcessFlow product)."
+                "description": "Atividades do ProcessFlow para um cliente específico."
             },
             "surveys": {
                 "path": "/clients/{clientId}/surveys/{surveyId}",
                 "schema": { "$ref": "#/entities/Survey" },
-                "description": "Stores all surveys for a specific client (PulseCheck product)."
+                "description": "Pesquisas do PulseCheck para um cliente específico."
             }
         }
     },
     "/users/{userId}": {
         "schema": { "$ref": "#/entities/User" },
-        "description": "Maps Firebase Auth UIDs to client IDs and product access."
+        "description": "Mapeia Firebase Auth UIDs a clientes, produtos e permissões."
     },
     "/pulse_check_questions/{questionId}": {
         "schema": { "$ref": "#/entities/Question" },
-        "description": "Global repository of questions for PulseCheck, managed by consultants."
+        "description": "Repositório global de perguntas para o PulseCheck, gerenciado por consultores. Permite a reutilização de perguntas em várias pesquisas e clientes."
     },
     "/pulse_check_responses/{responseId}": {
         "schema": { "$ref": "#/entities/Response" },
-        "description": "Collection for all anonymous and identified survey responses."
+        "description": "Coleção global para todas as respostas (anônimas ou identificadas). Separada para garantir que as regras de segurança permitam escrita anônima sem expor outras respostas."
     }
   }
 }
