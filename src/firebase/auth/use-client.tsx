@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
@@ -26,6 +25,12 @@ const ClientContext = createContext<ClientContextValue>({
     setSelectedClientId: () => {},
 });
 
+const getInitialConsultantId = (): string | null => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('consultant_selected_client_id');
+}
+
+
 export const ClientProvider = ({ children }: { children: ReactNode }) => {
     const { user, loading: userLoading } = useUser();
     const db = useFirestore();
@@ -34,13 +39,14 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
     const [isClientLoading, setClientLoading] = useState(true);
     
     const [userNativeClientId, setUserNativeClientId] = useState<string | null>(null);
-    const [consultantSelectedClientId, setConsultantSelectedClientId] = useState<string | null>(null);
+    const [consultantSelectedClientId, setConsultantSelectedClientId] = useState<string | null>(getInitialConsultantId());
 
     const isConsultant = userProfile?.isConsultant || false;
 
     useEffect(() => {
         if (!user) {
             setConsultantSelectedClientId(null);
+            localStorage.removeItem('consultant_selected_client_id');
         }
     }, [user]);
 
@@ -101,12 +107,14 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
     const handleSetSelectedClientId = useCallback((id: string | null) => {
         if (isConsultant) {
             setConsultantSelectedClientId(id);
+            if (id) {
+                localStorage.setItem('consultant_selected_client_id', id);
+            } else {
+                localStorage.removeItem('consultant_selected_client_id');
+            }
         }
     }, [isConsultant]);
 
-    // This is the active client ID for the entire app.
-    // If the user is a consultant, it's the client they have selected in the UI.
-    // If they are a client_user, it's always their own company's client ID.
     const activeClientId = isConsultant ? consultantSelectedClientId : userNativeClientId;
 
     return (

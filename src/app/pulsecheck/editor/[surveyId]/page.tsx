@@ -63,7 +63,7 @@ export default function SurveyEditorPage() {
   
   const router = useRouter();
   const db = useFirestore();
-  const { clientId, selectedClientId, isConsultant } = useClient();
+  const { clientId } = useClient();
   const { toast } = useToast();
 
   const [isLoading, setIsLoading] = useState(!isNewSurvey);
@@ -81,14 +81,12 @@ export default function SurveyEditorPage() {
     }
   });
 
-  const effectiveClientId = isConsultant ? selectedClientId : clientId;
-
   useEffect(() => {
-    if (!isNewSurvey && effectiveClientId && db) {
+    if (!isNewSurvey && clientId && db) {
       const fetchSurvey = async () => {
         setIsLoading(true);
         try {
-          const docRef = doc(db, 'clients', effectiveClientId, 'surveys', surveyId as string);
+          const docRef = doc(db, 'clients', clientId, 'surveys', surveyId as string);
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
             const surveyData = docSnap.data() as Survey;
@@ -110,22 +108,22 @@ export default function SurveyEditorPage() {
       };
       fetchSurvey();
     }
-  }, [surveyId, effectiveClientId, db, router, form, toast, isNewSurvey]);
+  }, [surveyId, clientId, db, router, form, toast, isNewSurvey]);
 
   const onSubmit = (data: SurveyFormValues) => {
-    if (!effectiveClientId || !db) {
-        toast({ title: "Cliente não identificado. Não é possível salvar.", variant: "destructive" });
+    if (!clientId || !db) {
+        toast({ title: "Cliente não identificado. Não é possível salvar.", description: "Por favor, selecione um cliente no painel de consultoria antes de continuar.", variant: "destructive" });
         return;
     }
 
     startSaving(async () => {
       try {
         const idToSave = isNewSurvey ? doc(collection(db, 'clients')).id : surveyId as string;
-        const docRef = doc(db, 'clients', effectiveClientId, 'surveys', idToSave);
+        const docRef = doc(db, 'clients', clientId, 'surveys', idToSave);
 
         const surveyData: Partial<Survey> = {
           ...data,
-          clientId: effectiveClientId,
+          clientId: clientId,
           status: 'draft', // Sempre salva como rascunho no passo 1
           questionIds: [], // Será preenchido no passo 2
         };
