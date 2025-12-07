@@ -76,7 +76,8 @@ export default function ProductPortalPage() {
                 const product = allProducts[productKey as ProductKey];
                 if (!product) return null;
                 
-                const hasAccess = isConsultant || userProfile?.products?.includes(productKey);
+                // Visual logic: Does the user's profile explicitly list this product?
+                const hasAccess = userProfile?.products?.includes(productKey) || isConsultant;
 
                 return (
                     <div key={productKey} className="relative">
@@ -128,4 +129,3 @@ export default function ProductPortalPage() {
     </div>
   );
 }
-
