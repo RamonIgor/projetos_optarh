@@ -4,7 +4,7 @@ import { signOut } from 'firebase/auth';
 import { useAuth, useUser, useClient } from '@/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { LogOut, LayoutGrid, ListTodo, BarChart3, Shuffle, PlayCircle, Settings, Rows, Menu, UserPlus, KeyRound, Workflow, AreaChart } from 'lucide-react';
+import { LogOut, LayoutGrid, ListTodo, BarChart3, Shuffle, PlayCircle, Settings, Rows, Menu, UserPlus, KeyRound, Workflow, AreaChart, Files } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
@@ -68,7 +68,6 @@ const ProcessFlowNav = () => {
     { href: '/processflow/dashboard', label: 'Dashboard', icon: BarChart3, disabled: !hasActivities },
   ];
   
-  // Conditionally render the nav based on the pathname
   if (!pathname.startsWith('/processflow')) {
     return null;
   }
@@ -175,6 +174,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
   };
   
   const isProcessFlow = pathname.startsWith('/processflow');
+  const isPulseCheck = pathname.startsWith('/pulsecheck');
+
+  const productName = useMemo(() => {
+    if (isProcessFlow) return 'ProcessFlow';
+    if (isPulseCheck) return 'PulseCheck';
+    return null;
+  }, [isProcessFlow, isPulseCheck]);
 
   const consultancyButton = (
     isConsultant ? (
@@ -226,8 +232,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <Link href="/">
             <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} className="cursor-pointer" unoptimized/>
           </Link>
-          <ProcessFlowNav />
-          <PulseCheckNav />
+          {productName && (
+              <div className="hidden sm:flex items-center gap-2 text-muted-foreground">
+                  <span className="text-lg">/</span>
+                  <span className="font-medium text-foreground">{productName}</span>
+              </div>
+          )}
+          <div className="flex-1 flex justify-center">
+            <ProcessFlowNav />
+            <PulseCheckNav />
+          </div>
         </div>
         <div className="hidden sm:flex items-center gap-2">
             {consultancyButton}

@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
-  title: 'ProcessFlow',
+  title: 'Soluções OptaRH',
   description: 'Estruture o fluxo de trabalho do seu time, da ideia à rotina.',
 };
 
