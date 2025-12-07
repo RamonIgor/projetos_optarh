@@ -6,7 +6,7 @@ import { useFirestore, useClient } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { type Survey, type Response as SurveyResponse } from '@/types/activity';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, PlusCircle, Inbox } from 'lucide-react';
 import { SurveyCard } from './_components/SurveyCard';
 import { useToast } from '@/hooks/use-toast';
@@ -31,7 +31,7 @@ export default function PulseCheckDashboard() {
 
     if (!clientId) {
       if (isConsultant) {
-        toast({ title: "Selecione um cliente", description: "Por favor, selecione um cliente no Painel de Consultoria para ver as pesquisas." });
+        // toast({ title: "Selecione um cliente", description: "Por favor, selecione um cliente no Painel de Consultoria para ver as pesquisas." });
       }
       setSurveys([]);
       setResponses({});
