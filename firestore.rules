@@ -64,7 +64,7 @@ service cloud.firestore {
       match /surveys/{surveyId} {
         // Consultants can manage all surveys, client members can only read them
         allow read: if isConsultant() || canAccessPulseCheck(clientId);
-        allow write: if isConsultant();
+        allow write: if isConsultant() || canAccessPulseCheck(clientId);
       }
       
       // Subcollection for Consultancy Actions
@@ -93,7 +93,11 @@ service cloud.firestore {
        );
        // Consultants can delete responses, but no one can update them.
        allow update: if false;
-       allow delete: if isConsultant();
+       allow delete: if isConsultant() || (
+         isSignedIn() &&
+         getUserData(request.auth.uid).clientId == resource.data.clientId &&
+         hasProductAccess('pulse_check')
+       );
     }
   }
 }
