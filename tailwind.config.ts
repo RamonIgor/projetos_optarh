@@ -65,6 +65,11 @@ export default {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))',
         },
+        amber: {
+          '500': '#f59e0b',
+          '300': '#fcd34d',
+          '100': '#fef3c7',
+        }
       },
       borderRadius: {
         lg: 'var(--radius)',

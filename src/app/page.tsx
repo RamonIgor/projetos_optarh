@@ -20,12 +20,14 @@ const allProducts = {
     description: 'Estruture o fluxo de trabalho do seu time, da ideia à rotina.',
     href: '/processflow/brainstorm',
     icon: <Box className="h-6 w-6 text-primary"/>,
+    color: 'primary',
   },
   pesquisa_clima: {
     name: 'Pesquisa de Clima',
     description: 'Entenda e melhore o ambiente de trabalho da sua equipe.',
     href: '#', // Rota futura
     icon: <Sparkles className="h-6 w-6 text-amber-500" />,
+    color: 'amber',
   },
 };
 
@@ -36,7 +38,7 @@ export default function ProductPortalPage() {
   const router = useRouter();
   const auth = useAuth();
   const { user, loading: userLoading } = useUser();
-  const { userProfile, isClientLoading } = useClient();
+  const { userProfile, isClientLoading, isConsultant } = useClient();
 
   const isLoading = userLoading || isClientLoading;
   
@@ -54,14 +56,14 @@ export default function ProductPortalPage() {
 
   // Se for um usuário cliente e tiver apenas um produto, redireciona direto
   useEffect(() => {
-    if (!isLoading && userProfile?.products?.length === 1) {
+    if (!isLoading && userProfile?.products?.length === 1 && !isConsultant) {
         const singleProductKey = userProfile.products[0] as ProductKey;
         const product = allProducts[singleProductKey];
         if (product && product.href !== '#') {
             router.replace(product.href);
         }
     }
-  }, [isLoading, userProfile, router]);
+  }, [isLoading, userProfile, isConsultant, router]);
 
 
   if (isLoading) {
@@ -92,33 +94,45 @@ export default function ProductPortalPage() {
                 const product = allProducts[productKey as ProductKey];
                 if (!product) return null;
                 
-                // Visual logic: Does the user's profile explicitly list this product?
-                const hasAccess = userProfile?.products?.includes(productKey);
+                const hasAccess = isConsultant || userProfile?.products?.includes(productKey);
 
                 return (
-                    <div key={productKey} className="relative">
+                    <div key={productKey} className="relative group">
                         <Card 
                             className={cn(
-                              "transition-all duration-300 h-full flex flex-col", 
-                              hasAccess && "hover:shadow-xl hover:-translate-y-1",
-                              !hasAccess && "bg-background/50 opacity-80"
+                              "transition-all duration-300 h-full flex flex-col border-2", 
+                              hasAccess ? "border-transparent bg-card" : "border-dashed bg-card/50",
+                              hasAccess && "hover:shadow-xl hover:-translate-y-1"
                             )}
                         >
                             <CardHeader>
-                                <div className="flex items-center gap-4">
-                                    <div className={cn("p-3 rounded-full", hasAccess ? "bg-primary/10" : "bg-muted")}>
-                                        {product.icon}
+                                <div className="flex items-start justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className={cn(
+                                            "p-3 rounded-full", 
+                                            hasAccess ? `bg-${product.color}/10` : 'bg-muted'
+                                        )}>
+                                            {product.icon}
+                                        </div>
+                                        <div>
+                                            <CardTitle className="text-2xl">{product.name}</CardTitle>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <CardTitle className="text-2xl">{product.name}</CardTitle>
-                                        <CardDescription>{product.description}</CardDescription>
-                                    </div>
+                                    {!hasAccess && (
+                                        <Badge className="text-sm px-3 py-1 bg-amber-500 text-white shadow-lg border-2 border-amber-300">
+                                            Contrate
+                                        </Badge>
+                                    )}
                                 </div>
+                                 <CardDescription className="pt-2">{product.description}</CardDescription>
                             </CardHeader>
                             <CardContent className="mt-auto">
                                  <Button 
                                     onClick={() => hasAccess && product.href !== '#' && router.push(product.href)} 
-                                    className="w-full text-lg h-12 group"
+                                    className={cn(
+                                        "w-full text-lg h-12",
+                                        hasAccess && `bg-${product.color} hover:bg-${product.color}/90 text-white`
+                                    )}
                                     disabled={!hasAccess || product.href === '#'}
                                     variant={hasAccess ? 'default' : 'secondary'}
                                  >
@@ -133,11 +147,6 @@ export default function ProductPortalPage() {
                                 </Button>
                             </CardContent>
                         </Card>
-                        {!hasAccess && (
-                            <Badge className="absolute -top-3 -right-3 text-sm px-3 py-1 bg-amber-500 text-white shadow-lg border-2 border-amber-300">
-                                Contrate
-                            </Badge>
-                        )}
                     </div>
                 );
             })}
