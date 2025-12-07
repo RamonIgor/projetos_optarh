@@ -5,12 +5,14 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase/auth/use-user';
 import { useClient } from '@/firebase/auth/use-client';
-import { Loader2, Box, ArrowRight, Sparkles } from 'lucide-react';
+import { Loader2, Box, ArrowRight, Sparkles, LogOut } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/firebase';
+import { signOut } from 'firebase/auth';
 
 const allProducts = {
   process_flow: {
@@ -32,11 +34,18 @@ type ProductKey = keyof typeof allProducts;
 
 export default function ProductPortalPage() {
   const router = useRouter();
+  const auth = useAuth();
   const { user, loading: userLoading } = useUser();
-  const { userProfile, isClientLoading, isConsultant } = useClient();
+  const { userProfile, isClientLoading } = useClient();
 
   const isLoading = userLoading || isClientLoading;
   
+  const handleLogout = async () => {
+    if (!auth) return;
+    await signOut(auth);
+    router.push('/login');
+  };
+
   useEffect(() => {
     if (!isLoading && !user) {
       router.replace('/login');
@@ -45,14 +54,14 @@ export default function ProductPortalPage() {
 
   // Se for um usuário cliente e tiver apenas um produto, redireciona direto
   useEffect(() => {
-    if (!isLoading && !isConsultant && userProfile?.products?.length === 1) {
+    if (!isLoading && userProfile?.products?.length === 1) {
         const singleProductKey = userProfile.products[0] as ProductKey;
         const product = allProducts[singleProductKey];
         if (product && product.href !== '#') {
             router.replace(product.href);
         }
     }
-  }, [isLoading, isConsultant, userProfile, router]);
+  }, [isLoading, userProfile, router]);
 
 
   if (isLoading) {
@@ -64,10 +73,17 @@ export default function ProductPortalPage() {
   }
   
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen w-full bg-gradient-to-br from-cyan-50 to-blue-100 dark:from-slate-900 dark:to-blue-950 p-4">
+    <div className="flex flex-col min-h-screen w-full bg-gradient-to-br from-cyan-50 to-blue-100 dark:from-slate-900 dark:to-blue-950">
+      <header className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+        <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} unoptimized />
+        <Button variant="ghost" onClick={handleLogout}>
+          <LogOut className="mr-2 h-4 w-4" />
+          Sair
+        </Button>
+      </header>
+      <main className="flex flex-1 flex-col items-center justify-center p-4">
         <div className="text-center mb-12">
-            <Image src="/optarh-logo.png" alt="OptaRH Logo" width={220} height={70} unoptimized className="mx-auto" />
-            <h1 className="text-4xl font-bold text-foreground mt-4">Portal de Soluções</h1>
+            <h1 className="text-4xl font-bold text-foreground">Portal de Soluções</h1>
             <p className="mt-2 text-lg text-muted-foreground">Selecione o produto que deseja acessar.</p>
         </div>
 
@@ -77,7 +93,7 @@ export default function ProductPortalPage() {
                 if (!product) return null;
                 
                 // Visual logic: Does the user's profile explicitly list this product?
-                const hasAccess = userProfile?.products?.includes(productKey) || isConsultant;
+                const hasAccess = userProfile?.products?.includes(productKey);
 
                 return (
                     <div key={productKey} className="relative">
@@ -126,6 +142,7 @@ export default function ProductPortalPage() {
                 );
             })}
         </div>
+      </main>
     </div>
   );
 }
