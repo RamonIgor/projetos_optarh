@@ -69,7 +69,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
 
   const consultancyButton = (
     isAuthorized ? (
-        <Button variant={pathname === '/consultoria' ? 'outline' : 'ghost'} onClick={() => { router.push('/consultoria'); setMobileMenuOpen(false); }}>
+        <Button variant={pathname === '/consultoria' ? 'outline' : 'ghost'} onClick={() => { router.push('/consultoria'); if(mobileMenuOpen) setMobileMenuOpen(false); }}>
             <Rows className="mr-2 h-4 w-4" />
             Painel
         </Button>

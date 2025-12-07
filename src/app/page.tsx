@@ -33,15 +33,6 @@ const allProducts = {
 
 type ProductKey = keyof typeof allProducts;
 
-const consultantProduct = {
-    name: 'Painel da Consultoria',
-    description: 'Gerencie clientes, usuários e planos de ação.',
-    href: '/consultoria',
-    icon: <Wrench className="h-6 w-6 text-slate-500" />,
-    color: 'slate',
-};
-
-
 export default function ProductPortalPage() {
   const router = useRouter();
   const auth = useAuth();
@@ -98,10 +89,18 @@ export default function ProductPortalPage() {
     <div className="flex flex-col min-h-screen w-full bg-gradient-to-br from-cyan-50 to-blue-100 dark:from-slate-900 dark:to-blue-950">
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
         <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} unoptimized />
-        <Button variant="ghost" onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" />
-          Sair
-        </Button>
+        <div className="flex items-center gap-2">
+            {isConsultant && (
+                <Button variant="outline" onClick={() => router.push('/consultoria')}>
+                    <Wrench className="mr-2 h-4 w-4" />
+                    Painel
+                </Button>
+            )}
+            <Button variant="ghost" onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </Button>
+        </div>
       </header>
       <main className="flex flex-1 flex-col items-center justify-center p-4">
         <div className="text-center mb-12">
