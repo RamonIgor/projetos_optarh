@@ -56,7 +56,7 @@ export default function AppLayout({ children, unclassifiedCount, hasActivities }
   };
 
   const navItems = [
-    { href: '/processflow', label: 'Brainstorm', icon: ListTodo },
+    { href: '/processflow/brainstorm', label: 'Brainstorm', icon: ListTodo },
     { href: '/processflow/classificacao', label: 'Classificação', icon: LayoutGrid, count: unclassifiedCount, disabled: !hasActivities },
     { href: '/processflow/dashboard', label: 'Dashboard', icon: BarChart3, disabled: !hasActivities },
     { href: '/processflow/transicao', label: 'Transição', icon: Shuffle, disabled: !hasActivities },
