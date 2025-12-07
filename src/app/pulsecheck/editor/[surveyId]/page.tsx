@@ -63,7 +63,7 @@ export default function SurveyEditorPage() {
   
   const router = useRouter();
   const db = useFirestore();
-  const { clientId } = useClient();
+  const { clientId, selectedClientId, isConsultant } = useClient();
   const { toast } = useToast();
 
   const [isLoading, setIsLoading] = useState(!isNewSurvey);
@@ -81,12 +81,14 @@ export default function SurveyEditorPage() {
     }
   });
 
+  const effectiveClientId = isConsultant ? selectedClientId : clientId;
+
   useEffect(() => {
-    if (!isNewSurvey && clientId && db) {
+    if (!isNewSurvey && effectiveClientId && db) {
       const fetchSurvey = async () => {
         setIsLoading(true);
         try {
-          const docRef = doc(db, 'clients', clientId, 'surveys', surveyId as string);
+          const docRef = doc(db, 'clients', effectiveClientId, 'surveys', surveyId as string);
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
             const surveyData = docSnap.data() as Survey;
@@ -108,10 +110,10 @@ export default function SurveyEditorPage() {
       };
       fetchSurvey();
     }
-  }, [surveyId, clientId, db, router, form, toast, isNewSurvey]);
+  }, [surveyId, effectiveClientId, db, router, form, toast, isNewSurvey]);
 
   const onSubmit = (data: SurveyFormValues) => {
-    if (!clientId || !db) {
+    if (!effectiveClientId || !db) {
         toast({ title: "Cliente não identificado. Não é possível salvar.", variant: "destructive" });
         return;
     }
@@ -119,11 +121,11 @@ export default function SurveyEditorPage() {
     startSaving(async () => {
       try {
         const idToSave = isNewSurvey ? doc(collection(db, 'clients')).id : surveyId as string;
-        const docRef = doc(db, 'clients', clientId, 'surveys', idToSave);
+        const docRef = doc(db, 'clients', effectiveClientId, 'surveys', idToSave);
 
         const surveyData: Partial<Survey> = {
           ...data,
-          clientId,
+          clientId: effectiveClientId,
           status: 'draft', // Sempre salva como rascunho no passo 1
           questionIds: [], // Será preenchido no passo 2
         };
@@ -154,7 +156,7 @@ export default function SurveyEditorPage() {
     });
   };
 
-  if (isLoading) {
+  if (isLoading && !isNewSurvey) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] w-full">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -297,3 +299,5 @@ export default function SurveyEditorPage() {
     </div>
   );
 }
+
+    
