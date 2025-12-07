@@ -25,7 +25,7 @@ const allProducts = {
   pesquisa_clima: {
     name: 'Pesquisa de Clima',
     description: 'Entenda e melhore o ambiente de trabalho da sua equipe.',
-    href: '#', // Rota futura
+    href: '#',
     icon: <Sparkles className="h-6 w-6 text-amber-500" />,
     color: 'amber',
   },
@@ -54,7 +54,6 @@ export default function ProductPortalPage() {
     }
   }, [user, isLoading, router]);
 
-  // Se for um usuário cliente e tiver apenas um produto, redireciona direto
   useEffect(() => {
     if (!isLoading && userProfile?.products?.length === 1 && !isConsultant) {
         const singleProductKey = userProfile.products[0] as ProductKey;
@@ -117,7 +116,7 @@ export default function ProductPortalPage() {
                             )}
                         >
                             <CardHeader>
-                                <div className="flex items-start justify-between">
+                                <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-4">
                                         <div className={cn(
                                             "p-3 rounded-full", 
@@ -125,13 +124,11 @@ export default function ProductPortalPage() {
                                         )}>
                                             {product.icon}
                                         </div>
-                                        <div>
-                                            <CardTitle className="text-2xl">{product.name}</CardTitle>
-                                        </div>
+                                        <CardTitle className="text-2xl">{product.name}</CardTitle>
                                     </div>
                                     {!hasAccess && (
                                         <Badge className="text-sm px-3 py-1 bg-amber-500 text-white shadow-lg border-2 border-amber-300">
-                                            Contrate
+                                            CONTRATE
                                         </Badge>
                                     )}
                                 </div>
@@ -140,11 +137,7 @@ export default function ProductPortalPage() {
                             <CardContent className="mt-auto">
                                  <Button 
                                     onClick={() => handleCtaClick(hasAccess, product)} 
-                                    className={cn(
-                                        "w-full text-lg h-12",
-                                        hasAccess && `bg-primary hover:bg-primary/90 text-primary-foreground`
-                                    )}
-                                    variant={hasAccess ? 'default' : 'outline'}
+                                    className="w-full text-lg h-12"
                                  >
                                     {hasAccess ? (
                                       <>
