@@ -97,7 +97,7 @@
         "properties": {
             "text": { 
               "type": "string", 
-              "description": "O texto da pergunta (e.g., 'Em uma escala de 0 a 10, o quanto você recomendaria nossa empresa...?')." 
+              "description": "O texto da pergunta (e.g., 'Em uma escala de 0 a 10...')." 
             },
             "type": { 
               "type": "string", 
@@ -106,23 +106,39 @@
             },
             "category": { 
               "type": "string", 
-              "description": "A categoria da pergunta para fins de agrupamento e análise (e.g., Liderança, Comunicação, Ambiente de Trabalho)." 
+              "description": "A categoria da pergunta para fins de agrupamento e análise (e.g., Liderança, Comunicação)." 
             },
             "options": { 
               "type": ["array", "null"], 
               "items": { "type": "string" }, 
-              "description": "Um array de strings contendo as opções de resposta para perguntas do tipo 'multiple-choice'." 
+              "description": "Array de opções para perguntas 'multiple-choice'." 
+            },
+            "order": {
+                "type": "number",
+                "description": "Ordem de exibição da pergunta dentro de sua categoria."
+            },
+            "isMandatory": {
+                "type": "boolean",
+                "description": "Define se a pergunta é de preenchimento obrigatório."
+            },
+            "isNpsQuestion": {
+                "type": "boolean",
+                "description": "Flag para identificar a pergunta principal de eNPS."
+            },
+            "isDefault": {
+                "type": "boolean",
+                "description": "Indica se é uma pergunta padrão do sistema."
             },
             "createdBy": {
               "type": "string",
-              "description": "UID do consultor que criou a pergunta."
+              "description": "UID do consultor que criou a pergunta, ou 'system' para perguntas padrão."
             },
             "createdAt": {
               "type": "string",
               "format": "date-time"
             }
         },
-        "required": ["text", "type", "category", "createdBy", "createdAt"]
+        "required": ["text", "type", "category", "order", "isMandatory", "createdBy", "createdAt"]
     },
     "Survey": {
         "title": "Survey",

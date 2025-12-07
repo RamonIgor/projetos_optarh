@@ -65,7 +65,11 @@ export interface Question {
   type: 'nps' | 'likert' | 'multiple-choice' | 'open-text';
   category: string;
   options?: string[] | null;
-  createdBy: string; // UID of consultant
+  order: number;
+  isMandatory: boolean;
+  isNpsQuestion?: boolean;
+  isDefault?: boolean;
+  createdBy: string; // UID of consultant or 'system'
   createdAt: Timestamp | Date;
 }
 
