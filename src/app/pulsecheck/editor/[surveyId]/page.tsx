@@ -32,8 +32,6 @@ const surveyFormSchema = z.object({
   opensAt: z.date({ required_error: "A data de início é obrigatória." }),
   closesAt: z.date({ required_error: "A data de término é obrigatória." }),
   isAnonymous: z.boolean().default(true),
-  sendReminders: z.boolean().default(false),
-  reminderFrequency: z.number().optional(),
 }).refine(data => data.closesAt > data.opensAt, {
   message: "A data de término deve ser posterior à data de início.",
   path: ["closesAt"],
@@ -74,8 +72,6 @@ function ClientSelectorForEditor() {
     }, [db, isConsultant, toast]);
 
     if (!isConsultant) return null;
-
-    const selectedClientName = clients.find(c => c.id === clientId)?.name || 'Nenhum cliente selecionado';
 
     return (
         <Card className="mb-6 bg-muted/50">
@@ -135,7 +131,6 @@ export default function SurveyEditorPage() {
       title: "",
       description: "",
       isAnonymous: true,
-      sendReminders: false,
     }
   });
 
@@ -165,6 +160,8 @@ export default function SurveyEditorPage() {
         }
       };
       fetchSurvey();
+    } else {
+        setIsLoading(false);
     }
   }, [surveyId, clientId, db, router, form, toast, isNewSurvey]);
 
@@ -183,7 +180,7 @@ export default function SurveyEditorPage() {
           ...data,
           clientId: clientId,
           status: 'draft',
-          questionIds: [],
+          questions: [],
         };
         
         if (isNewSurvey) {
@@ -194,13 +191,10 @@ export default function SurveyEditorPage() {
 
         toast({
           title: "Progresso Salvo!",
-          description: "As informações básicas da pesquisa foram salvas como rascunho.",
+          description: "As informações básicas da pesquisa foram salvas.",
         });
         
-         toast({
-          title: "Próximo Passo (Em Breve)",
-          description: "A navegação para a configuração de perguntas será implementada aqui.",
-        });
+        router.push(`/pulsecheck/editor/${idToSave}/questions`);
 
       } catch (error) {
         console.error("Error saving survey:", error);
@@ -209,7 +203,7 @@ export default function SurveyEditorPage() {
     });
   };
 
-  if (isLoading && !isNewSurvey) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] w-full">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -317,28 +311,6 @@ export default function SurveyEditorPage() {
                                     <FormMessage />
                                 </FormItem>
                             )} />
-                            
-                            <FormField control={form.control} name="sendReminders" render={({ field }) => (
-                                <FormItem>
-                                    <div className="flex items-center space-x-2">
-                                        <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                                        <FormLabel className="!mt-0 cursor-pointer">Enviar lembretes automáticos</FormLabel>
-                                    </div>
-                                    <FormDescription>O sistema enviará e-mails para os colaboradores que ainda não responderam.</FormDescription>
-                                    {field.value && (
-                                        <motion.div initial={{opacity:0, height: 0}} animate={{opacity:1, height: 'auto'}} className="mt-4 pl-6">
-                                            <div className="flex items-center gap-2">
-                                                <FormLabel>A cada</FormLabel>
-                                                <FormField control={form.control} name="reminderFrequency" render={({ field: reminderField }) => (
-                                                    <Input type="number" className="w-20" placeholder="Ex: 3" {...reminderField} onChange={e => reminderField.onChange(parseInt(e.target.value, 10) || undefined)} />
-                                                )} />
-                                                <FormLabel>dias.</FormLabel>
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </FormItem>
-                            )} />
-
                         </CardContent>
                         <CardFooter className="border-t px-6 py-4 justify-end gap-2">
                             <Button type="button" variant="ghost" onClick={() => router.push('/pulsecheck')}>
@@ -347,7 +319,7 @@ export default function SurveyEditorPage() {
                             </Button>
                             <Button type="submit" disabled={isSaving}>
                                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Próximo: Configurar Perguntas
+                                Salvar e Ir para Perguntas
                                 <ChevronRight className="ml-2 h-4 w-4" />
                             </Button>
                         </CardFooter>

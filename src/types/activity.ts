@@ -73,13 +73,23 @@ export interface Question {
   createdAt: Timestamp | Date;
 }
 
+export interface SelectedQuestion {
+  id: string;
+  questionId: string; // Reference to the original question in the library
+  text: string;
+  type: 'nps' | 'likert' | 'multiple-choice' | 'open-text';
+  category: string;
+  options?: string[] | null;
+  isMandatory: boolean;
+}
+
 export interface Survey {
   id: string;
   title: string;
   description: string;
   clientId: string;
   status: 'draft' | 'active' | 'closed';
-  questionIds: string[];
+  questions: SelectedQuestion[]; // Changed from questionIds
   isAnonymous: boolean;
   createdAt: Timestamp | Date;
   opensAt: Timestamp | Date;

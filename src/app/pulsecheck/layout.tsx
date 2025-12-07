@@ -48,7 +48,7 @@ export default function PulseCheckLayout({
   }
   
   return (
-    <AppLayout hasActivities={false} unclassifiedCount={0}>
+    <AppLayout>
       <div className="w-full">
          {children}
       </div>

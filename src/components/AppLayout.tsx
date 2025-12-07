@@ -104,7 +104,7 @@ const ProcessFlowNav = () => {
   };
   
   return (
-    <nav className="hidden sm:flex p-1.5 rounded-full bg-background/50 backdrop-blur-sm border border-black/5 items-center gap-1 shadow-sm">
+    <nav className="flex flex-wrap p-1.5 rounded-full bg-background/50 backdrop-blur-sm border border-black/5 items-center gap-1 shadow-sm">
       {navItems.map(renderNavItem)}
     </nav>
   );
@@ -116,16 +116,17 @@ const PulseCheckNav = () => {
 
   const navItems = [
     { href: '/pulsecheck', label: 'Minhas Pesquisas', icon: AreaChart },
-    // Futuros links podem ser adicionados aqui
-    // { href: '/pulsecheck/templates', label: 'Templates', icon: Files },
+    { href: '/pulsecheck/editor/novo', label: 'Nova Pesquisa', icon: PlusCircle, isEditor: true },
   ];
   
   if (!pathname.startsWith('/pulsecheck')) {
     return null;
   }
+  
+  const isEditorActive = pathname.startsWith('/pulsecheck/editor');
 
   const renderNavItem = (item: typeof navItems[0]) => {
-    const isActive = pathname === item.href;
+    const isActive = isEditorActive ? item.isEditor : pathname === item.href;
     return (
       <Link
         key={item.href}
@@ -142,7 +143,7 @@ const PulseCheckNav = () => {
   };
   
   return (
-    <nav className="hidden sm:flex p-1.5 rounded-full bg-background/50 backdrop-blur-sm border border-black/5 items-center gap-1 shadow-sm">
+    <nav className="flex flex-wrap p-1.5 rounded-full bg-background/50 backdrop-blur-sm border border-black/5 items-center gap-1 shadow-sm">
       {navItems.map(renderNavItem)}
     </nav>
   );
@@ -151,8 +152,6 @@ const PulseCheckNav = () => {
 
 interface AppLayoutProps {
   children: React.ReactNode;
-  hasActivities: boolean;
-  unclassifiedCount: number;
 }
 
 export default function AppLayout({ children }: AppLayoutProps) {
@@ -180,9 +179,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   const consultancyButton = (
     isConsultant ? (
-        <Button variant={pathname === '/consultoria' ? 'outline' : 'ghost'} onClick={() => { router.push('/consultoria'); if(mobileMenuOpen) setMobileMenuOpen(false); }}>
+        <Button variant={pathname === '/consultoria' ? 'outline' : 'ghost'} onClick={() => { router.push('/consultoria'); if(mobileMenuOpen) setMobileMenuOpen(false); }} className="w-full justify-start">
             <Rows className="mr-2 h-4 w-4" />
-            Painel
+            Painel de Consultoria
         </Button>
     ) : null
   );
@@ -234,11 +233,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   <span className="font-bold text-foreground">{productName}</span>
               </div>
           )}
-          <div className="flex-1 flex justify-center">
-            <ProcessFlowNav />
-            <PulseCheckNav />
-          </div>
         </div>
+
+        <div className="flex-1 flex justify-center">
+            <div className="hidden sm:flex">
+                <ProcessFlowNav />
+                <PulseCheckNav />
+            </div>
+        </div>
+
         <div className="hidden sm:flex items-center gap-2">
             {consultancyButton}
             <SettingsMenu />
@@ -255,17 +258,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   <span className="sr-only">Abrir menu</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-full max-w-xs">
+              <SheetContent side="left" className="w-full max-w-xs p-0">
                 <div className="p-4">
                   <Link href="/" onClick={() => setMobileMenuOpen(false)}>
                     <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} className="cursor-pointer mb-8" unoptimized/>
                   </Link>
                   
-                  {isProcessFlow && (
-                    <div className="flex flex-col gap-1" onClick={() => setMobileMenuOpen(false)}>
+                  <div className="flex flex-col gap-2" onClick={() => setMobileMenuOpen(false)}>
                        <ProcessFlowNav />
-                    </div>
-                  )}
+                       <PulseCheckNav />
+                  </div>
 
                   <div className="mt-8 pt-4 border-t">
                     {consultancyButton}
