@@ -11,6 +11,7 @@ import { format, isPast, isFuture } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { Timestamp } from 'firebase/firestore';
 
 interface SurveyCardProps {
   survey: Survey;
@@ -43,18 +44,28 @@ function calculateNPS(responses: SurveyResponse[]) {
     return Math.round(promoterPercentage - detractorPercentage);
 }
 
+function toDate(dateValue: Date | Timestamp | string): Date {
+    if (dateValue instanceof Timestamp) {
+        return dateValue.toDate();
+    }
+    return new Date(dateValue);
+}
+
 export function SurveyCard({ survey, responses, onDelete }: SurveyCardProps) {
   const router = useRouter();
   
+  const surveyOpensAt = toDate(survey.opensAt);
+  const surveyClosesAt = toDate(survey.closesAt);
+
   const status = useMemo(() => {
-    if (survey.status === 'active' && isPast(new Date(survey.closesAt))) {
+    if (survey.status === 'active' && isPast(surveyClosesAt)) {
       return 'closed';
     }
-    if (survey.status === 'draft' && isFuture(new Date(survey.opensAt))) {
+    if (survey.status === 'draft' && isFuture(surveyOpensAt)) {
       return 'draft';
     }
     return survey.status;
-  }, [survey.status, survey.opensAt, survey.closesAt]);
+  }, [survey.status, surveyOpensAt, surveyClosesAt]);
   
   const config = statusConfig[status];
 
@@ -64,8 +75,8 @@ export function SurveyCard({ survey, responses, onDelete }: SurveyCardProps) {
 
   const npsScore = useMemo(() => calculateNPS(responses), [responses]);
   
-  const startDate = format(new Date(survey.opensAt), 'dd/MM/yy', { locale: ptBR });
-  const endDate = format(new Date(survey.closesAt), 'dd/MM/yy', { locale: ptBR });
+  const startDate = format(surveyOpensAt, 'dd/MM/yy', { locale: ptBR });
+  const endDate = format(surveyClosesAt, 'dd/MM/yy', { locale: ptBR });
 
   return (
     <Card className="flex flex-col shadow-md hover:shadow-xl transition-shadow">
