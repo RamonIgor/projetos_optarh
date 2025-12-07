@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, where, orderBy, deleteDoc, doc, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, orderBy, deleteDoc, doc, getDocs, getDoc, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { useFirestore, useClient } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { type Survey, type Response as SurveyResponse, type Client } from '@/types/activity';
@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { motion } from 'framer-motion';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { addDays } from 'date-fns';
 
 export default function PulseCheckDashboard() {
   const db = useFirestore();
@@ -83,11 +84,46 @@ export default function PulseCheckDashboard() {
     };
   }, [clientId, db, isClientLoading, isConsultant, toast]);
 
+  const handleDuplicate = async (surveyId: string) => {
+    if (!clientId) return;
+
+    try {
+      const originalSurveyRef = doc(db, 'clients', clientId, 'surveys', surveyId);
+      const originalSurveySnap = await getDoc(originalSurveyRef);
+
+      if (!originalSurveySnap.exists()) {
+        toast({ title: "Pesquisa original não encontrada", variant: "destructive" });
+        return;
+      }
+
+      const originalData = originalSurveySnap.data() as Survey;
+      
+      const newSurveyData: Omit<Survey, 'id'> = {
+        ...originalData,
+        title: `Cópia de ${originalData.title}`,
+        status: 'draft',
+        createdAt: serverTimestamp() as Timestamp,
+        opensAt: addDays(new Date(), 1), // Default to tomorrow
+        closesAt: addDays(new Date(), 8), // Default to one week duration
+      };
+
+      await addDoc(collection(db, 'clients', clientId, 'surveys'), newSurveyData);
+
+      toast({
+        title: "Pesquisa Duplicada!",
+        description: `Uma cópia de "${originalData.title}" foi criada como rascunho.`,
+      });
+
+    } catch (error) {
+      console.error("Error duplicating survey:", error);
+      toast({ title: "Erro ao duplicar pesquisa", variant: "destructive" });
+    }
+  };
+
   const handleDelete = async () => {
     if (!deletingSurveyId || !clientId) return;
 
     try {
-        // First, find and delete all associated responses
         const responsesQuery = query(
             collection(db, 'pulse_check_responses'), 
             where('clientId', '==', clientId),
@@ -97,7 +133,6 @@ export default function PulseCheckDashboard() {
         const batch = responseSnapshot.docs.map(doc => deleteDoc(doc.ref));
         await Promise.all(batch);
 
-        // After successfully deleting responses, delete the survey itself
         await deleteDoc(doc(db, 'clients', clientId, 'surveys', deletingSurveyId));
 
         toast({ title: "Pesquisa excluída com sucesso!" });
@@ -126,7 +161,7 @@ export default function PulseCheckDashboard() {
     const [isLoadingClients, setIsLoadingClients] = useState(true);
 
     useEffect(() => {
-        if (!db) {
+        if (!db || !isConsultant) {
             setIsLoadingClients(false);
             return;
         }
@@ -144,7 +179,7 @@ export default function PulseCheckDashboard() {
             }
         };
         fetchClients();
-    }, [db]);
+    }, [db, isConsultant]);
 
      if (!isConsultant) {
         return (
@@ -224,6 +259,7 @@ export default function PulseCheckDashboard() {
                     survey={survey} 
                     responses={responses[survey.id] || []}
                     onDelete={() => setDeletingSurveyId(survey.id)}
+                    onDuplicate={() => handleDuplicate(survey.id)}
                 />
                 ))}
             </div>

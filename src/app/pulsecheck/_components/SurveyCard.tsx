@@ -1,3 +1,4 @@
+
 "use client";
 
 import { type Survey, type Response as SurveyResponse } from '@/types/activity';
@@ -17,6 +18,7 @@ interface SurveyCardProps {
   survey: Survey;
   responses: SurveyResponse[];
   onDelete: () => void;
+  onDuplicate: () => void;
 }
 
 const statusConfig: Record<Survey['status'], { label: string; color: string; }> = {
@@ -51,7 +53,7 @@ function toDate(dateValue: Date | Timestamp | string): Date {
     return new Date(dateValue);
 }
 
-export function SurveyCard({ survey, responses, onDelete }: SurveyCardProps) {
+export function SurveyCard({ survey, responses, onDelete, onDuplicate }: SurveyCardProps) {
   const router = useRouter();
   
   const surveyOpensAt = toDate(survey.opensAt);
@@ -96,7 +98,7 @@ export function SurveyCard({ survey, responses, onDelete }: SurveyCardProps) {
               <DropdownMenuItem onClick={() => router.push(`/pulsecheck/resultados/${survey.id}`)} disabled={responses.length === 0}>
                 <BarChart2 className="mr-2 h-4 w-4" /> Ver Resultados
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={onDuplicate}>
                 <Copy className="mr-2 h-4 w-4" /> Duplicar
               </DropdownMenuItem>
               <DropdownMenuSeparator />
