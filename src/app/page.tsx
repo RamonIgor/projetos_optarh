@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase/auth/use-user';
 import { useClient } from '@/firebase/auth/use-client';
-import { Loader2, Box, ArrowRight, Sparkles, LogOut } from 'lucide-react';
+import { Loader2, Box, ArrowRight, Sparkles, LogOut, Wrench } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
@@ -32,6 +32,14 @@ const allProducts = {
 };
 
 type ProductKey = keyof typeof allProducts;
+
+const consultantProduct = {
+    name: 'Painel da Consultoria',
+    description: 'Gerencie clientes, usuários e planos de ação.',
+    href: '/consultoria',
+    icon: <Wrench className="h-6 w-6 text-slate-500" />,
+    color: 'slate',
+};
 
 
 export default function ProductPortalPage() {
@@ -75,7 +83,7 @@ export default function ProductPortalPage() {
     );
   }
   
-  const handleCtaClick = (hasAccess: boolean, product: (typeof allProducts)[ProductKey]) => {
+  const handleCtaClick = (hasAccess: boolean, product: { href: string }) => {
     if (hasAccess) {
         if (product.href !== '#') {
             router.push(product.href);
@@ -154,9 +162,29 @@ export default function ProductPortalPage() {
                     </div>
                 );
             })}
+             {isConsultant && (
+                 <div className="relative group">
+                    <Card className="transition-all duration-300 h-full flex flex-col border-2 border-transparent bg-card hover:shadow-xl hover:-translate-y-1">
+                        <CardHeader>
+                             <div className="flex items-center gap-4">
+                                <div className="p-3 rounded-full bg-slate-100">
+                                    {consultantProduct.icon}
+                                </div>
+                                <CardTitle className="text-2xl">{consultantProduct.name}</CardTitle>
+                            </div>
+                            <CardDescription className="pt-2">{consultantProduct.description}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="mt-auto">
+                            <Button onClick={() => router.push(consultantProduct.href)} className="w-full text-lg h-12">
+                                Acessar
+                                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
         </div>
       </main>
     </div>
   );
 }
-

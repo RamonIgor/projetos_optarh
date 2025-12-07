@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useTransition, useCallback } from 'react';
@@ -411,8 +412,10 @@ export default function ConsultancyPage() {
     useEffect(() => {
         if (!userLoading && !user) {
             router.push('/login');
+        } else if (!userLoading && user && !isConsultant) {
+            router.push('/');
         }
-    }, [user, userLoading, router]);
+    }, [user, userLoading, router, isConsultant]);
 
     // Effect to fetch the list of clients for consultants
     useEffect(() => {
