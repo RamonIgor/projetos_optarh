@@ -159,7 +159,7 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, questionTo
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-8 overflow-hidden flex-1">
             <ScrollArea className="h-full">
-            <div className="space-y-6 pr-6">
+            <div className="space-y-8 pr-6">
                 <FormField control={form.control} name="text" render={({ field }) => (
                     <FormItem>
                         <div className="flex justify-between items-baseline">
@@ -180,7 +180,7 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, questionTo
                                     <FormControl>
                                         <RadioGroupItem value={opt.value} id={opt.value} className="sr-only" />
                                     </FormControl>
-                                    <Label htmlFor={opt.value} className={cn("flex flex-col items-center justify-center gap-2 rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer", field.value === opt.value && "border-primary")}>
+                                    <Label htmlFor={opt.value} className={cn("flex flex-col items-center justify-center gap-2 rounded-md border-2 border-muted bg-popover p-6 hover:bg-accent hover:text-accent-foreground cursor-pointer", field.value === opt.value && "border-primary")}>
                                         <opt.icon className="h-6 w-6" />
                                         {opt.label}
                                     </Label>
