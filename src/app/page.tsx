@@ -25,7 +25,7 @@ const allProducts = {
   pulse_check: {
     name: 'PulseCheck',
     description: 'Monitore o clima e o engajamento da sua equipe com pesquisas rápidas.',
-    href: '#',
+    href: '/pulsecheck',
     icon: <Sparkles className="h-6 w-6 text-amber-500" />,
     color: 'amber',
   },
