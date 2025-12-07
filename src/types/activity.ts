@@ -11,6 +11,7 @@ export interface UserProfile {
     clientId: string;
     products: string[];
     isConsultant: boolean;
+    email?: string;
 }
 
 export interface ActivityComment {

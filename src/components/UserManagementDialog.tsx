@@ -73,6 +73,7 @@ function CreateUserForm({ onFinished, clients, isLoadingClients }: { onFinished:
                     clientId: selectedClientId,
                     products: selectedProducts,
                     isConsultant: false,
+                    email: newUser.email, // Save the email
                 });
 
                 toast({
@@ -165,9 +166,8 @@ function CreateUserForm({ onFinished, clients, isLoadingClients }: { onFinished:
 interface LegacyUser {
     id: string;
     clientId: string;
+    email?: string; // Add email field
     isConsultant: boolean;
-    // email is not stored in firestore, we might need to fetch it from Auth
-    // For now, let's just use the UID
 }
 
 function MigrateUsersForm({ onFinished }: { onFinished: () => void }) {
@@ -246,7 +246,7 @@ function MigrateUsersForm({ onFinished }: { onFinished: () => void }) {
                 ) : legacyUsers.length > 0 ? (
                     legacyUsers.map(user => (
                         <div key={user.id} className="p-3 border rounded-lg">
-                            <p className="font-semibold text-sm truncate" title={user.id}>{user.id}</p>
+                            <p className="font-semibold text-sm truncate" title={user.email || user.id}>{user.email || user.id}</p>
                             <p className="text-xs text-muted-foreground">Cliente ID: {user.clientId}</p>
                             <div className="my-2 space-y-1">
                                 {productsAvailable.map(product => (
