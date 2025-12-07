@@ -115,22 +115,20 @@ export default function ProductPortalPage() {
                               hasAccess && "hover:shadow-xl hover:-translate-y-1"
                             )}
                         >
+                            {!hasAccess && (
+                                <Badge className="absolute -top-3 right-4 text-sm px-3 py-1 bg-amber-500 text-white shadow-lg border-2 border-amber-300">
+                                    CONTRATE
+                                </Badge>
+                            )}
                             <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className={cn(
-                                            "p-3 rounded-full", 
-                                            hasAccess ? 'bg-primary/10' : product.color === 'amber' ? 'bg-amber-100' : 'bg-muted'
-                                        )}>
-                                            {product.icon}
-                                        </div>
-                                        <CardTitle className="text-2xl">{product.name}</CardTitle>
+                                <div className="flex items-center gap-4">
+                                    <div className={cn(
+                                        "p-3 rounded-full", 
+                                        hasAccess ? (product.color === 'primary' ? 'bg-primary/10' : 'bg-amber-100') : 'bg-muted'
+                                    )}>
+                                        {product.icon}
                                     </div>
-                                    {!hasAccess && (
-                                        <Badge className="text-sm px-3 py-1 bg-amber-500 text-white shadow-lg border-2 border-amber-300">
-                                            CONTRATE
-                                        </Badge>
-                                    )}
+                                    <CardTitle className="text-2xl">{product.name}</CardTitle>
                                 </div>
                                  <CardDescription className="pt-2">{product.description}</CardDescription>
                             </CardHeader>
@@ -138,6 +136,7 @@ export default function ProductPortalPage() {
                                  <Button 
                                     onClick={() => handleCtaClick(hasAccess, product)} 
                                     className="w-full text-lg h-12"
+                                    variant={hasAccess ? 'default' : 'default'}
                                  >
                                     {hasAccess ? (
                                       <>
