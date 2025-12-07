@@ -19,7 +19,6 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Loader2, CalendarIcon, Info, ChevronRight, Ban, Building } from 'lucide-react';
 import { format } from 'date-fns';
@@ -106,11 +105,11 @@ export default function SurveyEditorPage() {
           ...data,
           clientId: clientId,
           status: 'draft',
-          questions: [],
         };
         
         if (isNewSurvey) {
             surveyData.createdAt = serverTimestamp();
+            surveyData.questions = [];
         }
 
         await setDoc(docRef, surveyData, { merge: true });
@@ -140,7 +139,7 @@ export default function SurveyEditorPage() {
   const showDisabledMessage = isConsultant && !clientId;
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full max-w-4xl mx-auto pb-20">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <h1 className="text-4xl font-bold text-primary tracking-tight">{isNewSurvey ? "Criar Nova Pesquisa" : "Editar Pesquisa"}</h1>
             <p className="mt-2 text-lg text-muted-foreground">Passo 1 de 3: Informações Básicas</p>
@@ -232,7 +231,7 @@ export default function SurveyEditorPage() {
                         <CardHeader>
                             <CardTitle>Configurações Adicionais</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-8">
+                        <CardContent>
                             <FormField control={form.control} name="isAnonymous" render={({ field }) => (
                                 <FormItem>
                                     <div className="flex items-center space-x-2">
@@ -250,11 +249,7 @@ export default function SurveyEditorPage() {
                                 </FormItem>
                             )} />
                         </CardContent>
-                        <CardFooter className="border-t px-6 py-4 justify-end gap-2">
-                            <Button type="button" variant="ghost" onClick={() => router.push('/pulsecheck')}>
-                                <Ban className="mr-2 h-4 w-4" />
-                                Cancelar
-                            </Button>
+                        <CardFooter className="border-t px-6 py-4 justify-end">
                             <Button type="submit" disabled={isSaving}>
                                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 Salvar e Ir para Perguntas

@@ -7,7 +7,7 @@ import { useFirestore, useClient } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { type Survey, type Question, type SelectedQuestion } from '@/types/activity';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, Send } from 'lucide-react';
+import { Loader2, ArrowLeft, Send, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 import { QuestionLibrary } from './_components/QuestionLibrary';
@@ -125,8 +125,7 @@ export default function ConfigureQuestionsPage() {
 
         const finalQuestionData = {
             ...questionData,
-            options:
-              questionData.type === 'multiple-choice'
+            options: questionData.type === 'multiple-choice' 
                 ? (questionData.options || []).map(opt => typeof opt === 'object' ? (opt as any).value : opt)
                 : null,
           };
@@ -149,14 +148,12 @@ export default function ConfigureQuestionsPage() {
 
     }, [questionToEdit, selectedQuestions, updateSurveyQuestions, toast]);
     
-    const handlePublish = async () => {
+    const handleNextStep = () => {
         if(selectedQuestions.length === 0) {
-            toast({ title: "Nenhuma pergunta selecionada", description: "Adicione ao menos uma pergunta para publicar.", variant: "destructive"});
+            toast({ title: "Nenhuma pergunta selecionada", description: "Adicione ao menos uma pergunta para continuar.", variant: "destructive"});
             return;
         }
-        // Questions are already saved, just navigate
-        toast({ title: "Pesquisa Pronta para Publicar!", description: "O próximo passo seria revisar e enviar."});
-        router.push('/pulsecheck');
+        router.push(`/pulsecheck/editor/${surveyId}/review`);
     };
 
     const allCategories = useMemo(() => 
@@ -179,16 +176,10 @@ export default function ConfigureQuestionsPage() {
                         <h1 className="text-4xl font-bold text-primary tracking-tight">Configurar Perguntas</h1>
                         <p className="mt-2 text-lg text-muted-foreground">Passo 2 de 3: Monte sua pesquisa</p>
                     </div>
-                    <div className="flex gap-2">
-                        <Button variant="outline" onClick={() => router.push(`/pulsecheck/editor/${surveyId}`)}>
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            Voltar
-                        </Button>
-                        <Button onClick={handlePublish}>
-                            <Send className="mr-2 h-4 w-4" />
-                            Publicar
-                        </Button>
-                    </div>
+                     <Button onClick={handleNextStep}>
+                        Revisar e Publicar
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
                 </div>
             </motion.div>
             
