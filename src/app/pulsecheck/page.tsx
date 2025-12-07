@@ -133,16 +133,21 @@ export default function PulseCheckDashboard() {
 
   return (
       <div className="max-w-7xl mx-auto w-full">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <div className="flex justify-between items-center">
-             <div>
-                <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">Minhas Pesquisas</h1>
-                <p className="mt-4 text-lg text-muted-foreground">Visualize, edite e acompanhe o resultado das suas pesquisas de clima.</p>
-             </div>
-              <Button size="lg" onClick={() => router.push('/pulsecheck/editor')} disabled={!clientId}>
-                <PlusCircle className="mr-2 h-5 w-5" />
-                Nova Pesquisa
-              </Button>
+        <motion.div 
+            initial={{ opacity: 0, y: -20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.5 }}
+            className="flex flex-col items-center"
+        >
+          <div className="text-center">
+              <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">Minhas Pesquisas</h1>
+              <p className="mt-4 text-lg text-muted-foreground">Visualize, edite e acompanhe o resultado das suas pesquisas de clima.</p>
+          </div>
+          <div className="mt-6">
+            <Button size="lg" onClick={() => router.push('/pulsecheck/editor')} disabled={!clientId}>
+              <PlusCircle className="mr-2 h-5 w-5" />
+              Nova Pesquisa
+            </Button>
           </div>
         </motion.div>
 
