@@ -85,19 +85,21 @@ export default function PulseCheckDashboard() {
 
   const handleDelete = async () => {
     if (!deletingSurveyId || !clientId) return;
-    
+
     try {
-        await deleteDoc(doc(db, 'clients', clientId, 'surveys', deletingSurveyId));
-        
+        // First, find and delete all associated responses
         const responsesQuery = query(collection(db, 'pulse_check_responses'), where('surveyId', '==', deletingSurveyId));
         const responseSnapshot = await getDocs(responsesQuery);
         const batch = responseSnapshot.docs.map(doc => deleteDoc(doc.ref));
         await Promise.all(batch);
 
+        // After successfully deleting responses, delete the survey itself
+        await deleteDoc(doc(db, 'clients', clientId, 'surveys', deletingSurveyId));
+
         toast({ title: "Pesquisa excluída com sucesso!" });
     } catch (error) {
         console.error("Error deleting survey:", error);
-        toast({ title: "Erro ao excluir pesquisa", variant: "destructive" });
+        toast({ title: "Erro ao excluir pesquisa", description: "Verifique suas permissões de acesso.", variant: "destructive" });
     } finally {
         setDeletingSurveyId(null);
     }
