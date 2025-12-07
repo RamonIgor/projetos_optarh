@@ -155,7 +155,7 @@ export default function ConfigureQuestionsPage() {
     }
 
     return (
-        <div className="w-full flex flex-col h-[calc(100vh-150px)]">
+        <div className="w-full flex flex-col flex-grow">
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
                 <div className="flex justify-between items-start">
                     <div>
