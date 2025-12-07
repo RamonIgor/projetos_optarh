@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -31,9 +32,6 @@ export default function PulseCheckDashboard() {
     if (isClientLoading) return;
 
     if (!clientId) {
-      if (isConsultant) {
-        // A mensagem para o consultor agora é tratada no NoClientState
-      }
       setSurveys([]);
       setResponses({});
       setIsLoading(false);
@@ -142,6 +140,18 @@ export default function PulseCheckDashboard() {
         fetchClients();
     }, [db]);
 
+     if (!isConsultant) {
+        return (
+             <Card className="mt-8 shadow-lg dark:shadow-black/20">
+                <CardContent className="text-center py-20">
+                    <Building className="h-16 w-16 text-destructive mx-auto mb-6" />
+                    <h2 className="text-2xl font-bold">Nenhum Cliente Associado</h2>
+                    <p className="mt-2 text-muted-foreground max-w-md mx-auto">Sua conta de usuário não está associada a nenhum cliente. Por favor, entre em contato com o suporte.</p>
+                </CardContent>
+            </Card>
+        );
+     }
+
      return (
         <Card className="mt-8 shadow-lg dark:shadow-black/20">
            <CardContent className="text-center py-20">
@@ -196,7 +206,7 @@ export default function PulseCheckDashboard() {
             <div className="flex justify-center items-center h-64">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
             </div>
-            ) : !clientId && isConsultant ? (
+            ) : !clientId ? (
             <NoClientState />
             ) : surveys.length === 0 ? (
             <EmptyState />
