@@ -33,7 +33,7 @@ const createSecondaryAuth = () => {
 
 const productsAvailable = [
     { id: 'process_flow', label: 'ProcessFlow' },
-    { id: 'pesquisa_clima', label: 'Pesquisa de Clima' },
+    { id: 'pulse_check', label: 'PulseCheck' },
 ]
 
 function CreateUserForm({ onFinished, clients, isLoadingClients }: { onFinished: () => void, clients: Client[], isLoadingClients: boolean }) {

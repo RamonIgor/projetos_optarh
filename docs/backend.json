@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Client": {
@@ -36,7 +37,7 @@
                 "type": "array",
                 "items": {
                     "type": "string",
-                    "enum": ["process_flow", "pesquisa_clima"]
+                    "enum": ["process_flow", "pulse_check"]
                 },
                 "description": "List of products this user has access to."
             },

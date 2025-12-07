@@ -22,9 +22,9 @@ const allProducts = {
     icon: <Box className="h-6 w-6 text-primary"/>,
     color: 'primary',
   },
-  pesquisa_clima: {
-    name: 'Pesquisa de Clima',
-    description: 'Entenda e melhore o ambiente de trabalho da sua equipe.',
+  pulse_check: {
+    name: 'PulseCheck',
+    description: 'Monitore o clima e o engajamento da sua equipe com pesquisas rápidas.',
     href: '#',
     icon: <Sparkles className="h-6 w-6 text-amber-500" />,
     color: 'amber',
