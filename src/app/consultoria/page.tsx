@@ -46,6 +46,7 @@ import {
 import { UserManagementDialog } from '@/components/UserManagementDialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { signOut } from 'firebase/auth';
+import { Label } from '@/components/ui/label';
 
 const CategoryChart = dynamic(() => import('@/components/CategoryChart'), {
     ssr: false,
@@ -164,7 +165,6 @@ function AddClientDialog({ onClientAdded, children }: { onClientAdded: (clientId
             try {
                 const docRef = await addDoc(collection(db, 'clients'), {
                     name: data.name,
-                    userIds: [],
                     products: [], // Initialize with no products
                     createdAt: serverTimestamp(),
                 });
@@ -990,3 +990,5 @@ export default function ConsultancyPage() {
         </div>
     );
 }
+
+    
