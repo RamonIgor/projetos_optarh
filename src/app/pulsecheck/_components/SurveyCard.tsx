@@ -7,12 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Edit, BarChart2, Copy, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Edit, BarChart2, Copy, Trash2, Link as LinkIcon } from 'lucide-react';
 import { format, isPast, isFuture } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Timestamp } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 interface SurveyCardProps {
   survey: Survey;
@@ -55,6 +56,7 @@ function toDate(dateValue: Date | Timestamp | string): Date {
 
 export function SurveyCard({ survey, responses, onDelete, onDuplicate }: SurveyCardProps) {
   const router = useRouter();
+  const { toast } = useToast();
   
   const surveyOpensAt = toDate(survey.opensAt);
   const surveyClosesAt = toDate(survey.closesAt);
@@ -70,6 +72,23 @@ export function SurveyCard({ survey, responses, onDelete, onDuplicate }: SurveyC
   }, [survey.status, surveyOpensAt, surveyClosesAt]);
   
   const config = statusConfig[status];
+
+  const handleCopyLink = () => {
+    const surveyUrl = `${window.location.origin}/survey/${survey.id}`;
+    navigator.clipboard.writeText(surveyUrl).then(() => {
+      toast({
+        title: "Link Copiado!",
+        description: "O link da pesquisa foi copiado para a sua área de transferência.",
+      });
+    }).catch(err => {
+      console.error('Failed to copy text: ', err);
+      toast({
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar o link.",
+        variant: "destructive"
+      });
+    });
+  };
 
   // Placeholder para o número de participantes. A lógica real seria mais complexa.
   const totalParticipants = 120;
@@ -92,6 +111,10 @@ export function SurveyCard({ survey, responses, onDelete, onDuplicate }: SurveyC
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleCopyLink}>
+                <LinkIcon className="mr-2 h-4 w-4" /> Copiar Link da Pesquisa
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => router.push(`/pulsecheck/editor/${survey.id}`)}>
                 <Edit className="mr-2 h-4 w-4" /> Editar
               </DropdownMenuItem>
