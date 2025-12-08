@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, collection, query, where, onSnapshot, Timestamp, collectionGroup } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, onSnapshot, Timestamp, collectionGroup, getDocs } from 'firebase/firestore';
 import { useFirestore, useClient } from '@/firebase';
 import { type Survey, type Response as SurveyResponse, type SelectedQuestion, type Answer, type Client } from '@/types/activity';
 import { Loader2, ArrowLeft, Download, Users, TrendingUp, MessageSquare, ListTree, Target, Clock, AlertTriangle } from 'lucide-react';
@@ -199,13 +199,12 @@ export default function SurveyResultsPage() {
             return;
         }
     
-        let unsubSurvey: (() => void) | null = null;
         let unsubResponses: (() => void) | null = null;
-
+        
+        // This is a hacky way to find the clientId from surveyId as we don't have it in the URL
         const findSurveyAndListen = async () => {
             const surveyCollectionGroup = collectionGroup(db, 'surveys');
-            const surveyIdStr = Array.isArray(publicId) ? publicId[0] : publicId;
-            const q = query(surveyCollectionGroup, where('id', '==', surveyIdStr));
+            const q = query(surveyCollectionGroup, where('id', '==', publicId.toString()));
 
             try {
                 const surveyQuerySnapshot = await getDocs(q);
@@ -254,7 +253,6 @@ export default function SurveyResultsPage() {
         findSurveyAndListen();
     
         return () => {
-            if (unsubSurvey) unsubSurvey();
             if (unsubResponses) unsubResponses();
         };
     }, [publicId, db]);
