@@ -42,6 +42,15 @@ service cloud.firestore {
     function canAccessPulseCheck(clientId) {
       return isMemberOfClient(clientId) && hasProductAccess('pulse_check');
     }
+    
+    function isQuestionGlobal() {
+      // A question is global if it has no clientId field or it is null.
+      return !('clientId' in resource.data) || resource.data.clientId == null;
+    }
+    
+    function isQuestionForClient(clientId) {
+       return resource.data.clientId == clientId;
+    }
 
     // --- Collection Rules ---
 
@@ -76,9 +85,11 @@ service cloud.firestore {
     // --- PulseCheck Specific Collections ---
     
     match /pulse_check_questions/{questionId} {
-      // Questions are global templates. Any signed-in user can read them to build a survey.
-      allow get, list: if isSignedIn(); 
+      // Allow reading a question if it's global OR if it belongs to the user's client and they have PulseCheck access.
+      allow get, list: if isSignedIn() && (isQuestionGlobal() || (isQuestionForClient(getUserData(request.auth.uid).clientId) && hasProductAccess('pulse_check')));
+      
       // Only consultants can create, update, or delete question templates.
+      // When creating/updating, they can either make it global (clientId=null) or assign it to a client.
       allow write: if isConsultant();
     }
     
@@ -102,3 +113,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

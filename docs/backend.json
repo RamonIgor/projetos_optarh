@@ -100,7 +100,7 @@
     },
     "Question": {
         "title": "Question",
-        "description": "Representa uma única pergunta que pode ser reutilizada em diferentes pesquisas (surveys).",
+        "description": "Representa uma única pergunta que pode ser reutilizada em diferentes pesquisas (surveys). Pode ser global ou específica de um cliente.",
         "type": "object",
         "properties": {
             "text": { 
@@ -141,6 +141,10 @@
               "type": "string",
               "description": "UID do consultor que criou a pergunta, ou 'system' para perguntas padrão."
             },
+            "clientId": {
+                "type": ["string", "null"],
+                "description": "Se presente, indica que a pergunta é específica para este cliente. Se nulo, é uma pergunta global."
+            },
             "createdAt": {
               "type": "string",
               "format": "date-time"
@@ -157,17 +161,36 @@
             "description": { "type": "string", "description": "Uma breve descrição sobre o objetivo da pesquisa." },
             "clientId": { "type": "string", "description": "ID da empresa ('Client') para a qual a pesquisa se destina." },
             "status": { "type": "string", "enum": ["draft", "active", "closed"], "description": "O estado atual da pesquisa." },
-            "questionIds": { 
+            "questions": { 
               "type": "array", 
-              "items": { "type": "string" }, 
-              "description": "Um array de IDs de perguntas, referenciando documentos da coleção 'pulse_check_questions'."
+              "items": { "$ref": "#/entities/SelectedQuestion" }, 
+              "description": "Um array de objetos de perguntas selecionadas para esta pesquisa."
+            },
+            "totalParticipants": {
+              "type": "number",
+              "description": "Número total de colaboradores que devem participar da pesquisa."
             },
             "isAnonymous": { "type": "boolean", "description": "Define se as respostas para esta pesquisa específica são anônimas ou identificadas." },
             "createdAt": { "type": "string", "format": "date-time" },
             "opensAt": { "type": "string", "format": "date-time", "description": "Data e hora em que a pesquisa se torna ativa e aceita respostas." },
             "closesAt": { "type": "string", "format": "date-time", "description": "Data e hora em que a pesquisa é fechada." }
         },
-        "required": ["title", "clientId", "status", "questionIds", "isAnonymous", "createdAt", "opensAt", "closesAt"]
+        "required": ["title", "clientId", "status", "questions", "isAnonymous", "createdAt", "opensAt", "closesAt"]
+    },
+     "SelectedQuestion": {
+        "title": "SelectedQuestion",
+        "description": "Representa uma instância de uma pergunta dentro de uma pesquisa específica.",
+        "type": "object",
+        "properties": {
+            "id": { "type": "string", "description": "ID único da instância da pergunta na pesquisa." },
+            "questionId": { "type": "string", "description": "ID da pergunta original na biblioteca." },
+            "text": { "type": "string", "description": "O texto da pergunta no momento da seleção." },
+            "type": { "type": "string", "enum": ["nps", "likert", "multiple-choice", "open-text"] },
+            "category": { "type": "string" },
+            "options": { "type": ["array", "null"], "items": { "type": "string" } },
+            "isMandatory": { "type": "boolean" }
+        },
+        "required": ["id", "questionId", "text", "type", "category", "isMandatory"]
     },
     "Response": {
         "title": "Response",
@@ -177,6 +200,7 @@
             "surveyId": { "type": "string", "description": "ID da pesquisa ('Survey') à qual esta resposta pertence." },
             "clientId": { "type": "string", "description": "ID da empresa ('Client') para fácil filtragem dos resultados." },
             "respondentId": { "type": ["string", "null"], "description": "O UID do usuário que respondeu. É 'null' se a pesquisa for anônima." },
+            "respondentToken": { "type": ["string", "null"], "description": "Identificador único para um respondente anônimo, para evitar múltiplas submissões." },
             "answers": { 
                 "type": "object", 
                 "additionalProperties": {
@@ -189,7 +213,8 @@
                 },
                 "description": "Um objeto onde as chaves são os IDs das perguntas ('questionId') e os valores são os objetos contendo a resposta."
             },
-            "submittedAt": { "type": "string", "format": "date-time", "description": "Timestamp de quando a resposta foi enviada." }
+            "submittedAt": { "type": "string", "format": "date-time", "description": "Timestamp de quando a resposta foi enviada." },
+            "startedAt": { "type": ["string", "null"], "format": "date-time", "description": "Timestamp de quando o usuário iniciou a resposta." }
         },
         "required": ["surveyId", "clientId", "answers", "submittedAt"]
     }
@@ -220,7 +245,7 @@
     },
     "/pulse_check_questions/{questionId}": {
         "schema": { "$ref": "#/entities/Question" },
-        "description": "Repositório global de perguntas para o PulseCheck, gerenciado por consultores. Permite a reutilização de perguntas em várias pesquisas e clientes."
+        "description": "Repositório de perguntas para o PulseCheck. Contém perguntas globais (sem clientId) e perguntas específicas de clientes (com clientId)."
     },
     "/pulse_check_responses/{responseId}": {
         "schema": { "$ref": "#/entities/Response" },
@@ -228,3 +253,5 @@
     }
   }
 }
+
+    

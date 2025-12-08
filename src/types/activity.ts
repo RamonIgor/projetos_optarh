@@ -72,11 +72,12 @@ export interface Question {
   isNpsQuestion?: boolean;
   isDefault?: boolean;
   createdBy: string; // UID of consultant or 'system'
+  clientId?: string | null; // Null for global, clientId for client-specific
   createdAt: Timestamp | Date;
 }
 
 export interface SelectedQuestion {
-  id: string;
+  id: string; // Unique instance ID in the survey
   questionId: string; // Reference to the original question in the library
   text: string;
   type: 'nps' | 'likert' | 'multiple-choice' | 'open-text';
@@ -91,7 +92,7 @@ export interface Survey {
   description: string;
   clientId: string;
   status: 'draft' | 'active' | 'closed';
-  questions: SelectedQuestion[]; // Changed from questionIds
+  questions: SelectedQuestion[]; // Denormalized questions
   totalParticipants: number;
   isAnonymous: boolean;
   createdAt: Timestamp | Date;
@@ -110,7 +111,9 @@ export interface Response {
   clientId: string;
   respondentId: string | null; // UID or null for anonymous
   respondentToken?: string | null; // Anonymous unique identifier for a browser
-  answers: Record<string, Answer>; // Key is questionId
+  answers: Record<string, Answer>; // Key is the SelectedQuestion's `id`
   submittedAt: Timestamp | Date;
   startedAt?: Timestamp | Date;
 }
+
+    

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, serverTimestamp, getDocs, addDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, serverTimestamp, getDocs, addDoc, where } from 'firebase/firestore';
 import { useFirestore, useClient, useUser } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { type Survey, type Question, type SelectedQuestion, type Client } from '@/types/activity';
@@ -63,15 +63,22 @@ export default function ConfigureQuestionsPage() {
                 }
             });
 
-            // Fetch library questions
-            const questionsQuery = query(collection(db, 'pulse_check_questions'), orderBy('order'));
-            unsubLibrary = onSnapshot(questionsQuery, (snapshot) => {
-                const questionsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Question));
-                setLibraryQuestions(questionsData);
-            });
+            // Fetch library questions (global + client-specific)
+            const questionsRef = collection(db, 'pulse_check_questions');
+            const globalQuery = query(questionsRef, where('clientId', '==', null));
+            const clientQuery = query(questionsRef, where('clientId', '==', clientId));
+
+            const globalSnapshot = await getDocs(globalQuery);
+            const clientSnapshot = await getDocs(clientQuery);
+
+            const combinedQuestions = [
+                ...globalSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Question)),
+                ...clientSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Question)),
+            ];
             
-            // Wait for initial fetches to complete to set loading to false
-            await Promise.all([getDoc(surveyDocRef), getDoc(clientDocRef), getDocs(questionsQuery)]);
+            setLibraryQuestions(combinedQuestions.sort((a, b) => a.order - b.order));
+            
+            // Set loading to false after initial fetches
             setIsLoading(false);
         }
 
@@ -83,7 +90,6 @@ export default function ConfigureQuestionsPage() {
 
         return () => {
             unsubSurvey?.();
-            unsubLibrary?.();
             unsubClient?.();
         };
 
@@ -159,12 +165,12 @@ export default function ConfigureQuestionsPage() {
     };
 
     const handleSaveFromBuilder = useCallback(async (formData: QuestionBuilderFormValues) => {
-        if (!user || !db) return;
+        if (!user || !db || !clientId) return;
         
         const finalCategory = formData.category === 'new' ? formData.newCategory! : formData.category;
 
         try {
-            // All new questions go to the global library now.
+            // New questions are now specific to the client
             const newQuestionData = {
                 text: formData.text,
                 type: formData.type,
@@ -173,6 +179,7 @@ export default function ConfigureQuestionsPage() {
                 options: formData.type === 'multiple-choice' ? formData.options?.map(o => o.value) : null,
                 isDefault: false,
                 createdBy: user.uid,
+                clientId: clientId, // Link question to the current client
                 createdAt: serverTimestamp(),
                 order: (libraryQuestions.length + 1) * 10,
                 isNpsQuestion: formData.type === 'nps' && finalCategory.toUpperCase() === 'ENPS',
@@ -181,12 +188,15 @@ export default function ConfigureQuestionsPage() {
             const docRef = await addDoc(collection(db, 'pulse_check_questions'), newQuestionData);
             
             toast({
-                title: "Pergunta Adicionada à Biblioteca!",
-                description: `Sua nova pergunta está agora disponível na biblioteca na categoria "${finalCategory}".`,
+                title: "Pergunta Adicionada à Biblioteca do Cliente!",
+                description: `Sua nova pergunta está agora disponível para este cliente.`,
             });
+            
+            const newLibQuestion = { id: docRef.id, ...newQuestionData } as Question;
+            setLibraryQuestions(prev => [...prev, newLibQuestion].sort((a,b)=> a.order - b.order));
 
             // Auto-add the newly created question to the current survey
-            await handleAddQuestion({ ...newQuestionData, id: docRef.id, createdAt: new Date() });
+            await handleAddQuestion(newLibQuestion);
 
             setIsBuilderOpen(false);
 
@@ -194,7 +204,7 @@ export default function ConfigureQuestionsPage() {
             console.error("Error saving new question:", error);
             toast({ title: "Erro ao Salvar Pergunta", variant: "destructive" });
         }
-    }, [user, db, libraryQuestions, toast, handleAddQuestion]);
+    }, [user, db, libraryQuestions, toast, handleAddQuestion, clientId]);
 
     const handleSaveFromImporter = useCallback(async (importedQuestions: Omit<SelectedQuestion, 'id' | 'questionId'>[]) => {
         const newQuestions: SelectedQuestion[] = importedQuestions.map(q => ({
@@ -312,3 +322,5 @@ export default function ConfigureQuestionsPage() {
         </div>
     );
 }
+
+    
