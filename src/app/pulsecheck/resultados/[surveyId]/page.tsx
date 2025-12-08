@@ -319,14 +319,14 @@ export default function SurveyResultsPage() {
             const ratio = imgWidth / pdfWidth;
             const canvasImgHeight = imgHeight / ratio;
             
-            let position = 0;
             let heightLeft = canvasImgHeight;
+            let position = 0;
 
             pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, canvasImgHeight);
             heightLeft -= pdfHeight;
 
             while (heightLeft > 0) {
-                position = -pdfHeight;
+                position = position - pdfHeight;
                 pdf.addPage();
                 pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, canvasImgHeight);
                 heightLeft -= pdfHeight;
@@ -380,7 +380,7 @@ export default function SurveyResultsPage() {
                     <h2 className="text-2xl font-bold flex items-center gap-2"><ListTree className="h-6 w-6 text-primary" /> Resultados por Categoria</h2>
                     {analytics ? (
                          <Accordion type="multiple" defaultValue={Object.keys(analytics.categories)} className="w-full">
-                             {Object.entries(analytics.categories).sort(([keyA], [keyB]) => keyA.localeCompare(keyB)).map(([name, data]) => {
+                             {Object.entries(analytics.categories).sort(([keyA], [keyB]) => keyA.localeCompare(keyB)).map(([name, data]:[string, any]) => {
                                  const status = STATUS_CONFIG[data.status];
                                  const hasScore = data.score !== -1;
                                  
@@ -402,7 +402,7 @@ export default function SurveyResultsPage() {
                                              </div>
                                          </AccordionTrigger>
                                          <AccordionContent className="space-y-4 pt-4">
-                                            {data.questions.sort((a,b) => a.text.localeCompare(b.text)).map(q => (
+                                            {data.questions.sort((a:any,b:any) => a.text.localeCompare(b.text)).map((q: SelectedQuestion) => (
                                                 <QuestionResultCard key={q.id} question={{...q, text: getPersonalizedQuestionText(q.text)}} answers={analytics.answersByQuestionId[q.id] || []} />
                                             ))}
                                          </AccordionContent>
@@ -421,7 +421,7 @@ export default function SurveyResultsPage() {
                              {analytics && analytics.openFeedback.length > 0 ? (
                                 <ScrollArea className="h-96">
                                      <ul className="space-y-4">
-                                         {analytics.openFeedback.map((text, i) => (
+                                         {analytics.openFeedback.map((text: string, i: number) => (
                                             <li key={i} className="text-sm border-l-2 border-primary pl-3 italic text-muted-foreground">"{text}"</li>
                                          ))}
                                      </ul>
@@ -434,7 +434,7 @@ export default function SurveyResultsPage() {
                  </div>
             </div>
              {/* Hidden component for PDF rendering */}
-            <div className="absolute -left-[9999px] top-0 w-[794px] bg-white" ref={reportRef}>
+            <div className="fixed -left-[9999px] top-0 w-[794px] bg-white" ref={reportRef}>
                {client && survey && analytics && (
                  <ReportTemplate 
                    client={client} 

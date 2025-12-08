@@ -30,6 +30,10 @@ const toDate = (dateValue: Date | Timestamp | string): Date => {
 }
 
 const QuestionResultChart = ({ question, answers }: { question: SelectedQuestion, answers: Answer[] }) => {
+    if (!answers || answers.length === 0) {
+        return <div className="h-40 w-full flex items-center justify-center text-sm text-gray-400">Sem respostas.</div>;
+    }
+    
     const numericAnswers = answers.map(a => a.answer as number);
     const data = Array.from({ length: question.type === 'nps' ? 11 : 5 }, (_, i) => {
         const value = question.type === 'nps' ? i : i + 1;
