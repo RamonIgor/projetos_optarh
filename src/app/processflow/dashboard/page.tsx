@@ -6,7 +6,6 @@ import { useFirestore, useClient } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
 import { type Activity } from '@/types/activity';
-import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -90,8 +89,6 @@ export default function DashboardPage() {
         });
     }, [allActivities, categoryFilter, statusFilter]);
 
-    const unclassifiedCount = useMemo(() => allActivities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [allActivities]);
-
     const stats = useMemo(() => {
         const total = filteredActivities.length;
         const classified = filteredActivities.filter(a => a.status !== 'brainstorm').length;
@@ -144,160 +141,154 @@ export default function DashboardPage() {
     
     if (isLoadingPage || isLoading) {
         return (
-            <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
-                <div className="flex items-center justify-center min-h-[60vh] w-full">
-                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                </div>
-            </AppLayout>
+            <div className="flex items-center justify-center min-h-[60vh] w-full">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
         );
     }
     
     if (allActivities.length === 0 && !isClientLoading) {
         return (
-           <AppLayout unclassifiedCount={0} hasActivities={false}>
-            <div className="text-center py-20">
-              <h1 className="mt-4 text-3xl font-bold">Nenhum dado para exibir</h1>
-              <p className="mt-2 text-lg text-muted-foreground">Adicione e classifique atividades para ver o dashboard.</p>
-              <Button onClick={() => router.push('/processflow')} className="mt-6">
-                Ir para Brainstorm
-              </Button>
-            </div>
-          </AppLayout>
+           <div className="text-center py-20 flex-1">
+            <h1 className="mt-4 text-3xl font-bold">Nenhum dado para exibir</h1>
+            <p className="mt-2 text-lg text-muted-foreground">Adicione e classifique atividades para ver o dashboard.</p>
+            <Button onClick={() => router.push('/processflow/brainstorm')} className="mt-6">
+              Ir para Brainstorm
+            </Button>
+          </div>
         )
     }
 
     return (
-        <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
-          <div className="max-w-7xl mx-auto w-full">
-            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">Visão Geral do Projeto</h1>
-            </motion.div>
+        <div className="max-w-7xl mx-auto w-full">
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+              <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">Visão Geral do Projeto</h1>
+          </motion.div>
 
-            <div className="my-8 flex flex-col sm:flex-row gap-4">
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger className="w-full sm:w-[200px]">
-                        <SelectValue placeholder="Filtrar por categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Todas as Categorias</SelectItem>
-                        <SelectItem value="DP">DP</SelectItem>
-                        <SelectItem value="RH">RH</SelectItem>
-                        <SelectItem value="Compartilhado">Compartilhado</SelectItem>
-                    </SelectContent>
-                </Select>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-full sm:w-[200px]">
-                        <SelectValue placeholder="Filtrar por status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Todos os Status</SelectItem>
-                        <SelectItem value="aprovada">Aprovadas</SelectItem>
-                        <SelectItem value="aguardando_consenso">Aguardando Consenso</SelectItem>
-                        <SelectItem value="brainstorm">Não Classificadas</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                <StatCard title="Progresso do Levantamento" value={stats.total} icon={<FileText />} className="lg:col-span-1">
-                    <p className="text-xs text-muted-foreground mt-2">
-                        {stats.classified} classificadas, {stats.approved} aprovadas.
-                    </p>
-                    <Progress value={(stats.approved / (stats.total || 1)) * 100} className="mt-2 h-2" />
-                </StatCard>
-
-                <Card className="shadow-lg">
-                    <CardHeader>
-                        <CardTitle className="text-md font-medium text-muted-foreground flex items-center gap-2"><PieChart className="h-5 w-5" />Divisão por Categoria</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {categoryChartData.length > 0 ? (
-                           <CategoryChart data={categoryChartData} />
-                        ) : <p className="text-center text-sm text-muted-foreground py-10">Nenhum dado na categoria selecionada</p>}
-                    </CardContent>
-                </Card>
-
-                <StatCard title="Status de Aprovação" value={stats.approved} icon={<CheckSquare />} color="text-green-500">
-                    <p className="text-xs text-muted-foreground mt-2">
-                        <span className="text-yellow-500">{stats.byStatus['aguardando_consenso'] || 0} aguardando</span>, {' '}
-                        <span className="text-gray-500">{stats.byStatus['brainstorm'] || 0} não classificadas</span>
-                    </p>
-                </StatCard>
-
-                <Card className="shadow-lg">
-                     <CardHeader>
-                        <CardTitle className="text-md font-medium text-muted-foreground flex items-center gap-2"><Users className="h-5 w-5" />Atividades por Responsável</CardTitle>
-                    </CardHeader>
-                    <CardContent className="max-h-48 overflow-y-auto">
-                        <ul className="space-y-2 text-sm">
-                            {Object.entries(stats.byResponsible).sort(([, a], [, b]) => b - a).map(([name, count]) => (
-                                <li key={name} className="flex justify-between items-center">
-                                    <span>{name}</span>
-                                    <Badge variant="secondary">{count}</Badge>
-                                </li>
-                            ))}
-                        </ul>
-                    </CardContent>
-                </Card>
-                
-                 <Card className="shadow-lg">
-                     <CardHeader>
-                        <CardTitle className="text-md font-medium text-muted-foreground flex items-center gap-2"><Clock className="h-5 w-5" />Recorrência</CardTitle>
-                    </CardHeader>
-                    <CardContent className="max-h-48 overflow-y-auto">
-                        <ul className="space-y-2 text-sm">
-                            {Object.entries(stats.byRecurrence).map(([name, count]) => (
-                                <li key={name} className="flex justify-between items-center">
-                                    <span>{name}</span>
-                                    <Badge variant="secondary">{count}</Badge>
-                                </li>
-                            ))}
-                        </ul>
-                    </CardContent>
-                </Card>
-            </div>
-            
-            <div className="grid gap-8 md:grid-cols-2 mt-8">
-                <Card className="shadow-lg">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-lg"><ActivitySquare className="text-yellow-500"/> Atividades Pendentes de Decisão</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                         {stats.pendingDecision.length > 0 ? (
-                            <ul className="space-y-2">
-                                {stats.pendingDecision.map(activity => (
-                                    <li key={activity.id}>
-                                       <Link href={`/processflow/classificacao?activityId=${activity.id}`} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
-                                            <span className="font-medium">{getActivityName(activity, allActivities)}</span>
-                                            <Badge variant="outline" className="text-yellow-600 border-yellow-500">{activity.categoria}</Badge>
-                                        </Link>
-                                    </li>
-                                ))}
-                            </ul>
-                         ) : <p className="text-center text-sm text-muted-foreground py-6">Nenhuma atividade pendente!</p>}
-                    </CardContent>
-                </Card>
-                <Card className="shadow-lg">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-lg"><ThumbsUp className="text-green-500" /> Últimas Aprovações</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                         {stats.latestApproved.length > 0 ? (
-                            <ul className="space-y-2">
-                                {stats.latestApproved.map(activity => (
-                                    <li key={activity.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
-                                        <span className="font-medium">{getActivityName(activity, allActivities)}</span>
-                                        <span className="text-sm text-muted-foreground">
-                                            {activity.dataAprovacao && format((activity.dataAprovacao as any).toDate(), "dd/MM/yyyy 'às' HH:mm")}
-                                        </span>
-                                    </li>
-                                ))}
-                            </ul>
-                         ) : <p className="text-center text-sm text-muted-foreground py-6">Nenhuma atividade aprovada ainda.</p>}
-                    </CardContent>
-                </Card>
-            </div>
+          <div className="my-8 flex flex-col sm:flex-row gap-4">
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue placeholder="Filtrar por categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                      <SelectItem value="all">Todas as Categorias</SelectItem>
+                      <SelectItem value="DP">DP</SelectItem>
+                      <SelectItem value="RH">RH</SelectItem>
+                      <SelectItem value="Compartilhado">Compartilhado</SelectItem>
+                  </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue placeholder="Filtrar por status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                      <SelectItem value="all">Todos os Status</SelectItem>
+                      <SelectItem value="aprovada">Aprovadas</SelectItem>
+                      <SelectItem value="aguardando_consenso">Aguardando Consenso</SelectItem>
+                      <SelectItem value="brainstorm">Não Classificadas</SelectItem>
+                  </SelectContent>
+              </Select>
           </div>
-        </AppLayout>
+
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <StatCard title="Progresso do Levantamento" value={stats.total} icon={<FileText />} className="lg:col-span-1">
+                  <p className="text-xs text-muted-foreground mt-2">
+                      {stats.classified} classificadas, {stats.approved} aprovadas.
+                  </p>
+                  <Progress value={(stats.approved / (stats.total || 1)) * 100} className="mt-2 h-2" />
+              </StatCard>
+
+              <Card className="shadow-lg">
+                  <CardHeader>
+                      <CardTitle className="text-md font-medium text-muted-foreground flex items-center gap-2"><PieChart className="h-5 w-5" />Divisão por Categoria</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                      {categoryChartData.length > 0 ? (
+                          <CategoryChart data={categoryChartData} />
+                      ) : <p className="text-center text-sm text-muted-foreground py-10">Nenhum dado na categoria selecionada</p>}
+                  </CardContent>
+              </Card>
+
+              <StatCard title="Status de Aprovação" value={stats.approved} icon={<CheckSquare />} color="text-green-500">
+                  <p className="text-xs text-muted-foreground mt-2">
+                      <span className="text-yellow-500">{stats.byStatus['aguardando_consenso'] || 0} aguardando</span>, {' '}
+                      <span className="text-gray-500">{stats.byStatus['brainstorm'] || 0} não classificadas</span>
+                  </p>
+              </StatCard>
+
+              <Card className="shadow-lg">
+                    <CardHeader>
+                      <CardTitle className="text-md font-medium text-muted-foreground flex items-center gap-2"><Users className="h-5 w-5" />Atividades por Responsável</CardTitle>
+                  </CardHeader>
+                  <CardContent className="max-h-48 overflow-y-auto">
+                      <ul className="space-y-2 text-sm">
+                          {Object.entries(stats.byResponsible).sort(([, a], [, b]) => b - a).map(([name, count]) => (
+                              <li key={name} className="flex justify-between items-center">
+                                  <span>{name}</span>
+                                  <Badge variant="secondary">{count}</Badge>
+                              </li>
+                          ))}
+                      </ul>
+                  </CardContent>
+              </Card>
+              
+                <Card className="shadow-lg">
+                    <CardHeader>
+                      <CardTitle className="text-md font-medium text-muted-foreground flex items-center gap-2"><Clock className="h-5 w-5" />Recorrência</CardTitle>
+                  </CardHeader>
+                  <CardContent className="max-h-48 overflow-y-auto">
+                      <ul className="space-y-2 text-sm">
+                          {Object.entries(stats.byRecurrence).map(([name, count]) => (
+                              <li key={name} className="flex justify-between items-center">
+                                  <span>{name}</span>
+                                  <Badge variant="secondary">{count}</Badge>
+                              </li>
+                          ))}
+                      </ul>
+                  </CardContent>
+              </Card>
+          </div>
+          
+          <div className="grid gap-8 md:grid-cols-2 mt-8">
+              <Card className="shadow-lg">
+                  <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg"><ActivitySquare className="text-yellow-500"/> Atividades Pendentes de Decisão</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                        {stats.pendingDecision.length > 0 ? (
+                          <ul className="space-y-2">
+                              {stats.pendingDecision.map(activity => (
+                                  <li key={activity.id}>
+                                      <Link href={`/processflow/classificacao?activityId=${activity.id}`} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
+                                          <span className="font-medium">{getActivityName(activity, allActivities)}</span>
+                                          <Badge variant="outline" className="text-yellow-600 border-yellow-500">{activity.categoria}</Badge>
+                                      </Link>
+                                  </li>
+                              ))}
+                          </ul>
+                        ) : <p className="text-center text-sm text-muted-foreground py-6">Nenhuma atividade pendente!</p>}
+                  </CardContent>
+              </Card>
+              <Card className="shadow-lg">
+                  <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg"><ThumbsUp className="text-green-500" /> Últimas Aprovações</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                        {stats.latestApproved.length > 0 ? (
+                          <ul className="space-y-2">
+                              {stats.latestApproved.map(activity => (
+                                  <li key={activity.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
+                                      <span className="font-medium">{getActivityName(activity, allActivities)}</span>
+                                      <span className="text-sm text-muted-foreground">
+                                          {activity.dataAprovacao && format((activity.dataAprovacao as any).toDate(), "dd/MM/yyyy 'às' HH:mm")}
+                                      </span>
+                                  </li>
+                              ))}
+                          </ul>
+                        ) : <p className="text-center text-sm text-muted-foreground py-6">Nenhuma atividade aprovada ainda.</p>}
+                  </CardContent>
+              </Card>
+          </div>
+        </div>
     );
 }

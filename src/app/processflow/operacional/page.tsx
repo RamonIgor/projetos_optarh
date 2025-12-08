@@ -277,7 +277,6 @@ export default function OperationalPage() {
         });
     };
     
-    const unclassifiedCount = useMemo(() => allActivities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [allActivities]);
     const allResponsibles = useMemo(() => Array.from(new Set(allActivities.map(a => a.responsavel).filter(Boolean))), [allActivities]);
     
     const allRecurrences = useMemo(() => {
@@ -338,108 +337,96 @@ export default function OperationalPage() {
 
     if (isLoadingPage || isLoading) {
         return (
-            <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
-                <div className="flex items-center justify-center min-h-[60vh] w-full">
-                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                </div>
-            </AppLayout>
+            <div className="flex items-center justify-center min-h-[60vh] w-full">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
         );
     }
     
     if (allActivities.length === 0 && !isClientLoading) {
         return (
-           <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={false}>
-            <div className="text-center py-20">
-              <h1 className="mt-4 text-3xl font-bold">Nenhuma atividade aprovada</h1>
-              <p className="mt-2 text-lg text-muted-foreground">Classifique e aprove atividades para popular o checklist operacional.</p>
-              <Button onClick={() => router.push('/processflow/classificacao')} className="mt-6">
-                Ir para Classificação
-              </Button>
-            </div>
-          </AppLayout>
+           <div className="text-center py-20 flex-1">
+            <h1 className="mt-4 text-3xl font-bold">Nenhuma atividade aprovada</h1>
+            <p className="mt-2 text-lg text-muted-foreground">Classifique e aprove atividades para popular o checklist operacional.</p>
+            <Button onClick={() => router.push('/processflow/classificacao')} className="mt-6">
+              Ir para Classificação
+            </Button>
+          </div>
         )
     }
 
     return (
-        <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
-          <div className="max-w-7xl mx-auto w-full">
-            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">Checklist Operacional</h1>
-                <p className="mt-4 text-lg text-muted-foreground">Acompanhe a execução das atividades recorrentes da equipe.</p>
-            </motion.div>
-            
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 my-8">
-                <StatCard title="Total de Atividades" value={stats.total} icon={<Calendar className="h-6 w-6 text-muted-foreground" />} />
-                <StatCard title="Executadas no Período" value={stats.executed} icon={<CheckSquare className="h-6 w-6 text-green-500" />} />
-                <StatCard title="Pendentes" value={stats.pending} icon={<Clock className="h-6 w-6 text-yellow-500" />} />
-                <StatCard title="Taxa de Conclusão" value={`${Math.round(stats.completionRate)}%`} icon={<Progress value={stats.completionRate} className="w-12 h-3" /> } />
-            </div>
-
-             <Tabs value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as any)}>
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <TabsList>
-                        <TabsTrigger value="Todas">Todas</TabsTrigger>
-                        <TabsTrigger value="DP">DP</TabsTrigger>
-                        <TabsTrigger value="RH">RH</TabsTrigger>
-                        <TabsTrigger value="Compartilhado">Compartilhado</TabsTrigger>
-                    </TabsList>
-
-                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                        <Select value={recurrenceFilter} onValueChange={setRecurrenceFilter}>
-                            <SelectTrigger className="w-full sm:w-[180px]">
-                                <SelectValue placeholder="Filtrar por recorrência" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todas Recorrências</SelectItem>
-                                {allRecurrences.map(r => <SelectItem key={r} value={r!}>{r}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        <Select value={responsibleFilter} onValueChange={setResponsibleFilter}>
-                            <SelectTrigger className="w-full sm:w-[180px]">
-                                <SelectValue placeholder="Filtrar por responsável" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos Responsáveis</SelectItem>
-                                {allResponsibles.map(r => <SelectItem key={r} value={r!}>{r}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="w-full sm:w-[180px]">
-                                <SelectValue placeholder="Filtrar por status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Mostrar Todas</SelectItem>
-                                <SelectItem value="pending">Apenas Pendentes</SelectItem>
-                                <SelectItem value="executed">Apenas Executadas</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-                 <div className="mt-6 space-y-6">
-                    {recurrenceOrder.map(recurrence => (
-                         <RecurrenceGroup
-                             key={recurrence}
-                             title={recurrence}
-                             activities={groupedActivities[recurrence] || []}
-                             onToggle={handleToggleActivity}
-                             getActivityName={(act) => getActivityName(act)}
-                         />
-                     ))}
-                     {filteredActivities.length === 0 && !isLoading && (
-                        <div className="text-center py-20 border-2 border-dashed rounded-lg">
-                            <h3 className="text-xl font-semibold">Nenhuma atividade encontrada</h3>
-                            <p className="mt-2 text-muted-foreground">Tente ajustar os filtros ou adicione mais atividades.</p>
-                        </div>
-                     )}
-                 </div>
-            </Tabs>
+        <div className="max-w-7xl mx-auto w-full">
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+              <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">Checklist Operacional</h1>
+              <p className="mt-4 text-lg text-muted-foreground">Acompanhe a execução das atividades recorrentes da equipe.</p>
+          </motion.div>
+          
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 my-8">
+              <StatCard title="Total de Atividades" value={stats.total} icon={<Calendar className="h-6 w-6 text-muted-foreground" />} />
+              <StatCard title="Executadas no Período" value={stats.executed} icon={<CheckSquare className="h-6 w-6 text-green-500" />} />
+              <StatCard title="Pendentes" value={stats.pending} icon={<Clock className="h-6 w-6 text-yellow-500" />} />
+              <StatCard title="Taxa de Conclusão" value={`${Math.round(stats.completionRate)}%`} icon={<Progress value={stats.completionRate} className="w-12 h-3" /> } />
           </div>
-        </AppLayout>
+
+            <Tabs value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as any)}>
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                  <TabsList>
+                      <TabsTrigger value="Todas">Todas</TabsTrigger>
+                      <TabsTrigger value="DP">DP</TabsTrigger>
+                      <TabsTrigger value="RH">RH</TabsTrigger>
+                      <TabsTrigger value="Compartilhado">Compartilhado</TabsTrigger>
+                  </TabsList>
+
+                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                      <Select value={recurrenceFilter} onValueChange={setRecurrenceFilter}>
+                          <SelectTrigger className="w-full sm:w-[180px]">
+                              <SelectValue placeholder="Filtrar por recorrência" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="all">Todas Recorrências</SelectItem>
+                              {allRecurrences.map(r => <SelectItem key={r} value={r!}>{r}</SelectItem>)}
+                          </SelectContent>
+                      </Select>
+                      <Select value={responsibleFilter} onValueChange={setResponsibleFilter}>
+                          <SelectTrigger className="w-full sm:w-[180px]">
+                              <SelectValue placeholder="Filtrar por responsável" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="all">Todos Responsáveis</SelectItem>
+                              {allResponsibles.map(r => <SelectItem key={r} value={r!}>{r}</SelectItem>)}
+                          </SelectContent>
+                      </Select>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                          <SelectTrigger className="w-full sm:w-[180px]">
+                              <SelectValue placeholder="Filtrar por status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="all">Mostrar Todas</SelectItem>
+                              <SelectItem value="pending">Apenas Pendentes</SelectItem>
+                              <SelectItem value="executed">Apenas Executadas</SelectItem>
+                          </SelectContent>
+                      </Select>
+                  </div>
+              </div>
+                <div className="mt-6 space-y-6">
+                  {recurrenceOrder.map(recurrence => (
+                        <RecurrenceGroup
+                            key={recurrence}
+                            title={recurrence}
+                            activities={groupedActivities[recurrence] || []}
+                            onToggle={handleToggleActivity}
+                            getActivityName={(act) => getActivityName(act)}
+                        />
+                    ))}
+                    {filteredActivities.length === 0 && !isLoading && (
+                      <div className="text-center py-20 border-2 border-dashed rounded-lg">
+                          <h3 className="text-xl font-semibold">Nenhuma atividade encontrada</h3>
+                          <p className="mt-2 text-muted-foreground">Tente ajustar os filtros ou adicione mais atividades.</p>
+                      </div>
+                    )}
+                </div>
+          </Tabs>
+        </div>
     );
 }
-
-    
-
-
-
-

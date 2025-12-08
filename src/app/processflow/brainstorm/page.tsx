@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition, FormEvent, useMemo } from 'react';
 import { collection, addDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, doc } from 'firebase/firestore';
-import { type Activity } from '@/types/activity';
+import { type Activity, type Notification } from '@/types/activity';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -330,108 +330,102 @@ export default function BrainstormPage() {
 
   if (isLoadingPage) {
     return (
-      <AppLayout unclassifiedCount={0} hasActivities={false}>
-        <div className="flex items-center justify-center min-h-screen w-full">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        </div>
-      </AppLayout>
+      <div className="flex items-center justify-center min-h-screen w-full">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
     );
   }
   
   if (!user) {
     return null;
   }
-
-  const unclassifiedCount = activities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length;
   
   const showConsultantPrompt = isConsultant && !clientId;
 
   return (
-    <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={activities.length > 0}>
-      <div className="max-w-4xl mx-auto w-full">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <h1 className="text-4xl md:text-5xl font-bold text-center text-primary tracking-tight">Brainstorm de Atividades</h1>
-          <p className="mt-4 text-lg text-center text-muted-foreground">Liste todas as atividades e seus micro-processos. Não se preocupe com a classificação ainda.</p>
-        </motion.div>
+    <div className="max-w-4xl mx-auto w-full">
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+        <h1 className="text-4xl md:text-5xl font-bold text-center text-primary tracking-tight">Brainstorm de Atividades</h1>
+        <p className="mt-4 text-lg text-center text-muted-foreground">Liste todas as atividades e seus micro-processos. Não se preocupe com a classificação ainda.</p>
+      </motion.div>
 
-        <Card className="mt-8 shadow-lg dark:shadow-black/20">
-          <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle className="text-xl">Adicionar Nova Atividade Principal</CardTitle>
+      <Card className="mt-8 shadow-lg dark:shadow-black/20">
+        <CardHeader>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-xl">Adicionar Nova Atividade Principal</CardTitle>
+            </div>
+            <div className="text-sm font-medium text-muted-foreground pt-1">{activities.length} atividades levantadas</div>
+          </div>
+          <form onSubmit={handleAddSubmit} className="flex flex-col sm:flex-row gap-2 pt-4">
+            <Input
+              type="text"
+              placeholder="Ex: Processar folha de pagamento"
+              value={newActivityName}
+              onChange={(e) => setNewActivityName(e.target.value)}
+              className="h-12 text-base"
+              disabled={isAdding || !clientId}
+              aria-label="Nova atividade principal"
+            />
+            <Button type="submit" size="lg" className="h-12 w-full sm:w-auto" disabled={isAdding || !newActivityName.trim() || !clientId}>
+              {isAdding ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5 sm:mr-2" />}
+              <span className="hidden sm:inline">Adicionar</span>
+            </Button>
+          </form>
+            {showConsultantPrompt && (
+              <p className="text-sm text-yellow-600 mt-2">Como consultor(a), por favor, selecione um cliente no Painel de Consultoria para começar a adicionar atividades.</p>
+            )}
+            {!clientId && !isConsultant && !isClientLoading && (
+                <p className="text-sm text-destructive mt-2">Sua conta não está associada a um cliente. Não é possível adicionar atividades.</p>
+            )}
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {isLoading ? (
+                <div className="flex justify-center items-center py-10">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary"/>
+                </div>
+            ) : activityTree.length === 0 ? (
+                <div className="text-center py-10 border-2 border-dashed rounded-lg">
+                <h3 className="text-lg font-semibold">Tudo limpo por aqui!</h3>
+                <p className="mt-1 text-muted-foreground">
+                  {showConsultantPrompt
+                      ? "Selecione um cliente para ver as atividades."
+                      : "Comece a adicionar as atividades da sua equipe no campo acima."}
+                </p>
               </div>
-              <div className="text-sm font-medium text-muted-foreground pt-1">{activities.length} atividades levantadas</div>
-            </div>
-            <form onSubmit={handleAddSubmit} className="flex flex-col sm:flex-row gap-2 pt-4">
-              <Input
-                type="text"
-                placeholder="Ex: Processar folha de pagamento"
-                value={newActivityName}
-                onChange={(e) => setNewActivityName(e.target.value)}
-                className="h-12 text-base"
-                disabled={isAdding || !clientId}
-                aria-label="Nova atividade principal"
-              />
-              <Button type="submit" size="lg" className="h-12 w-full sm:w-auto" disabled={isAdding || !newActivityName.trim() || !clientId}>
-                {isAdding ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5 sm:mr-2" />}
-                <span className="hidden sm:inline">Adicionar</span>
-              </Button>
-            </form>
-             {showConsultantPrompt && (
-                <p className="text-sm text-yellow-600 mt-2">Como consultor(a), por favor, selecione um cliente no Painel de Consultoria para começar a adicionar atividades.</p>
-             )}
-             {!clientId && !isConsultant && !isClientLoading && (
-                 <p className="text-sm text-destructive mt-2">Sua conta não está associada a um cliente. Não é possível adicionar atividades.</p>
-             )}
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {isLoading ? (
-                 <div className="flex justify-center items-center py-10">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary"/>
-                 </div>
-              ) : activityTree.length === 0 ? (
-                 <div className="text-center py-10 border-2 border-dashed rounded-lg">
-                  <h3 className="text-lg font-semibold">Tudo limpo por aqui!</h3>
-                  <p className="mt-1 text-muted-foreground">
-                    {showConsultantPrompt
-                        ? "Selecione um cliente para ver as atividades."
-                        : "Comece a adicionar as atividades da sua equipe no campo acima."}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
-                  <AnimatePresence>
-                    {activityTree.map((activity) => (
-                        <div key={activity.id}>
-                            <ActivityItem 
-                                activity={activity} 
-                                onAddSubActivity={addActivity}
-                                onDeleteActivity={handleDeleteActivity}
-                                hasChildren={activity.children.length > 0}
-                            />
-                             {activity.children.length > 0 && (
-                                <div className="space-y-2 mt-2">
-                                    {activity.children.map(child => (
-                                         <ActivityItem 
-                                            key={child.id}
-                                            activity={child}
-                                            isSubItem={true}
-                                            onAddSubActivity={addActivity}
-                                            onDeleteActivity={handleDeleteActivity}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                  </AnimatePresence>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            ) : (
+              <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
+                <AnimatePresence>
+                  {activityTree.map((activity) => (
+                      <div key={activity.id}>
+                          <ActivityItem 
+                              activity={activity} 
+                              onAddSubActivity={addActivity}
+                              onDeleteActivity={handleDeleteActivity}
+                              hasChildren={activity.children.length > 0}
+                          />
+                            {activity.children.length > 0 && (
+                              <div className="space-y-2 mt-2">
+                                  {activity.children.map(child => (
+                                        <ActivityItem 
+                                          key={child.id}
+                                          activity={child}
+                                          isSubItem={true}
+                                          onAddSubActivity={addActivity}
+                                          onDeleteActivity={handleDeleteActivity}
+                                      />
+                                  ))}
+                              </div>
+                          )}
+                      </div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <AlertDialog open={dialogState.open} onOpenChange={(open) => setDialogState({ ...dialogState, open })}>
         <AlertDialogContent>
@@ -447,6 +441,6 @@ export default function BrainstormPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </AppLayout>
+    </div>
   );
 }
