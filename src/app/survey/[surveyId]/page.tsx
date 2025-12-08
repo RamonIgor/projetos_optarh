@@ -52,13 +52,6 @@ export default function SurveyResponsePage() {
 
     if (!surveyId) return;
 
-    const submissionStatus = localStorage.getItem(`survey_status_${surveyId}`);
-    if (submissionStatus === 'completed') {
-      setHasSubmitted(true);
-      setIsLoading(false);
-      return;
-    }
-
     if (!db || !clientId) {
       setError("Link de pesquisa inválido ou corrompido.");
       setIsLoading(false);
@@ -206,7 +199,6 @@ export default function SurveyResponsePage() {
         await addDoc(collection(db, 'pulse_check_responses'), responseData);
         setHasSubmitted(true);
         if (surveyId) {
-            localStorage.setItem(`survey_status_${surveyId}`, 'completed');
             localStorage.removeItem(`survey_answers_${surveyId}`);
         }
 
