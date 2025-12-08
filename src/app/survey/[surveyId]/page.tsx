@@ -240,15 +240,17 @@ export default function SurveyResponsePage() {
   const isLastStep = currentStep === survey.questions.length - 1;
   
   return (
-    <div className="flex min-h-screen w-full flex-col items-center bg-muted/40 p-4 sm:p-6">
-        <header className="w-full max-w-4xl">
-             {client?.logoUrl && (
-                 <div className="mb-4 text-center">
+    <div className="flex min-h-screen w-full flex-col items-center p-4 sm:p-6">
+        <header className="w-full max-w-5xl">
+             {client?.logoUrl ? (
+                 <div className="mb-6 text-center">
                     <Image src={client.logoUrl} alt={`${client.name} Logo`} width={150} height={50} className="mx-auto" unoptimized/>
                  </div>
-             )}
-            <h1 className="text-center text-2xl font-bold text-foreground">{survey.title}</h1>
-            <div className="my-4 space-y-2">
+             ) : client?.name ? (
+                <h2 className="text-center text-xl font-bold text-muted-foreground">{client.name}</h2>
+             ) : null}
+            <h1 className="text-center text-3xl font-bold text-foreground">{survey.title}</h1>
+            <div className="my-6 space-y-2">
                 <div className="flex justify-between text-sm text-muted-foreground">
                     <span>Pergunta {currentStep + 1} de {survey.questions.length}</span>
                     {survey.isAnonymous && <Badge variant="secondary">Suas respostas são anônimas</Badge>}
@@ -265,11 +267,11 @@ export default function SurveyResponsePage() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -50 }}
                     transition={{ duration: 0.3 }}
-                    className="w-full max-w-4xl"
+                    className="w-full max-w-5xl"
                 >
                     <Card className="shadow-2xl">
-                        <CardHeader>
-                            <CardTitle className="text-2xl leading-relaxed">
+                        <CardHeader className="pb-8">
+                            <CardTitle className="text-3xl leading-tight">
                                 {currentQuestion?.text}
                                 {currentQuestion?.isMandatory && <span className="ml-2 text-destructive">*</span>}
                             </CardTitle>
@@ -291,7 +293,7 @@ export default function SurveyResponsePage() {
              </AnimatePresence>
         </main>
         
-        <footer className="mt-6 flex w-full max-w-4xl justify-between">
+        <footer className="mt-8 flex w-full max-w-5xl justify-between">
             <Button variant="outline" onClick={handlePrev} disabled={currentStep === 0 || isSubmitting}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Anterior
