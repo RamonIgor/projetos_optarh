@@ -12,7 +12,7 @@ import { motion } from 'framer-motion';
 
 import { QuestionLibrary } from './_components/QuestionLibrary';
 import { SelectedQuestions } from './_components/SelectedQuestions';
-import { QuestionBuilderDialog } from './_components/QuestionBuilderDialog';
+import { QuestionBuilderDialog, type QuestionBuilderFormValues } from './_components/QuestionBuilderDialog';
 
 export default function ConfigureQuestionsPage() {
     const { surveyId } = useParams();
@@ -148,32 +148,38 @@ export default function ConfigureQuestionsPage() {
         setIsBuilderOpen(true);
     };
 
-    const handleSaveFromBuilder = useCallback(async (questionData: Omit<SelectedQuestion, 'id' | 'questionId'>) => {
-        let newQuestions: SelectedQuestion[];
+    const handleSaveFromBuilder = useCallback(async (formData: QuestionBuilderFormValues) => {
+        const finalCategory = formData.category === 'new' ? formData.newCategory! : formData.category;
 
-        const finalQuestionData = {
-            ...questionData,
-            options: questionData.type === 'multiple-choice' 
-                ? (questionData.options || [])
-                : null,
-          };
+        const questionData: Omit<SelectedQuestion, 'id' | 'questionId'> = {
+            text: formData.text,
+            type: formData.type,
+            category: finalCategory,
+            isMandatory: formData.isMandatory,
+            options: formData.type === 'multiple-choice' ? formData.options?.map(o => o.value) : null,
+        };
+
+        let newQuestions: SelectedQuestion[];
 
         if (questionToEdit) { // Editing existing question
             newQuestions = selectedQuestions.map(q => 
-                q.id === questionToEdit.id ? { ...q, ...finalQuestionData, id: q.id, questionId: (q as any).questionId || 'custom' } as SelectedQuestion : q
+                q.id === questionToEdit.id 
+                ? { ...q, ...questionData }
+                : q
             );
+             toast({ title: "Pergunta atualizada!", duration: 2000 });
         } else { // Creating a new custom question
             const newCustomQuestion: SelectedQuestion = {
+                ...questionData,
                 id: `custom-${Date.now()}`,
-                questionId: `custom-${Date.now()}`,
-                ...finalQuestionData,
+                questionId: 'custom', // Mark as custom
             };
             newQuestions = [...selectedQuestions, newCustomQuestion];
+            toast({ title: "Pergunta personalizada adicionada!", duration: 2000 });
         }
         
         setSelectedQuestions(newQuestions);
         await updateSurveyQuestions(newQuestions);
-        toast({ title: "Pergunta salva!", duration: 2000 });
 
     }, [questionToEdit, selectedQuestions, updateSurveyQuestions, toast]);
     
@@ -185,9 +191,11 @@ export default function ConfigureQuestionsPage() {
         router.push(`/pulsecheck/editor/${surveyId}/review`);
     };
 
-    const allCategories = useMemo(() => 
-        Array.from(new Set(libraryQuestions.map(q => q.category))),
-    [libraryQuestions]);
+    const allCategories = useMemo(() => {
+        const categories = new Set(libraryQuestions.map(q => q.category));
+        return Array.from(categories).sort();
+    }, [libraryQuestions]);
+
 
     if (isLoading) {
         return (
