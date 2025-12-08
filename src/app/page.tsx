@@ -78,7 +78,6 @@ export default function ProductPortalPage() {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-white to-gray-100">
-      {/* Top Wave Decoration */}
       <div className="absolute top-0 left-0 right-0 h-96 w-full opacity-[0.15] [mask-image:linear-gradient(to_bottom,white,transparent)]">
         <svg className="absolute inset-0 h-full w-full" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
           <defs>
@@ -91,7 +90,6 @@ export default function ProductPortalPage() {
         </svg>
       </div>
 
-      {/* Geometric Pattern */}
       <div className="absolute inset-0 opacity-[0.06] [mask-image:radial-gradient(closest-side,white,transparent)]">
         <svg className="h-full w-full" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -163,12 +161,15 @@ export default function ProductPortalPage() {
                                 <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                             </Button>
                           ) : (
-                            <div className="relative mt-8">
-                                <Button onClick={() => handleCtaClick(false, product)} className="relative w-full h-14 text-lg rounded-xl bg-white overflow-hidden gradient-border-orange">
-                                    <span className="font-bold gradient-text bg-gradient-to-r from-orange-500 to-red-500">
-                                        Falar com Consultor
-                                    </span>
-                                </Button>
+                            <div
+                              onClick={() => handleCtaClick(false, product)}
+                              className="relative mt-8 p-0.5 bg-gradient-to-r from-orange-400 to-red-500 rounded-xl cursor-pointer group-hover:from-orange-500 group-hover:to-red-600 transition-all"
+                            >
+                              <div className="w-full h-full bg-white rounded-[10px] px-6 py-3.5 transition-all group-hover:bg-transparent">
+                                <span className="font-bold text-lg text-center block bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent transition-all group-hover:text-white">
+                                  Falar com Consultor
+                                </span>
+                              </div>
                             </div>
                           )}
                         </div>
