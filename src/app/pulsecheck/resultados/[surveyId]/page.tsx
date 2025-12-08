@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -5,15 +6,15 @@ import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { useFirestore, useClient } from '@/firebase';
 import { type Survey, type Response as SurveyResponse, type SelectedQuestion, Answer, type Client } from '@/types/activity';
-import { Loader2, ArrowLeft, Download, Users, CheckSquare, TrendingUp, TrendingDown, MessageSquare, ListTree, Target, Clock } from 'lucide-react';
+import { Loader2, ArrowLeft, Download, Users, TrendingUp, MessageSquare, ListTree, Target, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Bar, Cell, PieChart, Pie } from 'recharts';
 import { Progress } from '@/components/ui/progress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
+import { calculateNPS, calculateCategoryScore, getCategoryStatus } from '@/lib/pulsecheck-analytics';
 
 const NPS_COLORS = {
   detractor: '#f87171', // red-400
@@ -23,31 +24,13 @@ const NPS_COLORS = {
 
 const LIKERT_COLORS = ['#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e'];
 
-const calculateNPS = (answers: number[]) => {
-    if (answers.length === 0) return { score: 0, promoters: 0, passives: 0, detractors: 0, total: 0 };
-
-    const promoters = answers.filter(score => score >= 9).length;
-    const detractors = answers.filter(score => score <= 6).length;
-    const passives = answers.length - promoters - detractors;
-    
-    const promoterPercentage = (promoters / answers.length) * 100;
-    const detractorPercentage = (detractors / answers.length) * 100;
-
-    return {
-        score: Math.round(promoterPercentage - detractorPercentage),
-        promoters,
-        passives,
-        detractors,
-        total: answers.length
-    };
+const STATUS_CONFIG: Record<ReturnType<typeof getCategoryStatus>, { label: string; color: string; textColor: string }> = {
+    excelente: { label: "Excelente", color: "bg-green-500", textColor: "text-green-500" },
+    bom: { label: "Bom", color: "bg-blue-500", textColor: "text-blue-500" },
+    atencao: { label: "Atenção", color: "bg-yellow-500", textColor: "text-yellow-500" },
+    critico: { label: "Crítico", color: "bg-red-500", textColor: "text-red-500" }
 };
 
-const getCategoryStatus = (score: number) => {
-    if (score >= 80) return { label: "Excelente", color: "bg-green-500", textColor: "text-green-500" };
-    if (score >= 60) return { label: "Bom", color: "bg-blue-500", textColor: "text-blue-500" };
-    if (score >= 40) return { label: "Atenção", color: "bg-yellow-500", textColor: "text-yellow-500" };
-    return { label: "Crítico", color: "bg-red-500", textColor: "text-red-500" };
-}
 
 function StatCard({ title, value, description, icon: Icon, children }: { title: string, value: string | number, description?: string, icon: React.ElementType, children?: React.ReactNode }) {
     return (
@@ -83,7 +66,7 @@ function NpsStatCard({ title, npsResult }: { title: string, npsResult: ReturnTyp
             <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <div className={`text-4xl font-bold ${npsResult.score > 0 ? 'text-green-500' : 'text-red-500'}`}>{npsResult.score > 0 ? `+${npsResult.score}` : npsResult.score}</div>
+                        <div className={`text-4xl font-bold ${npsResult.score >= 0 ? 'text-green-500' : 'text-red-500'}`}>{npsResult.score > 0 ? `+${npsResult.score}` : npsResult.score}</div>
                         <p className="text-xs text-muted-foreground">
                             {npsResult.promoters} Promotores, {npsResult.passives} Passivos, {npsResult.detractors} Detratores
                         </p>
@@ -246,7 +229,7 @@ export default function SurveyResultsPage() {
         }, {} as Record<string, Answer[]>);
 
         const findNpsQuestion = (category: 'eNPS' | 'Liderança NPS') => {
-            return survey.questions.find(q => q.type === 'nps' && q.category.toUpperCase() === category) || null;
+            return survey.questions.find(q => q.type === 'nps' && q.category.toUpperCase() === category.toUpperCase()) || null;
         }
 
         const eNpsQuestion = findNpsQuestion('eNPS');
@@ -259,28 +242,16 @@ export default function SurveyResultsPage() {
         const lNpsResult = calculateNPS(lNpsAnswers);
 
         const categories = survey.questions.reduce((acc, q) => {
-            if (!acc[q.category]) acc[q.category] = { questions: [], score: 0 };
+            if (!acc[q.category]) acc[q.category] = { questions: [], score: 0, status: 'bom' };
             acc[q.category].questions.push(q);
             return acc;
-        }, {} as Record<string, { questions: SelectedQuestion[], score: number }>);
+        }, {} as Record<string, { questions: SelectedQuestion[], score: number, status: ReturnType<typeof getCategoryStatus> }>);
         
         Object.keys(categories).forEach(catName => {
             const category = categories[catName];
-            const likertQuestions = category.questions.filter(q => q.type === 'likert');
-            
-            if (likertQuestions.length === 0) {
-                category.score = -1; // Indicate no score applicable
-                return;
-            }
-
-            const totalScore = likertQuestions.reduce((sum, q) => {
-                const questionAnswers = (answersByQuestionId[q.id] || []).map(a => a.answer as number);
-                if (questionAnswers.length === 0) return sum;
-                const avg = questionAnswers.reduce((a, b) => a + b, 0) / questionAnswers.length;
-                return sum + ((avg - 1) / 4) * 100; // Convert 1-5 scale to 0-100
-            }, 0);
-
-            categories[catName].score = Math.round(totalScore / likertQuestions.length);
+            const categoryResult = calculateCategoryScore(category.questions, answersByQuestionId);
+            category.score = categoryResult.score;
+            category.status = categoryResult.status;
         });
         
         const openFeedback = survey.questions
@@ -323,7 +294,7 @@ export default function SurveyResultsPage() {
                     {analytics ? (
                          <Accordion type="multiple" defaultValue={Object.keys(analytics.categories)} className="w-full">
                              {Object.entries(analytics.categories).sort(([keyA], [keyB]) => keyA.localeCompare(keyB)).map(([name, data]) => {
-                                 const status = getCategoryStatus(data.score);
+                                 const status = STATUS_CONFIG[data.status];
                                  const hasScore = data.score !== -1;
                                  return (
                                      <AccordionItem key={name} value={name}>
@@ -336,7 +307,7 @@ export default function SurveyResultsPage() {
                                                  {hasScore ? (
                                                     <div className="flex items-center gap-4 w-1/3">
                                                          <Progress value={data.score} indicatorClassName={status.color} />
-                                                        <span className={cn("font-bold text-lg w-40 text-right", status.textColor)}>{data.score}% <span className='text-sm text-muted-foreground'>de favorabilidade</span></span>
+                                                        <span className={cn("font-bold text-lg w-40 text-right", status.textColor)}>{data.score}% de favorabilidade</span>
                                                     </div>
                                                  ) : (
                                                     <div className="w-1/3"></div>
