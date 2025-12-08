@@ -56,6 +56,12 @@ export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, on
       <CardHeader>
         <CardTitle className="whitespace-nowrap">Biblioteca de Perguntas</CardTitle>
         <CardDescription>Adicione perguntas prontas ou crie a sua.</CardDescription>
+        <div className="pt-2">
+            <Button className="w-full" variant="outline" onClick={onCreateCustom}>
+                <PlusCircle className="mr-2 h-4 w-4"/>
+                Criar Pergunta Personalizada
+            </Button>
+        </div>
       </CardHeader>
       <CardContent className="flex-grow overflow-hidden p-0">
         <ScrollArea className="h-full">
@@ -94,12 +100,6 @@ export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, on
             </Accordion>
         </ScrollArea>
       </CardContent>
-      <CardFooter className="p-4 border-t">
-        <Button className="w-full" variant="outline" onClick={onCreateCustom}>
-            <PlusCircle className="mr-2 h-4 w-4"/>
-            Criar Pergunta Personalizada
-        </Button>
-      </CardFooter>
     </Card>
   );
 }

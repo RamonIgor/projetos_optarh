@@ -23,7 +23,7 @@ export default function SurveyEditorLayout({
     }
 
     return (
-        <div className="w-full">
+        <div className="w-full pb-20">
             {children}
             <footer className="fixed bottom-0 left-0 w-full bg-background/80 backdrop-blur-sm border-t p-4">
                 <div className="container mx-auto flex justify-between">
