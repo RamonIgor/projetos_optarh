@@ -5,33 +5,34 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase/auth/use-user';
 import { useClient } from '@/firebase/auth/use-client';
-import { Loader2, Box, ArrowRight, Sparkles, LogOut, Wrench } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Loader2, LogOut, ArrowRight, Workflow, BarChart2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import Image from 'next/image';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
+import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 const allProducts = {
   process_flow: {
     name: 'ProcessFlow',
-    description: 'Estruture o fluxo de trabalho do seu time, da ideia à rotina.',
-    href: '/processflow/brainstorm',
-    icon: <Box className="h-6 w-6 text-primary"/>,
-    color: 'primary',
+    description: 'Estruture o fluxo de trabalho do seu time, da ideia à rotina, com automação inteligente e gestão visual.',
+    href: '/processflow',
+    icon: <Workflow className="h-8 w-8 text-white" />,
+    gradient: 'from-purple-500 to-indigo-500',
+    glowClass: 'glow-icon-purple'
   },
   pulse_check: {
     name: 'PulseCheck',
-    description: 'Monitore o clima e o engajamento da sua equipe com pesquisas rápidas.',
+    description: 'Monitore o clima e o engajamento da sua equipe em tempo real com pesquisas rápidas e insights acionáveis.',
     href: '/pulsecheck',
-    icon: <Sparkles className="h-6 w-6 text-amber-500" />,
-    color: 'amber',
+    icon: <BarChart2 className="h-8 w-8 text-white" />,
+    gradient: 'from-orange-500 to-red-500',
+    glowClass: 'glow-icon-orange'
   },
 };
 
 type ProductKey = keyof typeof allProducts;
+
 
 export default function ProductPortalPage() {
   const router = useRouter();
@@ -41,7 +42,7 @@ export default function ProductPortalPage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const isLoading = userLoading || isClientLoading;
-  
+
   const handleLogout = async () => {
     if (!auth) return;
     setIsLoggingOut(true);
@@ -57,101 +58,125 @@ export default function ProductPortalPage() {
 
   const handleCtaClick = (hasAccess: boolean, product: { href: string }) => {
     if (hasAccess) {
-        if (product.href !== '#') {
-            router.push(product.href);
-        }
+      if (product.href !== '#') {
+        router.push(product.href);
+      }
     } else {
-        const whatsappUrl = `https://wa.me/5518981140305`;
-        window.open(whatsappUrl, '_blank');
+      const whatsappUrl = `https://wa.me/5518981140305`;
+      window.open(whatsappUrl, '_blank');
     }
-  }
+  };
 
   if (isLoading || isLoggingOut || !user) {
     return (
-      <div className="flex items-center justify-center min-h-screen w-full bg-gradient-to-br from-cyan-50 to-blue-100 dark:from-slate-900 dark:to-blue-950">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      <div className="flex h-screen w-full items-center justify-center bg-gray-50">
+        <Loader2 className="h-10 w-10 animate-spin text-purple-600" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen w-full bg-gradient-to-br from-cyan-50 to-blue-100 dark:from-slate-900 dark:to-blue-950">
-      <header className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-        <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} unoptimized />
-        <div className="flex items-center gap-2">
-            {isConsultant && (
-                <Button variant="outline" onClick={() => router.push('/consultoria')}>
-                    <Wrench className="mr-2 h-4 w-4" />
-                    Painel
-                </Button>
-            )}
-            <Button variant="ghost" onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
+    <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-white to-gray-100">
+      {/* Top Wave Decoration */}
+      <div className="absolute top-0 left-0 right-0 h-96 w-full opacity-[0.15] [mask-image:linear-gradient(to_bottom,white,transparent)]">
+        <svg className="absolute inset-0 h-full w-full" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="wave-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style={{ stopColor: '#8b5cf6' }} />
+              <stop offset="100%" style={{ stopColor: '#6366f1' }} />
+            </linearGradient>
+          </defs>
+          <path d="M0,150 C150,300 350,-50 500,150 C650,350 850,-50 1000,150 L1000,0 L0,0 Z" fill="url(#wave-gradient)" transform="scale(2,1)"/>
+        </svg>
+      </div>
+
+      {/* Geometric Pattern */}
+      <div className="absolute inset-0 opacity-[0.06] [mask-image:radial-gradient(closest-side,white,transparent)]">
+        <svg className="h-full w-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <pattern id="pattern-connections" patternUnits="userSpaceOnUse" width="80" height="80" patternTransform="scale(1) rotate(0)">
+                <path d="M10 10l60 60M70 10l-60 60" stroke="#9ca3af" strokeWidth="1"></path>
+                <circle cx="10" cy="10" r="2" fill="#9ca3af"></circle>
+                <circle cx="70" cy="70" r="2" fill="#9ca3af"></circle>
+                <circle cx="10" cy="70" r="2" fill="#9ca3af"></circle>
+                <circle cx="70" cy="10" r="2" fill="#9ca3af"></circle>
+                </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#pattern-connections)"></rect>
+        </svg>
+      </div>
+
+      <div className="relative z-10 flex min-h-screen flex-col">
+        <header className="container mx-auto px-6 py-6 flex justify-between items-center">
+            <h1 className="text-2xl font-bold text-slate-800">OPTA RH</h1>
+            <Button variant="link" className="text-slate-500" onClick={handleLogout}>
+                Sair
+                <LogOut className="ml-2 h-4 w-4" />
             </Button>
-        </div>
-      </header>
-      <main className="flex flex-1 flex-col items-center justify-center p-4">
-        <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-foreground">Portal de Soluções</h1>
-            <p className="mt-2 text-lg text-muted-foreground">Selecione o produto que deseja acessar.</p>
-        </div>
+        </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
-            {Object.keys(allProducts).map(productKey => {
-                const product = allProducts[productKey as ProductKey];
-                if (!product) return null;
-                
-                const hasAccess = isConsultant || userProfile?.products?.includes(productKey);
+        <main className="flex flex-1 flex-col items-center justify-center p-6">
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="text-center mb-16"
+            >
+                <h1 className="text-5xl md:text-6xl font-bold text-slate-900 tracking-tight">Portal de Soluções</h1>
+                <p className="mt-4 text-xl text-slate-500">Escolha a solução ideal para impulsionar sua equipe</p>
+            </motion.div>
 
-                return (
-                    <div key={productKey} className="relative group">
-                        <Card 
-                            className={cn(
-                              "transition-all duration-300 h-full flex flex-col border-2", 
-                              hasAccess ? "border-transparent bg-card" : "border-dashed bg-card/50",
-                              hasAccess && "hover:shadow-xl hover:-translate-y-1"
-                            )}
-                        >
-                            {!hasAccess && (
-                                <Badge className="absolute -top-3 right-4 text-sm px-3 py-1 bg-amber-500 text-white shadow-lg border-2 border-amber-300">
-                                    CONTRATE
-                                </Badge>
-                            )}
-                            <CardHeader>
-                                <div className="flex items-center gap-4">
-                                    <div className={cn(
-                                        "p-3 rounded-full", 
-                                        hasAccess ? (product.color === 'primary' ? 'bg-primary/10' : 'bg-amber-100') : 'bg-muted'
-                                    )}>
-                                        {product.icon}
-                                    </div>
-                                    <CardTitle className="text-2xl">{product.name}</CardTitle>
-                                </div>
-                                 <CardDescription className="pt-2">{product.description}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="mt-auto">
-                                 <Button 
-                                    onClick={() => handleCtaClick(!!hasAccess, product)} 
-                                    className="w-full text-lg h-12"
-                                    variant={hasAccess ? 'default' : 'default'}
-                                 >
-                                    {hasAccess ? (
-                                      <>
-                                        Acessar
-                                        <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-                                      </>
-                                    ) : (
-                                      "Falar com Consultor"
-                                    )}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 w-full max-w-6xl">
+              {Object.keys(allProducts).map((productKey, index) => {
+                  const product = allProducts[productKey as ProductKey];
+                  if (!product) return null;
+                  
+                  const hasAccess = isConsultant || userProfile?.products?.includes(productKey);
+
+                  return (
+                      <motion.div
+                          key={productKey}
+                          initial={{ opacity: 0, y: 50 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.5, delay: 0.2 * index }}
+                          className="relative group"
+                      >
+                        <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-3xl blur opacity-10 group-hover:opacity-30 transition duration-1000"></div>
+                        <div className="relative bg-white rounded-3xl p-8 shadow-[0_10px_40px_rgba(0,0,0,0.05)] h-full flex flex-col">
+                          {productKey === 'pulse_check' && !hasAccess && (
+                              <div className="absolute -top-4 -right-4 px-4 py-1.5 text-sm font-bold text-white bg-gradient-to-r from-orange-500 to-red-500 rounded-full shadow-lg">
+                                  CONTRATE
+                              </div>
+                          )}
+
+                          <div className={cn("h-16 w-16 rounded-full flex items-center justify-center bg-gradient-to-br mb-6 shadow-lg", product.gradient, product.glowClass)}>
+                            {product.icon}
+                          </div>
+
+                          <h2 className="text-3xl font-bold text-slate-800">{product.name}</h2>
+                          <p className="mt-3 text-base text-slate-600 flex-grow">{product.description}</p>
+                          
+                          {hasAccess ? (
+                             <Button onClick={() => handleCtaClick(true, product)} className={cn("mt-8 w-full h-14 text-lg rounded-xl bg-gradient-to-r text-white transition-shadow shadow-lg hover:shadow-xl", product.gradient)}>
+                                Acessar
+                                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                            </Button>
+                          ) : (
+                            <div className="relative mt-8">
+                                <Button onClick={() => handleCtaClick(false, product)} className="relative w-full h-14 text-lg rounded-xl bg-white overflow-hidden gradient-border-orange">
+                                    <span className="font-bold gradient-text bg-gradient-to-r from-orange-500 to-red-500">
+                                        Falar com Consultor
+                                    </span>
                                 </Button>
-                            </CardContent>
-                        </Card>
-                    </div>
-                );
-            })}
-        </div>
-      </main>
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                  );
+              })}
+            </div>
+        </main>
+      </div>
     </div>
   );
 }
