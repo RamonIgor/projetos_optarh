@@ -37,6 +37,7 @@ export default function SurveyResponsePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [startedAt, setStartedAt] = useState<Date | null>(null);
   
   const [clientId, surveyId] = useMemo(() => {
     const idString = Array.isArray(publicId) ? publicId[0] : publicId;
@@ -47,6 +48,8 @@ export default function SurveyResponsePage() {
   }, [publicId]);
 
   useEffect(() => {
+    setStartedAt(new Date());
+
     if (!surveyId) return;
 
     const submissionStatus = localStorage.getItem(`survey_status_${surveyId}`);
@@ -196,6 +199,7 @@ export default function SurveyResponsePage() {
                 }
                 return acc;
             }, {} as Record<string, { questionText: string; answer: string | number; }>),
+            startedAt: startedAt,
             submittedAt: serverTimestamp(),
         };
 
@@ -267,7 +271,7 @@ export default function SurveyResponsePage() {
             </div>
         </header>
 
-        <main className="w-full flex justify-center">
+        <main className="w-full max-w-4xl">
              <AnimatePresence mode="wait">
                 <motion.div
                     key={currentStep}
@@ -275,7 +279,7 @@ export default function SurveyResponsePage() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -50 }}
                     transition={{ duration: 0.3 }}
-                    className="w-full max-w-4xl mt-4"
+                    className="w-full"
                 >
                     <Card className="shadow-2xl w-full">
                         <CardHeader className="pb-8">

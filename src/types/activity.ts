@@ -108,4 +108,5 @@ export interface Response {
   respondentId: string | null; // UID or null for anonymous
   answers: Record<string, Answer>; // Key is questionId
   submittedAt: Timestamp | Date;
+  startedAt?: Timestamp | Date;
 }

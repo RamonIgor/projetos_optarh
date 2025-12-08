@@ -15,6 +15,7 @@ import { Progress } from '@/components/ui/progress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import { calculateNPS, calculateCategoryScore, getCategoryStatus } from '@/lib/pulsecheck-analytics';
+import { differenceInMinutes } from 'date-fns';
 
 const NPS_COLORS = {
   detractor: '#f87171', // red-400
@@ -258,7 +259,21 @@ export default function SurveyResultsPage() {
             .filter(q => q.type === 'open-text')
             .flatMap(q => (answersByQuestionId[q.id] || []).map(a => a.answer as string).filter(Boolean));
 
-        return { eNpsResult, lNpsResult, categories, openFeedback, answersByQuestionId };
+        const durations = responses
+            .map(r => {
+                if (r.startedAt && r.submittedAt) {
+                    const start = r.startedAt instanceof Timestamp ? r.startedAt.toDate() : new Date(r.startedAt);
+                    const end = r.submittedAt instanceof Timestamp ? r.submittedAt.toDate() : new Date(r.submittedAt);
+                    return differenceInMinutes(end, start);
+                }
+                return null;
+            })
+            .filter((d): d is number => d !== null && d >= 0);
+
+        const averageTime = durations.length > 0 ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
+
+
+        return { eNpsResult, lNpsResult, categories, openFeedback, answersByQuestionId, averageTime };
 
     }, [survey, responses]);
 
@@ -285,7 +300,7 @@ export default function SurveyResultsPage() {
                 <StatCard title="Taxa de Resposta" value={`${responses.length}/120*`} description="*Número de participantes fixo" icon={Users} />
                 <NpsStatCard title="eNPS" npsResult={analytics?.eNpsResult || null} />
                 <NpsStatCard title="Liderança NPS" npsResult={analytics?.lNpsResult || null} />
-                <StatCard title="Tempo Médio" value="8 min*" description="*Cálculo em desenvolvimento" icon={Clock} />
+                <StatCard title="Tempo Médio" value={analytics?.averageTime ? `${analytics.averageTime} min` : 'N/A'} description="Tempo médio de resposta" icon={Clock} />
             </div>
 
             <div className="grid lg:grid-cols-3 gap-8">
