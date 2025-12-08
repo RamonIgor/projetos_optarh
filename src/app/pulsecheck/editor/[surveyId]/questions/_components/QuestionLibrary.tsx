@@ -6,7 +6,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Upload, Plus, Check, Download } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Upload, Plus, Check, Download, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface QuestionLibraryProps {
@@ -16,6 +17,7 @@ interface QuestionLibraryProps {
   onAddNew: () => void;
   onImport: () => void;
   onExport: () => void;
+  onDeleteFromLibrary: (questionId: string) => void;
 }
 
 const categoryOrder = [
@@ -32,7 +34,7 @@ const categoryOrder = [
   'FEEDBACK ABERTO'
 ];
 
-export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, onAddNew, onImport, onExport }: QuestionLibraryProps) {
+export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, onAddNew, onImport, onExport, onDeleteFromLibrary }: QuestionLibraryProps) {
   const groupedQuestions = useMemo(() => {
     return libraryQuestions.reduce((acc, q) => {
       if (!acc[q.category]) {
@@ -79,9 +81,36 @@ export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, on
                     <div className="space-y-2">
                     {groupedQuestions[category].sort((a, b) => a.order - b.order).map(q => {
                         const isAdded = selectedQuestionIds.has(q.id);
+                        const isDeletable = !q.isDefault && q.createdBy !== 'system';
+                        
                         return (
-                            <div key={q.id} className="flex items-start gap-2 p-2 rounded-md hover:bg-muted">
+                            <div key={q.id} className="flex items-start gap-2 p-2 rounded-md hover:bg-muted group">
                                 <p className="text-sm text-muted-foreground flex-1 pt-1.5">{q.text}</p>
+                                
+                                {isDeletable && (
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Excluir Pergunta da Biblioteca?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            Esta ação é permanente e removerá a pergunta "{q.text}" da biblioteca deste cliente. Ela não poderá ser usada em pesquisas futuras.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => onDeleteFromLibrary(q.id)}>
+                                            Sim, Excluir Permanentemente
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                )}
+
                                 <Button 
                                     variant={isAdded ? 'outline' : 'ghost'} 
                                     size="sm" 

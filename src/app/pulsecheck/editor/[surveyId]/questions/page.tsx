@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, serverTimestamp, getDocs, addDoc, where } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, serverTimestamp, getDocs, addDoc, where, deleteDoc } from 'firebase/firestore';
 import { useFirestore, useClient, useUser } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { type Survey, type Question, type SelectedQuestion, type Client } from '@/types/activity';
@@ -205,6 +205,18 @@ export default function ConfigureQuestionsPage() {
             toast({ title: "Erro ao Salvar Pergunta", variant: "destructive" });
         }
     }, [user, db, libraryQuestions, toast, handleAddQuestion, clientId]);
+    
+    const handleDeleteFromLibrary = useCallback(async (questionId: string) => {
+        if (!db) return;
+        try {
+            await deleteDoc(doc(db, 'pulse_check_questions', questionId));
+            setLibraryQuestions(prev => prev.filter(q => q.id !== questionId));
+            toast({ title: "Pergunta excluída da biblioteca."});
+        } catch (error) {
+            console.error("Error deleting question from library:", error);
+            toast({ title: "Erro ao excluir pergunta", variant: 'destructive'});
+        }
+    }, [db, toast]);
 
     const handleSaveFromImporter = useCallback(async (importedQuestions: Omit<SelectedQuestion, 'id' | 'questionId'>[]) => {
         const newQuestions: SelectedQuestion[] = importedQuestions.map(q => ({
@@ -294,6 +306,7 @@ export default function ConfigureQuestionsPage() {
                         onAddNew={() => { setQuestionToEdit(null); setIsBuilderOpen(true); }}
                         onImport={() => setIsImporterOpen(true)}
                         onExport={handleExportLibrary}
+                        onDeleteFromLibrary={handleDeleteFromLibrary}
                     />
                 </div>
                 <div className="md:col-span-7 lg:col-span-8 h-full flex flex-col">
@@ -322,5 +335,3 @@ export default function ConfigureQuestionsPage() {
         </div>
     );
 }
-
-    
