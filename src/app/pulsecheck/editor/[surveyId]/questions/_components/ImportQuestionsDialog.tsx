@@ -8,9 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, File, X } from 'lucide-react';
+import { Loader2, Upload, File, X, Download } from 'lucide-react';
 import type { SelectedQuestion } from '@/types/activity';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Info } from 'lucide-react';
 
 interface ImportQuestionsDialogProps {
@@ -21,6 +22,13 @@ interface ImportQuestionsDialogProps {
 
 const validTypes = ['nps', 'likert', 'multiple-choice', 'open-text'];
 const requiredHeaders = ['texto', 'categoria', 'tipo'];
+
+const exampleData = [
+    { texto: 'Em uma escala de 0 a 10...', categoria: 'eNPS', tipo: 'nps', opcoes: ''},
+    { texto: 'A empresa me oferece...', categoria: 'DESENVOLVIMENTO', tipo: 'likert', opcoes: ''},
+    { texto: 'Qual sua área?', categoria: 'DEMOGRAFIA', tipo: 'multiple-choice', opcoes: 'Financeiro|Marketing|RH'},
+    { texto: 'Sugestões sobre a liderança...', categoria: 'FEEDBACK', tipo: 'open-text', opcoes: ''},
+]
 
 export function ImportQuestionsDialog({ isOpen, onOpenChange, onImport }: ImportQuestionsDialogProps) {
   const { toast } = useToast();
@@ -143,30 +151,57 @@ export function ImportQuestionsDialog({ isOpen, onOpenChange, onImport }: Import
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) setFile(null); onOpenChange(open); }}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Importar Perguntas via Planilha</DialogTitle>
           <DialogDescription>
             Faça o upload de um arquivo .xlsx para adicionar múltiplas perguntas de uma só vez.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4 space-y-4">
+        <div className="py-4 space-y-6">
           <Alert>
             <Info className="h-4 w-4"/>
-            <AlertTitle>Formato da Planilha</AlertTitle>
+            <AlertTitle>Instruções</AlertTitle>
             <AlertDescription>
-                A primeira linha deve ser um cabeçalho com os seguintes títulos (em qualquer ordem):
-                <ul className="list-disc pl-5 mt-2 text-xs">
-                    <li><b>Texto:</b> O enunciado completo da pergunta.</li>
-                    <li><b>Categoria:</b> Ex: Cultura, Liderança.</li>
-                    <li><b>Tipo:</b> `likert`, `nps`, `multiple-choice`, ou `open-text`.</li>
-                    <li><b>Opcoes:</b> (Opcional) Apenas para `multiple-choice`. Separe com uma barra vertical (|). Ex: `Opção A|Opção B`.</li>
-                </ul>
+                A primeira linha da sua planilha deve ser um cabeçalho com os títulos: <strong>Texto</strong>, <strong>Categoria</strong>, <strong>Tipo</strong> e <strong>Opcoes</strong>.
+                Os tipos válidos são: `likert`, `nps`, `multiple-choice`, ou `open-text`. A coluna `Opcoes` só é necessária para o tipo `multiple-choice`, com as opções separadas por `|`.
+                <a href="/pulsecheck_questions_template.xlsx" download className="mt-2 inline-block">
+                    <Button variant="link" className="p-0 h-auto">
+                        <Download className="mr-2 h-4 w-4"/>
+                        Baixar template de exemplo
+                    </Button>
+                </a>
             </AlertDescription>
           </Alert>
 
+          <div className='my-4'>
+             <Label className="font-semibold">Exemplo de Formato:</Label>
+              <div className="mt-2 rounded-lg border">
+                  <Table>
+                      <TableHeader>
+                          <TableRow>
+                              <TableHead>Texto</TableHead>
+                              <TableHead>Categoria</TableHead>
+                              <TableHead>Tipo</TableHead>
+                              <TableHead>Opcoes</TableHead>
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          {exampleData.map((row, i) => (
+                            <TableRow key={i}>
+                                <TableCell className="text-xs">{row.texto}</TableCell>
+                                <TableCell className="text-xs">{row.categoria}</TableCell>
+                                <TableCell className="text-xs">{row.tipo}</TableCell>
+                                <TableCell className="text-xs">{row.opcoes}</TableCell>
+                            </TableRow>
+                          ))}
+                      </TableBody>
+                  </Table>
+              </div>
+          </div>
+
           <div>
-            <Label htmlFor="file-upload" className="block mb-2">Arquivo .xlsx</Label>
+            <Label htmlFor="file-upload" className="block mb-2 font-semibold">Seu arquivo .xlsx</Label>
             {file ? (
                 <div className="flex items-center justify-between p-2 border rounded-md">
                     <div className="flex items-center gap-2">
