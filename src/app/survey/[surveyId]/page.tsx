@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, Timestamp, collectionGroup } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { type Survey, type Client, type SelectedQuestion, type Response as SurveyResponse } from '@/types/activity';
 import { useToast } from '@/hooks/use-toast';
@@ -39,7 +39,6 @@ export default function SurveyResponsePage() {
   
 
   useEffect(() => {
-    // Check localStorage if survey has been completed
     const submissionStatus = localStorage.getItem(`survey_status_${surveyId}`);
     if (submissionStatus === 'completed') {
       setHasSubmitted(true);
@@ -54,35 +53,41 @@ export default function SurveyResponsePage() {
     }
     
     const fetchSurveyData = async () => {
-      // We need to find which client this survey belongs to
-      const surveysCollectionGroup = collection(db, 'surveys'); // This is not a real collection group query
-      const q = query(surveysCollectionGroup, where('__name__', '==', `clients/${'*/surveys/' + surveyId}`));
-
       try {
-        // This is a workaround since collectionGroup queries are complex to setup.
-        // We will iterate through clients to find the survey.
-        const clientsSnapshot = await getDocs(collection(db, 'clients'));
-        let foundSurvey = null;
-        let foundClient = null;
+        const surveysQuery = query(
+          collectionGroup(db, 'surveys'),
+          where('__name__', '==', `clients/${surveyId.split('_')[0]}/surveys/${surveyId}`)
+        );
 
-        for (const clientDoc of clientsSnapshot.docs) {
-            const surveyDocRef = doc(db, 'clients', clientDoc.id, 'surveys', surveyId as string);
-            const surveyDocSnap = await getDoc(surveyDocRef);
-            if (surveyDocSnap.exists()) {
-                foundSurvey = { id: surveyDocSnap.id, ...surveyDocSnap.data() } as Survey;
-                foundClient = { id: clientDoc.id, ...clientDoc.data() } as Client;
+        const surveyDocs = await getDocs(
+          query(collectionGroup(db, 'surveys'), where('__name__', 'matches', `/${surveyId}$`))
+        );
+
+        let foundSurvey: Survey | null = null;
+        let foundSurveyDoc;
+        
+        for (const doc of surveyDocs.docs) {
+            if (doc.id === surveyId) {
+                foundSurvey = { id: doc.id, ...doc.data() } as Survey;
+                foundSurveyDoc = doc;
                 break;
             }
         }
         
-        if (foundSurvey && foundClient) {
+        if (foundSurvey && foundSurveyDoc) {
             if (foundSurvey.status !== 'active' || new Date() > (foundSurvey.closesAt as Timestamp).toDate()) {
                  setError('Esta pesquisa não está mais ativa.');
                  setIsLoading(false);
                  return;
             }
             setSurvey(foundSurvey);
-            setClient(foundClient);
+
+            // Fetch client data
+            const clientDocRef = doc(db, 'clients', foundSurvey.clientId);
+            const clientDocSnap = await getDoc(clientDocRef);
+            if (clientDocSnap.exists()) {
+                setClient({ id: clientDocSnap.id, ...clientDocSnap.data() } as Client);
+            }
 
             // Load answers from localStorage
             const savedAnswers = localStorage.getItem(`survey_answers_${surveyId}`);
