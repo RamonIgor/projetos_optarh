@@ -101,11 +101,7 @@ service cloud.firestore {
        allow create: if true; 
        // Consultants can read all responses.
        // Client members can read responses for their own client ID if they have pulse_check access.
-       allow read: if isConsultant() || (
-         isSignedIn() &&
-         resource.data.clientId == getUserData(request.auth.uid).clientId &&
-         hasProductAccess('pulse_check')
-       );
+       allow read: if isConsultant() || canAccessPulseCheck(resource.data.clientId);
        // Consultants can delete responses, but no one can update them.
        allow update: if false;
        allow delete: if isConsultant() || (
