@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { useFirestore, useClient } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { type Survey, type Question, type SelectedQuestion } from '@/types/activity';
+import { type Survey, type Question, type SelectedQuestion, type Client } from '@/types/activity';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, Send, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -22,6 +22,7 @@ export default function ConfigureQuestionsPage() {
     const { toast } = useToast();
 
     const [survey, setSurvey] = useState<Survey | null>(null);
+    const [client, setClient] = useState<Client | null>(null);
     const [libraryQuestions, setLibraryQuestions] = useState<Question[]>([]);
     const [selectedQuestions, setSelectedQuestions] = useState<SelectedQuestion[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -29,34 +30,56 @@ export default function ConfigureQuestionsPage() {
     const [isBuilderOpen, setIsBuilderOpen] = useState(false);
     const [questionToEdit, setQuestionToEdit] = useState<SelectedQuestion | null>(null);
 
-    // Fetch Survey and Library Questions
+    // Fetch Survey, Client, and Library Questions
     useEffect(() => {
         if (!clientId || !db) return;
 
-        // Fetch survey data
-        const surveyDocRef = doc(db, 'clients', clientId, 'surveys', surveyId as string);
-        const unsubscribeSurvey = onSnapshot(surveyDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const surveyData = { id: docSnap.id, ...docSnap.data() } as Survey;
-                setSurvey(surveyData);
-                setSelectedQuestions(surveyData.questions || []);
-                setIsLoading(false);
-            } else {
-                toast({ title: "Pesquisa não encontrada", variant: "destructive" });
-                router.push('/pulsecheck');
-            }
-        });
+        let unsubSurvey: () => void, unsubLibrary: () => void, unsubClient: () => void;
 
-        // Fetch library questions
-        const questionsQuery = query(collection(db, 'pulse_check_questions'), orderBy('order'));
-        const unsubscribeLibrary = onSnapshot(questionsQuery, (snapshot) => {
-            const questionsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Question));
-            setLibraryQuestions(questionsData);
+        const fetchData = async () => {
+            // Fetch survey data
+            const surveyDocRef = doc(db, 'clients', clientId, 'surveys', surveyId as string);
+            unsubSurvey = onSnapshot(surveyDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const surveyData = { id: docSnap.id, ...docSnap.data() } as Survey;
+                    setSurvey(surveyData);
+                    setSelectedQuestions(surveyData.questions || []);
+                } else {
+                    toast({ title: "Pesquisa não encontrada", variant: "destructive" });
+                    router.push('/pulsecheck');
+                }
+            });
+
+            // Fetch client data
+            const clientDocRef = doc(db, 'clients', clientId);
+            unsubClient = onSnapshot(clientDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    setClient({ id: docSnap.id, ...docSnap.data() } as Client);
+                }
+            });
+
+            // Fetch library questions
+            const questionsQuery = query(collection(db, 'pulse_check_questions'), orderBy('order'));
+            unsubLibrary = onSnapshot(questionsQuery, (snapshot) => {
+                const questionsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Question));
+                setLibraryQuestions(questionsData);
+            });
+            
+            // Wait for initial fetches to complete to set loading to false
+            await Promise.all([getDoc(surveyDocRef), getDoc(clientDocRef), getDoc(questionsQuery.get())]);
+            setIsLoading(false);
+        }
+
+        fetchData().catch(err => {
+            console.error(err);
+            setIsLoading(false);
+            toast({ title: "Erro ao carregar dados", variant: "destructive" });
         });
 
         return () => {
-            unsubscribeSurvey();
-            unsubscribeLibrary();
+            unsubSurvey?.();
+            unsubLibrary?.();
+            unsubClient?.();
         };
 
     }, [surveyId, clientId, db, router, toast]);
@@ -73,10 +96,15 @@ export default function ConfigureQuestionsPage() {
     }, [clientId, db, surveyId, toast]);
 
     const handleAddQuestion = useCallback(async (question: Question) => {
+        let questionText = question.text;
+        if (client?.name && question.text.includes('[EMPRESA]')) {
+            questionText = question.text.replace(/\[EMPRESA\]/g, client.name);
+        }
+
         const newQuestion: SelectedQuestion = {
             id: `${question.id}-${Date.now()}`,
             questionId: question.id,
-            text: question.text,
+            text: questionText,
             type: question.type,
             category: question.category,
             options: question.type === 'multiple-choice' ? (question.options || []) : null,
@@ -86,7 +114,7 @@ export default function ConfigureQuestionsPage() {
         setSelectedQuestions(newQuestions);
         await updateSurveyQuestions(newQuestions);
         toast({ title: "Pergunta adicionada!", duration: 2000 });
-    }, [selectedQuestions, updateSurveyQuestions, toast]);
+    }, [selectedQuestions, updateSurveyQuestions, toast, client]);
     
     const handleRemoveQuestion = useCallback(async (idToRemove: string) => {
         const newQuestions = selectedQuestions.filter(q => q.id !== idToRemove);

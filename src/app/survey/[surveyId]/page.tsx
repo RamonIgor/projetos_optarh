@@ -114,6 +114,13 @@ export default function SurveyResponsePage() {
   
   const currentQuestion: SelectedQuestion | undefined = survey?.questions[currentStep];
 
+  const getPersonalizedQuestionText = useCallback((text: string) => {
+    if (client?.name && text.includes('[EMPRESA]')) {
+      return text.replace(/\[EMPRESA\]/g, client.name);
+    }
+    return text;
+  }, [client]);
+
   const renderQuestion = (question: SelectedQuestion) => {
     const commonProps = {
       questionId: question.id,
@@ -260,7 +267,7 @@ export default function SurveyResponsePage() {
             </div>
         </header>
 
-        <main className="flex w-full items-center justify-center">
+        <main className="w-full flex justify-center">
              <AnimatePresence mode="wait">
                 <motion.div
                     key={currentStep}
@@ -268,12 +275,12 @@ export default function SurveyResponsePage() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -50 }}
                     transition={{ duration: 0.3 }}
-                    className="w-full max-w-4xl"
+                    className="w-full max-w-4xl mt-4"
                 >
                     <Card className="shadow-2xl w-full">
                         <CardHeader className="pb-8">
                             <CardTitle className="text-4xl leading-tight">
-                                {currentQuestion?.text}
+                                {currentQuestion && getPersonalizedQuestionText(currentQuestion.text)}
                                 {currentQuestion?.isMandatory && <span className="ml-2 text-destructive">*</span>}
                             </CardTitle>
                         </CardHeader>
@@ -314,3 +321,4 @@ export default function SurveyResponsePage() {
     </div>
   );
 }
+
