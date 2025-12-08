@@ -16,6 +16,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { cn } from '@/lib/utils';
 import { calculateNPS, calculateCategoryScore, getCategoryStatus } from '@/lib/pulsecheck-analytics';
 import { differenceInMinutes } from 'date-fns';
+import { Tooltip as TooltipComponent, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+
 
 const NPS_COLORS = {
   detractor: '#f87171', // red-400
@@ -299,7 +301,18 @@ export default function SurveyResultsPage() {
                     <h1 className="text-4xl font-bold text-primary">{survey.title}</h1>
                     <p className="mt-2 text-lg text-muted-foreground">{survey.description}</p>
                 </div>
-                <Button variant="outline" disabled><Download className="mr-2 h-4 w-4" />Exportar (em breve)</Button>
+                <TooltipComponent>
+                    <TooltipTrigger asChild>
+                        <span tabIndex={0}>
+                            <Button variant="outline" disabled>
+                                <Download className="mr-2 h-4 w-4" />Exportar Relatório
+                            </Button>
+                        </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Funcionalidade em desenvolvimento.</p>
+                    </TooltipContent>
+                </TooltipComponent>
             </div>
             
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
