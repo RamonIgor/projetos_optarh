@@ -55,14 +55,6 @@ export default function ProductPortalPage() {
     }
   }, [user, isLoading, router]);
 
-  if (isLoading || isLoggingOut) {
-    return (
-      <div className="flex items-center justify-center min-h-screen w-full bg-gradient-to-br from-cyan-50 to-blue-100 dark:from-slate-900 dark:to-blue-950">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      </div>
-    );
-  }
-  
   const handleCtaClick = (hasAccess: boolean, product: { href: string }) => {
     if (hasAccess) {
         if (product.href !== '#') {
@@ -72,6 +64,14 @@ export default function ProductPortalPage() {
         const whatsappUrl = `https://wa.me/5518981140305`;
         window.open(whatsappUrl, '_blank');
     }
+  }
+
+  if (isLoading || isLoggingOut || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen w-full bg-gradient-to-br from-cyan-50 to-blue-100 dark:from-slate-900 dark:to-blue-950">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (
