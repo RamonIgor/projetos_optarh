@@ -12,6 +12,7 @@ import { Loader2, Upload, File, X, Info } from 'lucide-react';
 import type { SelectedQuestion } from '@/types/activity';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import Link from 'next/link';
 
 interface ImportQuestionsDialogProps {
   isOpen: boolean;
@@ -162,8 +163,12 @@ export function ImportQuestionsDialog({ isOpen, onOpenChange, onImport }: Import
             <Info className="h-4 w-4"/>
             <AlertTitle>Instruções</AlertTitle>
             <AlertDescription>
-                A primeira linha da sua planilha deve ser um cabeçalho com os títulos: <strong>Texto</strong>, <strong>Categoria</strong>, <strong>Tipo</strong> e <strong>Opcoes</strong>.
-                Os tipos válidos são: `likert`, `nps`, `multiple-choice`, ou `open-text`. A coluna `Opcoes` só é necessária para o tipo `multiple-choice`, com as opções separadas por `|`.
+              A primeira linha da sua planilha deve ser um cabeçalho com os títulos: <strong>Texto</strong>, <strong>Categoria</strong>, <strong>Tipo</strong> e <strong>Opcoes</strong>.
+              Os tipos válidos são: `likert`, `nps`, `multiple-choice`, ou `open-text`. A coluna `Opcoes` só é necessária para o tipo `multiple-choice`, com as opções separadas por `|`.
+              <br/>
+              <Button variant="link" asChild className="p-0 h-auto mt-2">
+                <Link href="/pulsecheck_questions_template.xlsx" download>Baixar template de exemplo (.xlsx)</Link>
+              </Button>
             </AlertDescription>
           </Alert>
 
@@ -220,7 +225,7 @@ export function ImportQuestionsDialog({ isOpen, onOpenChange, onImport }: Import
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={handleImport} disabled={isImporting || !file}>
             {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-            Importar
+            Importar para Biblioteca
           </Button>
         </DialogFooter>
       </DialogContent>
