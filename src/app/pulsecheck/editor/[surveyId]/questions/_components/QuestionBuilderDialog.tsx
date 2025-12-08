@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useMemo } from 'react';
@@ -113,7 +114,6 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, questionTo
 
   const onSubmit = (data: QuestionBuilderFormValues) => {
     onSave(data);
-    onOpenChange(false);
   };
   
   const isSubmitting = form.formState.isSubmitting;
@@ -292,3 +292,5 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, questionTo
     </Dialog>
   );
 }
+
+    
