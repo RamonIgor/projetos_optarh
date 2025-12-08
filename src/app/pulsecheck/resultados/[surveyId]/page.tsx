@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { useFirestore, useClient } from '@/firebase';
-import { type Survey, type Response as SurveyResponse, type SelectedQuestion, Answer, type Client } from '@/types/activity';
+import { type Survey, type Response as SurveyResponse, type SelectedQuestion, type Answer, type Client } from '@/types/activity';
 import { Loader2, ArrowLeft, Download, Users, TrendingUp, MessageSquare, ListTree, Target, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -198,27 +198,41 @@ export default function SurveyResultsPage() {
             return;
         };
 
+        let unsubResponses: () => void;
+
         const surveyDocRef = doc(db, 'clients', clientId, 'surveys', surveyId as string);
-        const unsubSurvey = onSnapshot(surveyDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const surveyData = { id: docSnap.id, ...docSnap.data() } as Survey;
+        
+        const unsubSurvey = onSnapshot(surveyDocRef, (surveySnap) => {
+            if (surveySnap.exists()) {
+                const surveyData = { id: surveySnap.id, ...surveySnap.data() } as Survey;
                 setSurvey(surveyData);
+
                 const clientDocRef = doc(db, 'clients', surveyData.clientId);
                 getDoc(clientDocRef).then(clientSnap => {
                     if (clientSnap.exists()) setClient(clientSnap.data() as Client);
                 });
+
+                // Now that we have the survey, listen for responses
+                const responsesQuery = query(collection(db, 'pulse_check_responses'), where('clientId', '==', clientId), where('surveyId', '==', surveyData.id));
+                unsubResponses = onSnapshot(responsesQuery, (responsesSnap) => {
+                    setResponses(responsesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SurveyResponse)));
+                    setIsLoading(false);
+                }, () => {
+                    setIsLoading(false);
+                });
+
             } else {
                 router.push('/pulsecheck');
+                setIsLoading(false);
             }
-        });
-
-        const responsesQuery = query(collection(db, 'pulse_check_responses'), where('clientId', '==', clientId), where('surveyId', '==', surveyId));
-        const unsubResponses = onSnapshot(responsesQuery, (snapshot) => {
-            setResponses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SurveyResponse)));
+        }, () => {
             setIsLoading(false);
         });
 
-        return () => { unsubSurvey(); unsubResponses(); };
+        return () => { 
+            unsubSurvey();
+            if (unsubResponses) unsubResponses();
+        };
     }, [surveyId, clientId, db, router]);
     
     const getPersonalizedQuestionText = useCallback((text: string) => {
