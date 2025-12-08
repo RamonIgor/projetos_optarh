@@ -73,7 +73,7 @@ service cloud.firestore {
       match /surveys/{surveyId} {
         // Consultants can manage all surveys, client members can only read them
         allow read: if isConsultant() || canAccessPulseCheck(clientId);
-        allow write: if isConsultant() || canAccessPulseCheck(clientId);
+        allow write: if isConsultant(); // Only consultants can write/edit surveys
       }
       
       // Subcollection for Consultancy Actions
