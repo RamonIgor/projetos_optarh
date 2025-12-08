@@ -156,8 +156,8 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, questionTo
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 min-h-0">
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid lg:grid-cols-2 gap-8 flex-1 min-h-0">
+            <div className="space-y-8">
                 <FormField control={form.control} name="text" render={({ field }) => (
                     <FormItem>
                         <div className="flex justify-between items-baseline">
@@ -257,7 +257,7 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, questionTo
                         </FormControl>
                     </FormItem>
                 )} />
-            </form>
+            </div>
             <div className="flex flex-col gap-6">
                 <h3 className="text-lg font-semibold border-b pb-2">Preview da Pergunta</h3>
                 <Card className="bg-muted/50 flex-grow flex items-center">
@@ -267,10 +267,10 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, questionTo
                 </Card>
                 <DialogFooter className="mt-auto">
                     <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
-                    <Button type="button" onClick={form.handleSubmit(onSubmit)}>Adicionar Pergunta</Button>
+                    <Button type="submit">Adicionar Pergunta</Button>
                 </DialogFooter>
             </div>
-          </div>
+          </form>
         </Form>
       </DialogContent>
     </Dialog>
