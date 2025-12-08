@@ -49,7 +49,7 @@ function StatCard({ title, value, description, icon: Icon, children }: { title: 
 }
 
 function NpsStatCard({ title, npsResult }: { title: string, npsResult: ReturnType<typeof calculateNPS> | null }) {
-    if (!npsResult) return <StatCard title={title} value="N/A" description="Nenhuma resposta" icon={TrendingUp} />;
+    if (!npsResult || npsResult.total === 0) return <StatCard title={title} value="N/A" description="Nenhuma resposta" icon={TrendingUp} />;
     
     const pieData = [
         { name: 'Promotores', value: npsResult.promoters, fill: NPS_COLORS.promoter },
@@ -227,13 +227,13 @@ export default function SurveyResultsPage() {
             });
             return acc;
         }, {} as Record<string, Answer[]>);
-
+        
         const findNpsQuestion = (category: string) => {
             const normalizedCategory = category.toLowerCase();
-            return survey.questions.find(q => q.type === 'nps' && q.category.toLowerCase() === normalizedCategory) || null;
+            return survey.questions.find(q => q.type === 'nps' && q.category.toLowerCase() === normalizedCategory);
         }
 
-        const eNpsQuestion = findNpsQuestion('eNPS');
+        const eNpsQuestion = findNpsQuestion('enps');
         const lNpsQuestion = findNpsQuestion('Liderança NPS');
 
         const eNpsAnswers = eNpsQuestion ? (answersByQuestionId[eNpsQuestion.id] || []).map(a => a.answer as number) : [];
@@ -262,9 +262,12 @@ export default function SurveyResultsPage() {
         const durations = responses
             .map(r => {
                 if (r.startedAt && r.submittedAt) {
+                    // Ensure both are Date objects before calculating
                     const start = r.startedAt instanceof Timestamp ? r.startedAt.toDate() : new Date(r.startedAt);
                     const end = r.submittedAt instanceof Timestamp ? r.submittedAt.toDate() : new Date(r.submittedAt);
-                    return differenceInMinutes(end, start);
+                    if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                        return differenceInMinutes(end, start);
+                    }
                 }
                 return null;
             })
@@ -313,21 +316,21 @@ export default function SurveyResultsPage() {
                              {Object.entries(analytics.categories).sort(([keyA], [keyB]) => keyA.localeCompare(keyB)).map(([name, data]) => {
                                  const status = STATUS_CONFIG[data.status];
                                  const hasScore = data.score !== -1;
+                                 
                                  return (
                                      <AccordionItem key={name} value={name}>
                                          <AccordionTrigger className="hover:no-underline">
                                              <div className="flex justify-between items-center w-full pr-4">
                                                  <div className="flex-1 text-left">
                                                      <p className="font-bold text-lg">{name}</p>
-                                                     <p className="text-sm text-muted-foreground">{data.questions.length} perguntas</p>
                                                  </div>
                                                  {hasScore ? (
-                                                    <div className="flex items-center gap-4 w-1/3">
+                                                    <div className="flex items-center gap-4 w-1/2">
                                                          <Progress value={data.score} indicatorClassName={status.color} />
-                                                        <span className={cn("font-bold text-lg w-40 text-right", status.textColor)}>{data.score}% de favorabilidade</span>
+                                                        <span className={cn("font-bold text-lg w-48 text-right", status.textColor)}>{data.score}% de favorabilidade</span>
                                                     </div>
                                                  ) : (
-                                                    <div className="w-1/3"></div>
+                                                    <div className="w-1/2"></div>
                                                  )}
                                              </div>
                                          </AccordionTrigger>
@@ -366,5 +369,3 @@ export default function SurveyResultsPage() {
         </div>
     );
 }
-
-    

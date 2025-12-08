@@ -196,5 +196,3 @@ export async function seedDefaultQuestions(db: Firestore) {
     
     return { addedCount, skippedCount };
 }
-
-    
