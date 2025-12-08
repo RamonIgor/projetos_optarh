@@ -74,7 +74,10 @@ export function SurveyCard({ survey, responses, onDelete, onDuplicate }: SurveyC
   const config = statusConfig[status];
 
   const handleCopyLink = () => {
-    const surveyUrl = `${window.location.origin}/survey/${survey.id}`;
+    // Combine client ID and survey ID to create a unique, directly resolvable identifier
+    const publicId = `${survey.clientId}_${survey.id}`;
+    const surveyUrl = `${window.location.origin}/survey/${publicId}`;
+
     navigator.clipboard.writeText(surveyUrl).then(() => {
       toast({
         title: "Link Copiado!",

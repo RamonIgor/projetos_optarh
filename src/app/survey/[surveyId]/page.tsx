@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -22,7 +23,7 @@ import { ThankYouScreen } from './_components/ThankYouScreen';
 
 
 export default function SurveyResponsePage() {
-  const { surveyId } = useParams();
+  const { surveyId: publicId } = useParams();
   const db = useFirestore();
   const { toast } = useToast();
 
@@ -37,8 +38,16 @@ export default function SurveyResponsePage() {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   
+  const [clientId, surveyId] = useMemo(() => {
+    const idString = Array.isArray(publicId) ? publicId[0] : publicId;
+    const parts = idString.split('_');
+    if (parts.length < 2) return [null, null];
+    return [parts[0], parts.slice(1).join('_')];
+  }, [publicId]);
 
   useEffect(() => {
+    if (!surveyId) return;
+
     const submissionStatus = localStorage.getItem(`survey_status_${surveyId}`);
     if (submissionStatus === 'completed') {
       setHasSubmitted(true);
@@ -46,35 +55,19 @@ export default function SurveyResponsePage() {
       return;
     }
 
-    if (!db || !surveyId) {
-      setError("ID da pesquisa inválido.");
+    if (!db || !clientId) {
+      setError("Link de pesquisa inválido ou corrompido.");
       setIsLoading(false);
       return;
     }
     
     const fetchSurveyData = async () => {
       try {
-        const surveysQuery = query(
-          collectionGroup(db, 'surveys'),
-          where('__name__', '==', `clients/${surveyId.split('_')[0]}/surveys/${surveyId}`)
-        );
-
-        const surveyDocs = await getDocs(
-          query(collectionGroup(db, 'surveys'), where('__name__', 'matches', `/${surveyId}$`))
-        );
-
-        let foundSurvey: Survey | null = null;
-        let foundSurveyDoc;
+        const surveyDocRef = doc(db, 'clients', clientId, 'surveys', surveyId);
+        const surveyDocSnap = await getDoc(surveyDocRef);
         
-        for (const doc of surveyDocs.docs) {
-            if (doc.id === surveyId) {
-                foundSurvey = { id: doc.id, ...doc.data() } as Survey;
-                foundSurveyDoc = doc;
-                break;
-            }
-        }
-        
-        if (foundSurvey && foundSurveyDoc) {
+        if (surveyDocSnap.exists()) {
+            const foundSurvey = { id: surveyDocSnap.id, ...surveyDocSnap.data() } as Survey;
             if (foundSurvey.status !== 'active' || new Date() > (foundSurvey.closesAt as Timestamp).toDate()) {
                  setError('Esta pesquisa não está mais ativa.');
                  setIsLoading(false);
@@ -107,9 +100,10 @@ export default function SurveyResponsePage() {
     };
 
     fetchSurveyData();
-  }, [db, surveyId]);
+  }, [db, surveyId, clientId]);
 
   const handleAnswer = (questionId: string, value: string | number) => {
+    if (!surveyId) return;
     setValidationError(null);
     const newAnswers = { ...answers, [questionId]: value };
     setAnswers(newAnswers);
@@ -195,8 +189,10 @@ export default function SurveyResponsePage() {
 
         await addDoc(collection(db, 'pulse_check_responses'), responseData);
         setHasSubmitted(true);
-        localStorage.setItem(`survey_status_${surveyId}`, 'completed');
-        localStorage.removeItem(`survey_answers_${surveyId}`);
+        if (surveyId) {
+            localStorage.setItem(`survey_status_${surveyId}`, 'completed');
+            localStorage.removeItem(`survey_answers_${surveyId}`);
+        }
 
     } catch (error) {
         console.error("Error submitting response:", error);
