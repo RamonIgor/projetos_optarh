@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { useFirestore, useClient } from '@/firebase';
@@ -14,9 +13,12 @@ import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Bar, Cell, PieCha
 import { Progress } from '@/components/ui/progress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
-import { calculateNPS, calculateCategoryScore, getCategoryStatus } from '@/lib/pulsecheck-analytics';
+import { calculateNPS, calculateCategoryScore, getCategoryStatus, getTopIssues } from '@/lib/pulsecheck-analytics';
 import { differenceInMinutes } from 'date-fns';
 import { Tooltip as TooltipComponent, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import { ReportTemplate } from './_components/ReportTemplate';
 
 
 const NPS_COLORS = {
@@ -181,11 +183,13 @@ export default function SurveyResultsPage() {
     const router = useRouter();
     const db = useFirestore();
     const { clientId } = useClient();
+    const reportRef = useRef<HTMLDivElement>(null);
 
     const [survey, setSurvey] = useState<Survey | null>(null);
     const [client, setClient] = useState<Client | null>(null);
     const [responses, setResponses] = useState<SurveyResponse[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
     useEffect(() => {
         if (!clientId || !db || !surveyId) {
@@ -247,6 +251,7 @@ export default function SurveyResultsPage() {
         const lNpsResult = calculateNPS(lNpsAnswers);
 
         const categories = survey.questions.reduce((acc, q) => {
+            if (q.category === 'eNPS' || q.category === 'Liderança NPS' || q.category === 'DEMOGRAFIA' || q.category === 'FEEDBACK ABERTO') return acc;
             if (!acc[q.category]) acc[q.category] = { questions: [], score: 0, status: 'bom' };
             acc[q.category].questions.push(q);
             return acc;
@@ -277,11 +282,61 @@ export default function SurveyResultsPage() {
             .filter((d): d is number => d !== null && d >= 0);
 
         const averageTime = durations.length > 0 ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
+        
+        const topIssues = getTopIssues(categories);
+        const topStrengths = getTopIssues(categories).reverse();
 
 
-        return { eNpsResult, lNpsResult, categories, openFeedback, answersByQuestionId, averageTime };
+        return { eNpsResult, lNpsResult, categories, openFeedback, answersByQuestionId, averageTime, topIssues, topStrengths };
 
     }, [survey, responses]);
+    
+    const generatePdf = async () => {
+        if (!reportRef.current) return;
+        setIsGeneratingPdf(true);
+        try {
+            const canvas = await html2canvas(reportRef.current, {
+                scale: 2, // Higher scale for better quality
+                useCORS: true,
+                backgroundColor: '#ffffff',
+            });
+            const imgData = canvas.toDataURL('image/png');
+            
+            // A4 dimensions in 'pt': 595.28 x 841.89
+            const pdf = new jsPDF({
+                orientation: 'p',
+                unit: 'pt',
+                format: 'a4'
+            });
+
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const imgWidth = canvas.width;
+            const imgHeight = canvas.height;
+            const ratio = imgWidth / imgHeight;
+            const canvasPdfWidth = pdfWidth;
+            const canvasPdfHeight = canvasPdfWidth / ratio;
+            
+            let position = 0;
+            let heightLeft = imgHeight * pdfWidth / imgWidth;
+
+            pdf.addImage(imgData, 'PNG', 0, position, canvasPdfWidth, canvasPdfHeight);
+            heightLeft -= pdfHeight;
+
+            while (heightLeft > 0) {
+                position = heightLeft - (imgHeight * pdfWidth / imgWidth);
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, canvasPdfWidth, canvasPdfHeight);
+                heightLeft -= pdfHeight;
+            }
+
+            pdf.save(`Relatorio_${survey?.title.replace(/\s/g, '_')}.pdf`);
+        } catch (error) {
+            console.error("Error generating PDF:", error);
+        } finally {
+            setIsGeneratingPdf(false);
+        }
+    };
 
 
      if (isLoading) {
@@ -301,18 +356,14 @@ export default function SurveyResultsPage() {
                     <h1 className="text-4xl font-bold text-primary">{survey.title}</h1>
                     <p className="mt-2 text-lg text-muted-foreground">{survey.description}</p>
                 </div>
-                <TooltipComponent>
-                    <TooltipTrigger asChild>
-                        <span tabIndex={0}>
-                            <Button variant="outline" disabled>
-                                <Download className="mr-2 h-4 w-4" />Exportar Relatório
-                            </Button>
-                        </span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>Funcionalidade em desenvolvimento.</p>
-                    </TooltipContent>
-                </TooltipComponent>
+                 <Button onClick={generatePdf} disabled={isGeneratingPdf}>
+                    {isGeneratingPdf ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                        <Download className="mr-2 h-4 w-4" />
+                    )}
+                    Exportar Relatório
+                </Button>
             </div>
             
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -379,6 +430,17 @@ export default function SurveyResultsPage() {
                          </CardContent>
                      </Card>
                  </div>
+            </div>
+             {/* Hidden component for PDF rendering */}
+            <div className="absolute -left-[9999px] top-0 w-[800px] p-10 bg-white" ref={reportRef}>
+               {client && survey && analytics && (
+                 <ReportTemplate 
+                   client={client} 
+                   survey={survey} 
+                   responseCount={responses.length}
+                   analytics={analytics} 
+                 />
+               )}
             </div>
         </div>
     );

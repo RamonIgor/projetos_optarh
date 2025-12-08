@@ -11,6 +11,14 @@ import type { Answer, Question, SelectedQuestion, SurveyResponse } from '@/types
  * @property {number} detractors - Count of detractors (score 0-6).
  * @property {number} total - Total number of responses.
  */
+export type NpsResult = {
+  score: number;
+  promoters: number;
+  passives: number;
+  detractors: number;
+  total: number;
+};
+
 
 /**
  * @typedef {object} LikertResult
@@ -26,6 +34,11 @@ import type { Answer, Question, SelectedQuestion, SurveyResponse } from '@/types
  * @property {'excelente' | 'bom' | 'atencao' | 'critico'} status - The qualitative status of the category.
  * @property {Record<string, LikertResult>} questionScores - Individual scores for each Likert question in the category.
  */
+export type CategoryScore = {
+    score: number;
+    status: 'excelente' | 'bom' | 'atencao' | 'critico';
+    questionScores: Record<string, any>;
+};
 
 
 // --- Core Calculation Functions ---
@@ -67,7 +80,7 @@ export function calculateNPS(scores: number[]): NpsResult {
  * @param {number[]} scores - An array of numerical scores from 1 to 5.
  * @returns {LikertResult} An object containing the favorability score, average, and distribution.
  */
-export function calculateLikertScore(scores: number[]): LikertResult {
+export function calculateLikertScore(scores: number[]): any {
   if (!scores || scores.length === 0) {
     return { score: 0, average: 0, distribution: {}, count: 0 };
   }
@@ -118,7 +131,7 @@ export function calculateCategoryScore(
         return { score: -1, status: 'bom', questionScores: {} }; // -1 indicates not applicable
     }
 
-    const questionScores: Record<string, LikertResult> = {};
+    const questionScores: Record<string, any> = {};
     let totalScoreSum = 0;
     let scoredQuestionsCount = 0;
 
@@ -182,13 +195,11 @@ export function segmentAnalysis(responses: SurveyResponse[], segmentField: strin
  * @returns {Array<{category: string, score: number}>} A sorted list of categories that need attention.
  */
 export function getTopIssues(categoryScores: Record<string, CategoryScore>) {
-  // TODO: Implement logic to filter and sort categories by score.
   const issues = Object.entries(categoryScores)
-    .filter(([, data]) => data.score >= 0 && data.score < 60)
+    .filter(([, data]) => data.score >= 0)
     .sort(([, a], [, b]) => a.score - b.score)
     .map(([category, data]) => ({ category, score: data.score }));
   
-  console.warn('getTopIssues is a stub and may not be fully featured.');
   return issues;
 }
 
