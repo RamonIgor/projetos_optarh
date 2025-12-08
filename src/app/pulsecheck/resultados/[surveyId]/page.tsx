@@ -198,10 +198,14 @@ export default function SurveyResultsPage() {
             return;
         };
 
-        let unsubResponses: () => void;
+        let dataLoaded = { survey: false, responses: false };
+        const checkLoadingDone = () => {
+            if (dataLoaded.survey && dataLoaded.responses) {
+                setIsLoading(false);
+            }
+        };
 
         const surveyDocRef = doc(db, 'clients', clientId, 'surveys', surveyId as string);
-        
         const unsubSurvey = onSnapshot(surveyDocRef, (surveySnap) => {
             if (surveySnap.exists()) {
                 const surveyData = { id: surveySnap.id, ...surveySnap.data() } as Survey;
@@ -211,16 +215,8 @@ export default function SurveyResultsPage() {
                 getDoc(clientDocRef).then(clientSnap => {
                     if (clientSnap.exists()) setClient(clientSnap.data() as Client);
                 });
-
-                // Now that we have the survey, listen for responses
-                const responsesQuery = query(collection(db, 'pulse_check_responses'), where('clientId', '==', clientId), where('surveyId', '==', surveyData.id));
-                unsubResponses = onSnapshot(responsesQuery, (responsesSnap) => {
-                    setResponses(responsesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SurveyResponse)));
-                    setIsLoading(false);
-                }, () => {
-                    setIsLoading(false);
-                });
-
+                dataLoaded.survey = true;
+                checkLoadingDone();
             } else {
                 router.push('/pulsecheck');
                 setIsLoading(false);
@@ -229,9 +225,18 @@ export default function SurveyResultsPage() {
             setIsLoading(false);
         });
 
+        const responsesQuery = query(collection(db, 'pulse_check_responses'), where('clientId', '==', clientId), where('surveyId', '==', surveyId as string));
+        const unsubResponses = onSnapshot(responsesQuery, (responsesSnap) => {
+            setResponses(responsesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SurveyResponse)));
+            dataLoaded.responses = true;
+            checkLoadingDone();
+        }, () => {
+            setIsLoading(false);
+        });
+
         return () => { 
             unsubSurvey();
-            if (unsubResponses) unsubResponses();
+            unsubResponses();
         };
     }, [surveyId, clientId, db, router]);
     
