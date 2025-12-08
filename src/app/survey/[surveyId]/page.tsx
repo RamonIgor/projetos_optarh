@@ -42,6 +42,7 @@ export default function SurveyResponsePage() {
     const idString = Array.isArray(publicId) ? publicId[0] : publicId;
     const parts = idString.split('_');
     if (parts.length < 2) return [null, null];
+    // Rejoin in case the surveyId itself contains underscores
     return [parts[0], parts.slice(1).join('_')];
   }, [publicId]);
 
@@ -241,16 +242,16 @@ export default function SurveyResponsePage() {
   
   return (
     <div className="flex min-h-screen w-full flex-col items-center p-4 sm:p-6">
-        <header className="w-full max-w-5xl">
+        <header className="w-full max-w-4xl">
              {client?.logoUrl ? (
-                 <div className="mb-6 text-center">
+                 <div className="mb-8 text-center">
                     <Image src={client.logoUrl} alt={`${client.name} Logo`} width={150} height={50} className="mx-auto" unoptimized/>
                  </div>
              ) : client?.name ? (
-                <h2 className="text-center text-xl font-bold text-muted-foreground">{client.name}</h2>
+                <h2 className="text-center text-2xl font-bold text-muted-foreground mb-4">{client.name}</h2>
              ) : null}
-            <h1 className="text-center text-3xl font-bold text-foreground">{survey.title}</h1>
-            <div className="my-6 space-y-2">
+            <h1 className="text-center text-4xl font-bold text-foreground mb-4">{survey.title}</h1>
+            <div className="my-8 space-y-2">
                 <div className="flex justify-between text-sm text-muted-foreground">
                     <span>Pergunta {currentStep + 1} de {survey.questions.length}</span>
                     {survey.isAnonymous && <Badge variant="secondary">Suas respostas são anônimas</Badge>}
@@ -259,19 +260,19 @@ export default function SurveyResponsePage() {
             </div>
         </header>
 
-        <main className="flex w-full flex-1 items-center justify-center">
+        <main className="flex w-full items-center justify-center">
              <AnimatePresence mode="wait">
                 <motion.div
                     key={currentStep}
-                    initial={{ opacity: 0, x: 50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -50 }}
+                    initial={{ opacity: 0, y: 50 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -50 }}
                     transition={{ duration: 0.3 }}
-                    className="w-full max-w-5xl"
+                    className="w-full max-w-4xl"
                 >
-                    <Card className="shadow-2xl">
+                    <Card className="shadow-2xl w-full">
                         <CardHeader className="pb-8">
-                            <CardTitle className="text-3xl leading-tight">
+                            <CardTitle className="text-4xl leading-tight">
                                 {currentQuestion?.text}
                                 {currentQuestion?.isMandatory && <span className="ml-2 text-destructive">*</span>}
                             </CardTitle>
@@ -289,27 +290,27 @@ export default function SurveyResponsePage() {
                              )}
                         </CardContent>
                     </Card>
+
+                    <div className="mt-8 flex w-full justify-between">
+                        <Button variant="outline" onClick={handlePrev} disabled={currentStep === 0 || isSubmitting}>
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Anterior
+                        </Button>
+                        {isLastStep ? (
+                            <Button size="lg" className="h-12 text-lg" onClick={handleSubmit} disabled={isSubmitting}>
+                                {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Send className="mr-2 h-5 w-5" />}
+                                Enviar Respostas
+                            </Button>
+                        ) : (
+                            <Button variant="default" onClick={handleNext} disabled={isSubmitting}>
+                                Próxima
+                                <ArrowRight className="ml-2 h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
                 </motion.div>
              </AnimatePresence>
         </main>
-        
-        <footer className="mt-8 flex w-full max-w-5xl justify-between">
-            <Button variant="outline" onClick={handlePrev} disabled={currentStep === 0 || isSubmitting}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Anterior
-            </Button>
-            {isLastStep ? (
-                <Button size="lg" className="h-12 text-lg" onClick={handleSubmit} disabled={isSubmitting}>
-                    {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Send className="mr-2 h-5 w-5" />}
-                    Enviar Respostas
-                </Button>
-            ) : (
-                <Button variant="default" onClick={handleNext} disabled={isSubmitting}>
-                    Próxima
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-            )}
-        </footer>
     </div>
   );
 }
