@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -42,6 +43,7 @@ export default function ConfigureQuestionsPage() {
         let unsubSurvey: () => void | undefined;
         let unsubClient: () => void | undefined;
         let unsubClientLibrary: () => void | undefined;
+        let unsubGlobalLibrary: () => void | undefined;
 
         const fetchData = async () => {
             setIsLoading(true);
@@ -67,24 +69,24 @@ export default function ConfigureQuestionsPage() {
                     }
                 });
 
-                // Fetch library questions (initial load)
+                // Set up two listeners for questions: one for global, one for client-specific
                 const questionsRef = collection(db, 'pulse_check_questions');
+                
                 const globalQuery = query(questionsRef, where('clientId', '==', null));
+                unsubGlobalLibrary = onSnapshot(globalQuery, (snapshot) => {
+                    const globalQuestions = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Question));
+                    setLibraryQuestions(prev => {
+                        const clientSpecific = prev.filter(q => q.clientId === clientId);
+                        return [...globalQuestions, ...clientSpecific].sort((a,b) => a.order - b.order);
+                    });
+                });
                 
-                const globalSnapshot = await getDocs(globalQuery);
-                const globalQuestions = globalSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Question));
-                
-                // Set global questions first
-                setLibraryQuestions(globalQuestions);
-
-                // Then, listen for client-specific questions
                 const clientQuery = query(questionsRef, where('clientId', '==', clientId));
-                unsubClientLibrary = onSnapshot(clientQuery, (clientSnapshot) => {
-                    const clientQuestions = clientSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Question));
-                    // Combine with existing global questions
-                    setLibraryQuestions(prevLib => {
-                        const nonClientQuestions = prevLib.filter(q => q.clientId !== clientId && q.clientId !== null);
-                         return [...nonClientQuestions, ...globalQuestions, ...clientQuestions].sort((a,b) => a.order - b.order);
+                unsubClientLibrary = onSnapshot(clientQuery, (snapshot) => {
+                    const clientQuestions = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Question));
+                     setLibraryQuestions(prev => {
+                        const global = prev.filter(q => q.clientId === null || q.clientId === undefined);
+                        return [...global, ...clientQuestions].sort((a,b) => a.order - b.order);
                     });
                 });
 
@@ -102,6 +104,7 @@ export default function ConfigureQuestionsPage() {
             unsubSurvey?.();
             unsubClient?.();
             unsubClientLibrary?.();
+            unsubGlobalLibrary?.();
         };
 
     }, [surveyId, clientId, db, router, toast]);
@@ -181,7 +184,6 @@ export default function ConfigureQuestionsPage() {
         const finalCategory = formData.category === 'new' ? formData.newCategory! : formData.category;
 
         try {
-            // New questions are now specific to the client
             const newQuestionData = {
                 text: formData.text,
                 type: formData.type,
@@ -203,9 +205,6 @@ export default function ConfigureQuestionsPage() {
                 description: `Sua nova pergunta está agora disponível para este cliente.`,
             });
             
-            // The onSnapshot listener will automatically add the question to the UI
-            
-            // Auto-add the newly created question to the current survey
             await handleAddQuestion({ id: docRef.id, ...newQuestionData } as Question);
 
             setIsBuilderOpen(false);
@@ -220,7 +219,6 @@ export default function ConfigureQuestionsPage() {
         if (!db) return;
         try {
             await deleteDoc(doc(db, 'pulse_check_questions', questionId));
-            // The onSnapshot listener will automatically update the UI
             toast({ title: "Pergunta excluída da biblioteca."});
         } catch (error) {
             console.error("Error deleting question from library:", error);
@@ -229,24 +227,46 @@ export default function ConfigureQuestionsPage() {
     }, [db, toast]);
 
     const handleSaveFromImporter = useCallback(async (importedQuestions: Omit<SelectedQuestion, 'id' | 'questionId'>[]) => {
-        const newQuestions: SelectedQuestion[] = importedQuestions.map(q => ({
-            ...q,
-            id: uuidv4(),
-            questionId: 'custom', // Mark as custom/imported
-        }));
+        if (!user || !db || !clientId) {
+            toast({ title: "Não é possível importar", description: "Usuário ou cliente não identificado.", variant: "destructive" });
+            return;
+        }
 
-        const combinedQuestions = [...selectedQuestions, ...newQuestions];
-        setSelectedQuestions(combinedQuestions);
-        await updateSurveyQuestions(combinedQuestions);
-
-        toast({
-            title: `${newQuestions.length} perguntas importadas!`,
-            description: "As novas perguntas foram adicionadas ao final da lista.",
-            duration: 3000
+        const questionsCollection = collection(db, 'pulse_check_questions');
+        let addedCount = 0;
+        
+        const promises = importedQuestions.map(q => {
+            const questionData = {
+                text: q.text,
+                type: q.type,
+                category: q.category,
+                isMandatory: q.isMandatory,
+                options: q.options || null,
+                isDefault: false,
+                createdBy: user.uid,
+                clientId: clientId, // Link to current client
+                createdAt: serverTimestamp(),
+                order: (libraryQuestions.length + addedCount + 1) * 10,
+                isNpsQuestion: q.type === 'nps' && q.category.toUpperCase() === 'ENPS',
+            };
+            addedCount++;
+            return addDoc(questionsCollection, questionData);
         });
-        setIsImporterOpen(false);
 
-    }, [selectedQuestions, updateSurveyQuestions, toast]);
+        try {
+            await Promise.all(promises);
+            toast({
+                title: `${addedCount} perguntas importadas!`,
+                description: "As novas perguntas foram adicionadas à biblioteca deste cliente.",
+                duration: 4000
+            });
+            setIsImporterOpen(false);
+        } catch (error) {
+            console.error("Error importing questions to library:", error);
+            toast({ title: "Erro ao importar", description: "Não foi possível salvar as perguntas na biblioteca.", variant: "destructive"});
+        }
+
+    }, [user, db, clientId, libraryQuestions.length, toast]);
     
     const handleExportLibrary = () => {
         if (libraryQuestions.length === 0) {
