@@ -7,12 +7,13 @@ import { useFirestore, useClient } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { type Survey, type Question, type SelectedQuestion, type Client } from '@/types/activity';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, Send, ArrowRight } from 'lucide-react';
+import { Loader2, ArrowLeft, Send, ArrowRight, Upload } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 import { QuestionLibrary } from './_components/QuestionLibrary';
 import { SelectedQuestions } from './_components/SelectedQuestions';
 import { QuestionBuilderDialog, type QuestionBuilderFormValues } from './_components/QuestionBuilderDialog';
+import { ImportQuestionsDialog } from './_components/ImportQuestionsDialog';
 
 export default function ConfigureQuestionsPage() {
     const { surveyId } = useParams();
@@ -28,6 +29,7 @@ export default function ConfigureQuestionsPage() {
     const [isLoading, setIsLoading] = useState(true);
 
     const [isBuilderOpen, setIsBuilderOpen] = useState(false);
+    const [isImporterOpen, setIsImporterOpen] = useState(false);
     const [questionToEdit, setQuestionToEdit] = useState<SelectedQuestion | null>(null);
 
     // Fetch Survey, Client, and Library Questions
@@ -142,11 +144,6 @@ export default function ConfigureQuestionsPage() {
         setQuestionToEdit(question);
         setIsBuilderOpen(true);
     };
-    
-    const handleOpenBuilderForCreate = () => {
-        setQuestionToEdit(null);
-        setIsBuilderOpen(true);
-    };
 
     const handleSaveFromBuilder = useCallback(async (formData: QuestionBuilderFormValues) => {
         const finalCategory = formData.category === 'new' ? formData.newCategory! : formData.category;
@@ -168,20 +165,35 @@ export default function ConfigureQuestionsPage() {
                 : q
             );
              toast({ title: "Pergunta atualizada!", duration: 2000 });
-        } else { // Creating a new custom question
-            const newCustomQuestion: SelectedQuestion = {
-                ...questionData,
-                id: `custom-${Date.now()}`,
-                questionId: 'custom', // Mark as custom
-            };
-            newQuestions = [...selectedQuestions, newCustomQuestion];
-            toast({ title: "Pergunta personalizada adicionada!", duration: 2000 });
+        } else { // This case is now deprecated in favor of import
+             return;
         }
         
         setSelectedQuestions(newQuestions);
         await updateSurveyQuestions(newQuestions);
+        setIsBuilderOpen(false);
 
     }, [questionToEdit, selectedQuestions, updateSurveyQuestions, toast]);
+
+    const handleSaveFromImporter = useCallback(async (importedQuestions: Omit<SelectedQuestion, 'id' | 'questionId'>[]) => {
+        const newQuestions: SelectedQuestion[] = importedQuestions.map(q => ({
+            ...q,
+            id: `custom-${Date.now()}-${Math.random()}`,
+            questionId: 'custom', // Mark as custom/imported
+        }));
+
+        const combinedQuestions = [...selectedQuestions, ...newQuestions];
+        setSelectedQuestions(combinedQuestions);
+        await updateSurveyQuestions(combinedQuestions);
+
+        toast({
+            title: `${newQuestions.length} perguntas importadas!`,
+            description: "As novas perguntas foram adicionadas ao final da lista.",
+            duration: 3000
+        });
+        setIsImporterOpen(false);
+
+    }, [selectedQuestions, updateSurveyQuestions, toast]);
     
     const handleNextStep = () => {
         if(selectedQuestions.length === 0) {
@@ -226,7 +238,7 @@ export default function ConfigureQuestionsPage() {
                         libraryQuestions={libraryQuestions}
                         selectedQuestions={selectedQuestions}
                         onAdd={handleAddQuestion}
-                        onCreateCustom={handleOpenBuilderForCreate}
+                        onImport={() => setIsImporterOpen(true)}
                     />
                 </div>
                 <div className="md:col-span-7 lg:col-span-8 h-full flex flex-col">
@@ -246,6 +258,12 @@ export default function ConfigureQuestionsPage() {
                 onSave={handleSaveFromBuilder}
                 questionToEdit={questionToEdit}
                 allCategories={allCategories}
+            />
+
+            <ImportQuestionsDialog
+                isOpen={isImporterOpen}
+                onOpenChange={setIsImporterOpen}
+                onImport={handleSaveFromImporter}
             />
         </div>
     );

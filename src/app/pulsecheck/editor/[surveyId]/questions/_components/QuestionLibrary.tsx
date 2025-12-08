@@ -6,14 +6,14 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { PlusCircle, Plus, Check } from 'lucide-react';
+import { Upload, Plus, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface QuestionLibraryProps {
   libraryQuestions: Question[];
   selectedQuestions: SelectedQuestion[];
   onAdd: (question: Question) => void;
-  onCreateCustom: () => void;
+  onImport: () => void;
 }
 
 const categoryOrder = [
@@ -30,7 +30,7 @@ const categoryOrder = [
   'FEEDBACK ABERTO'
 ];
 
-export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, onCreateCustom }: QuestionLibraryProps) {
+export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, onImport }: QuestionLibraryProps) {
   const groupedQuestions = useMemo(() => {
     return libraryQuestions.reduce((acc, q) => {
       if (!acc[q.category]) {
@@ -55,11 +55,11 @@ export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, on
     <Card className="flex flex-col h-full">
       <CardHeader>
         <CardTitle className="whitespace-nowrap">Biblioteca de Perguntas</CardTitle>
-        <CardDescription>Adicione perguntas prontas ou crie a sua.</CardDescription>
+        <CardDescription>Adicione perguntas prontas ou importe em massa.</CardDescription>
         <div className="pt-2">
-            <Button className="w-full" variant="outline" onClick={onCreateCustom}>
-                <PlusCircle className="mr-2 h-4 w-4"/>
-                Criar Pergunta Personalizada
+            <Button className="w-full" variant="outline" onClick={onImport}>
+                <Upload className="mr-2 h-4 w-4"/>
+                Importar Perguntas
             </Button>
         </div>
       </CardHeader>

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo } from 'react';
@@ -162,12 +161,13 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, questionTo
         <DialogHeader>
           <DialogTitle>{questionToEdit ? "Editar Pergunta" : "Criar Nova Pergunta"}</DialogTitle>
           <DialogDescription>
-            {questionToEdit ? 'Modifique os detalhes da pergunta.' : 'Crie uma pergunta personalizada que será adicionada a esta pesquisa.'}
+            {questionToEdit ? 'Modifique os detalhes da pergunta.' : 'Esta funcionalidade está desabilitada. Use a importação.'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
             <ScrollArea className="flex-1 -mr-6">
+                <fieldset disabled={!questionToEdit} className="disabled:opacity-50">
                 <div className="grid lg:grid-cols-2 gap-8 pr-6 pb-6">
                     <div className="space-y-8">
                         <FormField control={form.control} name="text" render={({ field }) => (
@@ -279,11 +279,12 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, questionTo
                         </Card>
                     </div>
                 </div>
+                </fieldset>
             </ScrollArea>
             <DialogFooter className="mt-auto pt-6 border-t">
                 <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
-                <Button type="submit" disabled={isSubmitting}>
-                   {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : (questionToEdit ? 'Salvar Alterações' : 'Adicionar Pergunta')}
+                <Button type="submit" disabled={isSubmitting || !questionToEdit}>
+                   {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : 'Salvar Alterações'}
                 </Button>
             </DialogFooter>
           </form>
@@ -292,5 +293,3 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, questionTo
     </Dialog>
   );
 }
-
-    
