@@ -30,9 +30,9 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useState, useMemo, useEffect } from 'react';
-import { onSnapshot, query, collection } from "firebase/firestore";
+import { onSnapshot, query, collection, where } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
-import { type Activity } from "@/types/activity";
+import { type Activity, type Survey, type Response as SurveyResponse } from "@/types/activity";
 
 
 const ProcessFlowNav = () => {
@@ -113,12 +113,30 @@ const ProcessFlowNav = () => {
 
 
 const PulseCheckNav = () => {
+  const db = useFirestore();
+  const { clientId } = useClient();
   const pathname = usePathname();
-  const router = useRouter();
+  const [responses, setResponses] = useState<SurveyResponse[]>([]);
 
+  useEffect(() => {
+    if (!db || !clientId) {
+      setResponses([]);
+      return;
+    }
+    const q = query(collection(db, 'pulse_check_responses'), where('clientId', '==', clientId));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setResponses(snapshot.docs.map(doc => doc.data() as SurveyResponse));
+    });
+    return () => unsubscribe();
+  }, [db, clientId]);
+
+  const hasClientAndResponses = !!clientId && responses.length > 0;
+  
   const navItems = [
     { href: '/pulsecheck', label: 'Minhas Pesquisas', icon: AreaChart },
   ];
+
+  const resultsItem = { href: '/pulsecheck', label: 'Resultados', icon: BarChart3, disabled: !hasClientAndResponses };
   
   if (!pathname.startsWith('/pulsecheck')) {
     return null;
@@ -142,15 +160,42 @@ const PulseCheckNav = () => {
       </Link>
     );
   };
+
+  const renderResultsLink = () => {
+    const link = (
+      <Link
+        key={resultsItem.href}
+        href={resultsItem.disabled ? '#' : resultsItem.href}
+        className={cn(
+          "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+          "text-muted-foreground hover:text-foreground",
+          resultsItem.disabled && "opacity-50 cursor-not-allowed"
+        )}
+        aria-disabled={resultsItem.disabled}
+        onClick={(e) => {
+          if (resultsItem.disabled) e.preventDefault();
+        }}
+      >
+        <resultsItem.icon className="h-4 w-4" />
+        <span>{resultsItem.label}</span>
+      </Link>
+    );
+
+     if (resultsItem.disabled) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>{link}</TooltipTrigger>
+          <TooltipContent><p>Selecione um cliente e tenha respostas para ver os resultados.</p></TooltipContent>
+        </Tooltip>
+      );
+    }
+    return link;
+  }
   
   return (
     <nav className="flex flex-wrap p-1.5 rounded-full bg-background/50 backdrop-blur-sm border border-black/5 items-center gap-1 shadow-sm">
       {navItems.map(renderNavItem)}
-       <div className="h-4 border-l border-border mx-1"></div>
-       <Button variant="ghost" size="sm" className="rounded-full" onClick={() => router.push('/pulsecheck/editor')}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Novo Questionário
-       </Button>
+      {renderResultsLink()}
     </nav>
   );
 };
