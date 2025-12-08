@@ -118,6 +118,10 @@ export default function SurveyResponsePage() {
       questionId: question.id,
       currentAnswer: answers[question.id],
     };
+    
+    if (question.type === 'multiple-choice' && (!question.options || question.options.length === 0)) {
+        return <OpenTextQuestion {...commonProps} onAnswer={(value) => handleAnswer(question.id, value)} />;
+    }
 
     switch (question.type) {
       case 'nps':
@@ -134,7 +138,7 @@ export default function SurveyResponsePage() {
   };
 
   const handleNext = () => {
-    if (currentQuestion && currentQuestion.isMandatory && answers[currentQuestion.id] === undefined) {
+    if (currentQuestion && currentQuestion.isMandatory && (answers[currentQuestion.id] === undefined || answers[currentQuestion.id] === '')) {
         setValidationError("Esta pergunta é obrigatória.");
         return;
     }
@@ -152,7 +156,7 @@ export default function SurveyResponsePage() {
   };
   
   const handleSubmit = async () => {
-     if (currentQuestion && currentQuestion.isMandatory && answers[currentQuestion.id] === undefined) {
+     if (currentQuestion && currentQuestion.isMandatory && (answers[currentQuestion.id] === undefined || answers[currentQuestion.id] === '')) {
         setValidationError("Esta pergunta é obrigatória.");
         return;
     }
@@ -160,7 +164,7 @@ export default function SurveyResponsePage() {
     
     // Final validation
     for(const q of survey?.questions || []) {
-        if(q.isMandatory && answers[q.id] === undefined) {
+        if(q.isMandatory && (answers[q.id] === undefined || answers[q.id] === '')) {
             const qIndex = survey!.questions.findIndex(sq => sq.id === q.id);
             setCurrentStep(qIndex);
             setValidationError("Por favor, responda a esta pergunta obrigatória antes de enviar.");
