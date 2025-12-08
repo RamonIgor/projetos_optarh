@@ -73,6 +73,7 @@ export default function SurveyEditorPage() {
             const surveyData = docSnap.data() as Survey;
             form.reset({
               ...surveyData,
+              totalParticipants: surveyData.totalParticipants || 1, // Ensure a default value
               opensAt: (surveyData.opensAt as Timestamp).toDate(),
               closesAt: (surveyData.closesAt as Timestamp).toDate(),
             });
@@ -145,7 +146,7 @@ export default function SurveyEditorPage() {
     <div className="w-full max-w-4xl mx-auto pb-20">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <h1 className="text-4xl font-bold text-primary tracking-tight">{isNewSurvey ? "Criar Nova Pesquisa" : "Editar Pesquisa"}</h1>
-            <p className="mt-2 text-lg text-muted-foreground">Passo 1 de 3: Informações Básicas</p>
+            <p className="mt-2 text-lg text-muted-foreground">Passo 1 de 2: Informações Básicas</p>
         </motion.div>
         
         {showDisabledMessage && (
@@ -182,7 +183,7 @@ export default function SurveyEditorPage() {
                             <FormField control={form.control} name="description" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Descrição</FormLabel>
-                                    <FormControl><Textarea placeholder="Descreva brevemente o objetivo desta pesquisa para os colaboradores." {...field} /></FormControl>
+                                    <FormControl><Textarea placeholder="Descreva brevemente o objetivo desta pesquisa para os colaboradores." {...field} value={field.value || ''} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />
@@ -232,11 +233,11 @@ export default function SurveyEditorPage() {
                                         <FormControl>
                                             <div className="relative">
                                                 <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                <Input type="number" placeholder="Ex: 150" {...field} className="pl-9" />
+                                                <Input type="number" placeholder="Ex: 150" {...field} value={field.value || ''} className="pl-9" />
                                             </div>
                                         </FormControl>
                                         <FormDescription>
-                                            O número de colaboradores que devem responder. Usado para calcular a taxa de adesão.
+                                            Informe o número de colaboradores que devem receber esta pesquisa. Este valor será usado para calcular a taxa de adesão.
                                         </FormDescription>
                                         <FormMessage />
                                     </FormItem>
@@ -281,3 +282,5 @@ export default function SurveyEditorPage() {
     </div>
   );
 }
+
+    
