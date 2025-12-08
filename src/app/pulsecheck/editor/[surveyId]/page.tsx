@@ -235,6 +235,9 @@ export default function SurveyEditorPage() {
                                                 <Input type="number" placeholder="Ex: 150" {...field} className="pl-9" />
                                             </div>
                                         </FormControl>
+                                        <FormDescription>
+                                            O número de colaboradores que devem responder. Usado para calcular a taxa de adesão.
+                                        </FormDescription>
                                         <FormMessage />
                                     </FormItem>
                                 )} />
