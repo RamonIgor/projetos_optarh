@@ -16,6 +16,7 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
+  TooltipProvider,
 } from "@/components/ui/tooltip"
 
 
@@ -130,8 +131,10 @@ export default function ProcessFlowLayout({
   const canRender = user && (isConsultant || userProfile?.products?.includes("process_flow"));
   
   return canRender ? (
-     <AppLayout navContent={<ProcessFlowNav />}>
-        {children}
-    </AppLayout>
+     <TooltipProvider>
+        <AppLayout hasActivities={false} unclassifiedCount={0} navContent={<ProcessFlowNav />}>
+            {children}
+        </AppLayout>
+     </TooltipProvider>
   ) : null;
 }

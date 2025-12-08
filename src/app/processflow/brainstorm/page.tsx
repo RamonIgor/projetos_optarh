@@ -16,7 +16,6 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
-import AppLayout from '@/components/AppLayout';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 

@@ -6,7 +6,6 @@ import { useFirestore, useClient } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
 import { type Activity } from '@/types/activity';
-import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';

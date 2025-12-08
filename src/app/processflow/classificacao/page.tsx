@@ -6,7 +6,6 @@ import { useFirestore, useClient } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
 import { type Activity, type ActivityComment } from '@/types/activity';
-import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -607,60 +606,4 @@ function CommentSheet({activity, newComment, setNewComment, onAddComment, isSavi
             </SheetContent>
         </Sheet>
     )
-}
-
-function SummaryScreen({ stats, onReviewPending, onReviewApproved }: { stats: { approved: number, pending: number, unclassified: number }, onReviewPending: () => void, onReviewApproved: () => void }) {
-  const router = useRouter();
-  const total = stats.approved + stats.pending + stats.unclassified;
-  const approvedPercentage = total > 0 ? (stats.approved / total) * 100 : 0;
-
-  const StatCard = ({ title, value, color, icon }: { title: string, value: number, color: string, icon: React.ReactNode }) => (
-    <Card className={cn("border-l-4", color)}>
-      <CardContent className="p-6 flex items-center gap-4">
-        {icon}
-        <div>
-          <p className="text-3xl font-bold">{value}</p>
-          <p className="text-muted-foreground">{title}</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  return (
-    <div className="max-w-4xl mx-auto text-center py-12">
-      <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
-        <h1 className="text-5xl font-bold tracking-tight">🎉 Rodada de Classificação Concluída!</h1>
-        <p className="mt-4 text-lg text-muted-foreground">Vocês revisaram as atividades pendentes. Veja o resumo:</p>
-      
-        <div className="grid md:grid-cols-3 gap-4 my-8 text-left">
-          <StatCard title="Atividades Aprovadas" value={stats.approved} color="border-green-500" icon={<ThumbsUp className="h-8 w-8 text-green-500" />}/>
-          <StatCard title="Aguardando Consenso" value={stats.pending} color="border-yellow-500" icon={<ActivitySquare className="h-8 w-8 text-yellow-500" />}/>
-          <StatCard title="Não Classificadas" value={stats.unclassified} color="border-gray-400" icon={<Square className="h-8 w-8 text-gray-400" />}/>
-        </div>
-
-        <div className="my-8">
-            <div className="flex justify-between mb-1 text-sm text-muted-foreground">
-                <span>Progresso Total de Aprovação</span>
-                <span>{Math.round(approvedPercentage)}%</span>
-            </div>
-            <Progress value={approvedPercentage} className="h-3 [&>div]:bg-green-500" />
-        </div>
-
-        <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Button size="lg" className="h-16 text-lg" onClick={onReviewPending} disabled={stats.pending === 0 && stats.unclassified === 0}>
-              Revisar Pendentes
-          </Button>
-           <Button size="lg" variant="outline" className="h-16 text-lg" onClick={onReviewApproved} disabled={stats.approved === 0}>
-              Revisar Aprovadas
-          </Button>
-          <Button size="lg" variant="outline" className="h-16 text-lg" onClick={() => router.push('/processflow/dashboard')}>
-              Ir para o Dashboard
-          </Button>
-          <Button size="lg" variant="outline" className="h-16 text-lg" onClick={() => router.push('/processflow/brainstorm')}>
-              Voltar ao Brainstorm
-          </Button>
-        </div>
-      </motion.div>
-    </div>
-  )
 }
