@@ -10,6 +10,17 @@ import { Badge } from '@/components/ui/badge';
 import { GripVertical, Trash2, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { memo } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface DraggableQuestionItemProps {
   question: SelectedQuestion;
@@ -59,9 +70,27 @@ export const DraggableQuestionItem = memo(({ question, index, onUpdate, onRemove
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(question)} disabled>
                         <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => onRemove(question.id)}>
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação removerá a pergunta apenas desta pesquisa. Ela permanecerá na biblioteca para uso futuro.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => onRemove(question.id)}>
+                            Sim, remover
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                 </div>
               </div>
             </CardContent>
