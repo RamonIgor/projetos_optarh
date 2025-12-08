@@ -198,41 +198,28 @@ export default function SurveyResultsPage() {
             return;
         };
 
-        let dataLoaded = { survey: false, responses: false };
-        const checkLoadingDone = () => {
-            if (dataLoaded.survey && dataLoaded.responses) {
-                setIsLoading(false);
-            }
-        };
-
         const surveyDocRef = doc(db, 'clients', clientId, 'surveys', surveyId as string);
         const unsubSurvey = onSnapshot(surveyDocRef, (surveySnap) => {
             if (surveySnap.exists()) {
                 const surveyData = { id: surveySnap.id, ...surveySnap.data() } as Survey;
                 setSurvey(surveyData);
-
+                
                 const clientDocRef = doc(db, 'clients', surveyData.clientId);
                 getDoc(clientDocRef).then(clientSnap => {
-                    if (clientSnap.exists()) setClient(clientSnap.data() as Client);
+                    if (clientSnap.exists()) {
+                        setClient(clientSnap.data() as Client);
+                    }
                 });
-                dataLoaded.survey = true;
-                checkLoadingDone();
+
             } else {
                 router.push('/pulsecheck');
-                setIsLoading(false);
             }
-        }, () => {
-            setIsLoading(false);
-        });
+        }, () => setIsLoading(false));
 
         const responsesQuery = query(collection(db, 'pulse_check_responses'), where('clientId', '==', clientId), where('surveyId', '==', surveyId as string));
         const unsubResponses = onSnapshot(responsesQuery, (responsesSnap) => {
             setResponses(responsesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SurveyResponse)));
-            dataLoaded.responses = true;
-            checkLoadingDone();
-        }, () => {
-            setIsLoading(false);
-        });
+        }, () => setIsLoading(false));
 
         return () => { 
             unsubSurvey();
@@ -240,77 +227,18 @@ export default function SurveyResultsPage() {
         };
     }, [surveyId, clientId, db, router]);
     
+    // Determine loading state based on all required data
+    useEffect(() => {
+        if (survey && client && responses) {
+            setIsLoading(false);
+        }
+        // Initial loading is true until data arrives
+    }, [survey, client, responses]);
+
     const getPersonalizedQuestionText = useCallback((text: string) => {
         return (client?.name && text.includes('[EMPRESA]')) ? text.replace(/\[EMPRESA\]/g, client.name) : text;
     }, [client]);
 
-    const analytics = useMemo(() => {
-        if (!survey || responses.length === 0) return null;
-
-        const answersByQuestionId = responses.reduce((acc, res) => {
-            Object.entries(res.answers).forEach(([qId, answer]) => {
-                if (!acc[qId]) acc[qId] = [];
-                acc[qId].push(answer);
-            });
-            return acc;
-        }, {} as Record<string, Answer[]>);
-        
-        const findNpsQuestion = (category: string) => {
-            const normalizedCategory = category.toLowerCase();
-            const q = survey.questions.find(q => q.category.toLowerCase() === normalizedCategory);
-            return q && q.type === 'nps' ? q : null;
-        }
-
-        const eNpsQuestion = findNpsQuestion('enps');
-        const lNpsQuestion = findNpsQuestion('liderança nps');
-
-        const eNpsAnswers = eNpsQuestion ? (answersByQuestionId[eNpsQuestion.id] || []).map(a => a.answer as number) : [];
-        const lNpsAnswers = lNpsQuestion ? (answersByQuestionId[lNpsQuestion.id] || []).map(a => a.answer as number) : [];
-        
-        const eNpsResult = calculateNPS(eNpsAnswers);
-        const lNpsResult = calculateNPS(lNpsAnswers);
-
-        const categories = survey.questions.reduce((acc, q) => {
-            if (q.category === 'eNPS' || q.category === 'Liderança NPS' || q.category === 'DEMOGRAFIA' || q.category === 'FEEDBACK ABERTO') return acc;
-            if (!acc[q.category]) acc[q.category] = { questions: [], score: 0, status: 'bom' };
-            acc[q.category].questions.push(q);
-            return acc;
-        }, {} as Record<string, { questions: SelectedQuestion[], score: number, status: ReturnType<typeof getCategoryStatus> }>);
-        
-        Object.keys(categories).forEach(catName => {
-            const category = categories[catName];
-            const categoryResult = calculateCategoryScore(category.questions, answersByQuestionId);
-            category.score = categoryResult.score;
-            category.status = categoryResult.status;
-        });
-        
-        const openFeedback = survey.questions
-            .filter(q => q.type === 'open-text')
-            .flatMap(q => (answersByQuestionId[q.id] || []).map(a => a.answer as string).filter(Boolean));
-
-        const durations = responses
-            .map(r => {
-                if (r.startedAt && r.submittedAt) {
-                    const start = r.startedAt instanceof Timestamp ? r.startedAt.toDate() : new Date(r.startedAt);
-                    const end = r.submittedAt instanceof Timestamp ? r.submittedAt.toDate() : new Date(r.submittedAt);
-                    if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-                        return differenceInMinutes(end, start);
-                    }
-                }
-                return null;
-            })
-            .filter((d): d is number => d !== null && d >= 0);
-
-        const averageTime = durations.length > 0 ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
-        
-        const topIssues = getTopIssues(categories);
-        const topStrengths = getTopIssues(categories).reverse();
-
-
-        return { eNpsResult, lNpsResult, categories, openFeedback, answersByQuestionId, averageTime, topIssues, topStrengths };
-
-    }, [survey, responses]);
-    
     const generatePdf = async () => {
         if (!reportRef.current) return;
         setIsGeneratingPdf(true);
@@ -359,11 +287,77 @@ export default function SurveyResultsPage() {
         }
     };
 
+    // Calculate analytics only when all data is available
+    const analytics = useMemo(() => {
+        if (!survey || !responses || !client) return null;
 
-     if (isLoading) {
+        const answersByQuestionId = responses.reduce((acc, res) => {
+            Object.entries(res.answers).forEach(([qId, answer]) => {
+                if (!acc[qId]) acc[qId] = [];
+                acc[qId].push(answer);
+            });
+            return acc;
+        }, {} as Record<string, Answer[]>);
+
+        const findNpsQuestion = (category: string) => {
+            const normalizedCategory = category.toLowerCase();
+            const q = survey.questions.find(q => q.category.toLowerCase() === normalizedCategory);
+            return q && q.type === 'nps' ? q : null;
+        };
+
+        const eNpsQuestion = findNpsQuestion('enps');
+        const lNpsQuestion = findNpsQuestion('liderança nps');
+
+        const eNpsAnswers = eNpsQuestion ? (answersByQuestionId[eNpsQuestion.id] || []).map(a => a.answer as number) : [];
+        const lNpsAnswers = lNpsQuestion ? (answersByQuestionId[lNpsQuestion.id] || []).map(a => a.answer as number) : [];
+
+        const eNpsResult = calculateNPS(eNpsAnswers);
+        const lNpsResult = calculateNPS(lNpsAnswers);
+
+        const categories = survey.questions.reduce((acc, q) => {
+            if (q.category === 'eNPS' || q.category === 'Liderança NPS' || q.category === 'DEMOGRAFIA' || q.category === 'FEEDBACK ABERTO') return acc;
+            if (!acc[q.category]) acc[q.category] = { questions: [], score: 0, status: 'bom' };
+            acc[q.category].questions.push(q);
+            return acc;
+        }, {} as Record<string, { questions: SelectedQuestion[], score: number, status: ReturnType<typeof getCategoryStatus> }>);
+
+        Object.keys(categories).forEach(catName => {
+            const category = categories[catName];
+            const categoryResult = calculateCategoryScore(category.questions, answersByQuestionId);
+            category.score = categoryResult.score;
+            category.status = categoryResult.status;
+        });
+
+        const openFeedback = survey.questions
+            .filter(q => q.type === 'open-text')
+            .flatMap(q => (answersByQuestionId[q.id] || []).map(a => a.answer as string).filter(Boolean));
+
+        const durations = responses
+            .map(r => {
+                if (r.startedAt && r.submittedAt) {
+                    const start = r.startedAt instanceof Timestamp ? r.startedAt.toDate() : new Date(r.startedAt);
+                    const end = r.submittedAt instanceof Timestamp ? r.submittedAt.toDate() : new Date(r.submittedAt);
+                    if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                        return differenceInMinutes(end, start);
+                    }
+                }
+                return null;
+            })
+            .filter((d): d is number => d !== null && d >= 0);
+
+        const averageTime = durations.length > 0 ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
+
+        const topIssues = getTopIssues(categories);
+        const topStrengths = getTopIssues(categories).reverse();
+
+        return { eNpsResult, lNpsResult, categories, openFeedback, answersByQuestionId, averageTime, topIssues, topStrengths };
+    }, [survey, responses, client]);
+
+
+     if (isLoading || !analytics) {
         return <div className="flex items-center justify-center min-h-[60vh] w-full"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
     }
-    if (!survey) {
+    if (!survey || !client) {
         return <div>Pesquisa não encontrada.</div>;
     }
 
