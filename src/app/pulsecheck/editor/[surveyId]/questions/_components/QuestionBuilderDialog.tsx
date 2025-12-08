@@ -7,7 +7,7 @@ import * as z from 'zod';
 import { type Question, type SelectedQuestion } from '@/types/activity';
 import { cn } from '@/lib/utils';
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -265,10 +265,10 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, questionTo
                         {renderPreview()}
                     </CardContent>
                 </Card>
-                <DialogFooter className="mt-auto">
+                <div className="mt-auto flex justify-end gap-2">
                     <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
                     <Button type="submit">Adicionar Pergunta</Button>
-                </DialogFooter>
+                </div>
             </div>
           </form>
         </Form>
