@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo } from 'react';
@@ -6,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Upload, Plus, Check } from 'lucide-react';
+import { Upload, Plus, Check, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface QuestionLibraryProps {
@@ -14,6 +15,7 @@ interface QuestionLibraryProps {
   selectedQuestions: SelectedQuestion[];
   onAdd: (question: Question) => void;
   onImport: () => void;
+  onExport: () => void;
 }
 
 const categoryOrder = [
@@ -30,7 +32,7 @@ const categoryOrder = [
   'FEEDBACK ABERTO'
 ];
 
-export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, onImport }: QuestionLibraryProps) {
+export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, onImport, onExport }: QuestionLibraryProps) {
   const groupedQuestions = useMemo(() => {
     return libraryQuestions.reduce((acc, q) => {
       if (!acc[q.category]) {
@@ -55,11 +57,15 @@ export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, on
     <Card className="flex flex-col h-full">
       <CardHeader>
         <CardTitle className="whitespace-nowrap">Biblioteca de Perguntas</CardTitle>
-        <CardDescription>Adicione perguntas prontas ou importe em massa.</CardDescription>
-        <div className="pt-2">
+        <CardDescription>Adicione perguntas prontas ou trabalhe em massa.</CardDescription>
+        <div className="pt-2 grid grid-cols-2 gap-2">
             <Button className="w-full" variant="outline" onClick={onImport}>
                 <Upload className="mr-2 h-4 w-4"/>
-                Importar Perguntas
+                Importar
+            </Button>
+            <Button className="w-full" variant="outline" onClick={onExport} disabled={libraryQuestions.length === 0}>
+                <Download className="mr-2 h-4 w-4"/>
+                Exportar
             </Button>
         </div>
       </CardHeader>

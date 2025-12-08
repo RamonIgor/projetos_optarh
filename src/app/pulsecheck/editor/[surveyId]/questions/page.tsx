@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -9,6 +10,7 @@ import { type Survey, type Question, type SelectedQuestion, type Client } from '
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, Send, ArrowRight, Upload } from 'lucide-react';
 import { motion } from 'framer-motion';
+import * as XLSX from 'xlsx';
 
 import { QuestionLibrary } from './_components/QuestionLibrary';
 import { SelectedQuestions } from './_components/SelectedQuestions';
@@ -146,6 +148,8 @@ export default function ConfigureQuestionsPage() {
     };
 
     const handleSaveFromBuilder = useCallback(async (formData: QuestionBuilderFormValues) => {
+        if (!questionToEdit) return; // Should not happen with the current UI
+
         const finalCategory = formData.category === 'new' ? formData.newCategory! : formData.category;
 
         const questionData: Omit<SelectedQuestion, 'id' | 'questionId'> = {
@@ -156,21 +160,15 @@ export default function ConfigureQuestionsPage() {
             options: formData.type === 'multiple-choice' ? formData.options?.map(o => o.value) : null,
         };
 
-        let newQuestions: SelectedQuestion[];
-
-        if (questionToEdit) { // Editing existing question
-            newQuestions = selectedQuestions.map(q => 
-                q.id === questionToEdit.id 
-                ? { ...q, ...questionData }
-                : q
-            );
-             toast({ title: "Pergunta atualizada!", duration: 2000 });
-        } else { // This case is now deprecated in favor of import
-             return;
-        }
+        const newQuestions = selectedQuestions.map(q => 
+            q.id === questionToEdit.id 
+            ? { ...q, ...questionData }
+            : q
+        );
         
         setSelectedQuestions(newQuestions);
         await updateSurveyQuestions(newQuestions);
+        toast({ title: "Pergunta atualizada!", duration: 2000 });
         setIsBuilderOpen(false);
 
     }, [questionToEdit, selectedQuestions, updateSurveyQuestions, toast]);
@@ -195,6 +193,29 @@ export default function ConfigureQuestionsPage() {
 
     }, [selectedQuestions, updateSurveyQuestions, toast]);
     
+    const handleExportLibrary = () => {
+        if (libraryQuestions.length === 0) {
+            toast({ title: "Biblioteca vazia", description: "Não há perguntas para exportar.", variant: 'default' });
+            return;
+        }
+
+        const dataToExport = libraryQuestions.map(q => ({
+            Texto: q.text,
+            Categoria: q.category,
+            Tipo: q.type,
+            Opcoes: q.options ? q.options.join('|') : '',
+            Obrigatoria: q.isMandatory ? 'Sim' : 'Não',
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Biblioteca de Perguntas");
+
+        XLSX.writeFile(workbook, "OptaRH_Biblioteca_PulseCheck.xlsx");
+        
+        toast({ title: "Exportação iniciada!", description: "Seu arquivo será baixado em breve." });
+    };
+
     const handleNextStep = () => {
         if(selectedQuestions.length === 0) {
             toast({ title: "Nenhuma pergunta selecionada", description: "Adicione ao menos uma pergunta para continuar.", variant: "destructive"});
@@ -239,6 +260,7 @@ export default function ConfigureQuestionsPage() {
                         selectedQuestions={selectedQuestions}
                         onAdd={handleAddQuestion}
                         onImport={() => setIsImporterOpen(true)}
+                        onExport={handleExportLibrary}
                     />
                 </div>
                 <div className="md:col-span-7 lg:col-span-8 h-full flex flex-col">
