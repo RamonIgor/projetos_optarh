@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, type FormEvent } from 'react';
@@ -108,70 +109,84 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen w-full bg-gradient-to-br from-cyan-50 to-blue-100 dark:from-slate-900 dark:to-blue-950 p-4">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="text-center mb-8"
-      >
-        <Image src="/optarh-logo.png" alt="OptaRH Logo" width={180} height={60} className="mx-auto" unoptimized />
-      </motion.div>
+    <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-white to-gray-100 flex flex-col items-center justify-center p-4">
+      <div className="absolute top-0 left-0 right-0 h-96 w-full opacity-[0.15] [mask-image:linear-gradient(to_bottom,white,transparent)]">
+        <svg className="absolute inset-0 h-full w-full" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="wave-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style={{ stopColor: '#8b5cf6' }} />
+              <stop offset="100%" style={{ stopColor: '#6366f1' }} />
+            </linearGradient>
+          </defs>
+          <path d="M0,150 C150,300 350,-50 500,150 C650,350 850,-50 1000,150 L1000,0 L0,0 Z" fill="url(#wave-gradient)" transform="scale(2,1)"/>
+        </svg>
+      </div>
+      
+      <div className="relative z-10 w-full max-w-sm">
+         <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center mb-8"
+        >
+          <Image src="/optarh-logo.png" alt="OptaRH Logo" width={150} height={50} className="mx-auto" unoptimized />
+        </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
-        className="w-full max-w-sm"
-      >
-        <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Bem-vindo(a) de volta!</CardTitle>
-            <CardDescription>Acesse o portal de soluções.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-6" onSubmit={handleSignIn}>
-              <div className="space-y-2">
-                <Label htmlFor="email-login">Email</Label>
-                <Input
-                  id="email-login"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="h-11 text-base"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password-login">Senha</Label>
-                <Input
-                  id="password-login"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Sua senha"
-                  className="h-11 text-base"
-                />
-              </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+            <Card className="shadow-2xl">
+            <CardHeader className="text-center">
+                <CardTitle className="text-2xl font-bold text-slate-800">Bem-vindo(a)!</CardTitle>
+                <CardDescription className="text-slate-600">Acesse o portal de soluções.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <form className="space-y-6" onSubmit={handleSignIn}>
+                <div className="space-y-2">
+                    <Label htmlFor="email-login">Email</Label>
+                    <Input
+                    id="email-login"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="h-11 text-base"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="password-login">Senha</Label>
+                    <Input
+                    id="password-login"
+                    type="password"
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Sua senha"
+                    className="h-11 text-base"
+                    />
+                </div>
 
-              <div>
-                <Button type="submit" className="w-full h-12 text-lg" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  ) : (
-                    <LogIn className="mr-2 h-5 w-5" />
-                  )}
-                  Entrar
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </motion.div>
+                <div>
+                    <Button type="submit" className="w-full h-12 text-lg bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:shadow-lg transition-shadow" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    ) : (
+                        <LogIn className="mr-2 h-5 w-5" />
+                    )}
+                    Entrar
+                    </Button>
+                </div>
+                </form>
+            </CardContent>
+            </Card>
+        </motion.div>
+      </div>
     </div>
   );
 }
+
