@@ -10,15 +10,14 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Scale, List, Pilcrow, Hash, TextCursorInput } from 'lucide-react';
+import { PlusCircle, Trash2, Scale, List, Hash, TextCursorInput } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Label } from '@/components/ui/label';
 
 const questionBuilderSchema = z.object({
   text: z.string().min(5, "O texto da pergunta é muito curto.").max(500, "O texto da pergunta não pode exceder 500 caracteres."),
@@ -158,109 +157,107 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, questionTo
         </DialogHeader>
         <Form {...form}>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 min-h-0">
-            <ScrollArea className="h-full -mr-6 pr-6">
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                    <FormField control={form.control} name="text" render={({ field }) => (
-                        <FormItem>
-                            <div className="flex justify-between items-baseline">
-                                <FormLabel>Texto da Pergunta</FormLabel>
-                                <span className="text-xs text-muted-foreground">{field.value.length} / 500</span>
-                            </div>
-                            <FormControl><Textarea placeholder="Ex: Em uma escala de 0 a 10..." {...field} rows={5} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-
-                    <FormField control={form.control} name="type" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Tipo de Resposta</FormLabel>
-                            <RadioGroup onValueChange={field.onChange} defaultValue={field.value} value={field.value} className="grid grid-cols-2 gap-2">
-                                {typeOptions.map(opt => (
-                                    <FormItem key={opt.value}>
-                                        <FormControl>
-                                            <RadioGroupItem value={opt.value} id={opt.value} className="sr-only" />
-                                        </FormControl>
-                                        <Label htmlFor={opt.value} className={cn("flex flex-col items-center justify-center gap-2 rounded-md border-2 border-muted bg-popover p-6 hover:bg-accent hover:text-accent-foreground cursor-pointer", field.value === opt.value && "border-primary")}>
-                                            <opt.icon className="h-6 w-6" />
-                                            {opt.label}
-                                        </Label>
-                                    </FormItem>
-                                ))}
-                            </RadioGroup>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-
-                    {watchedValues.type === 'multiple-choice' && (
-                        <div className="space-y-4 rounded-md border p-4">
-                            <FormLabel>Opções de Resposta</FormLabel>
-                            <div className="space-y-2">
-                                {fields.map((field, index) => (
-                                        <FormField
-                                        key={field.id}
-                                        control={form.control}
-                                        name={`options.${index}.value`}
-                                        render={({ field: optionField }) => (
-                                                <FormItem className="flex items-center gap-2">
-                                                <FormControl>
-                                                    <Input {...optionField} placeholder={`Opção ${index + 1}`} />
-                                                </FormControl>
-                                                <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 2}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                ))}
-                            </div>
-                                <Button type="button" variant="outline" size="sm" onClick={() => append({ value: '' })}>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Opção
-                            </Button>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                <FormField control={form.control} name="text" render={({ field }) => (
+                    <FormItem>
+                        <div className="flex justify-between items-baseline">
+                            <FormLabel>Texto da Pergunta</FormLabel>
+                            <span className="text-xs text-muted-foreground">{field.value.length} / 500</span>
                         </div>
-                    )}
-                    <div className="grid grid-cols-2 gap-4">
-                        <FormField control={form.control} name="category" render={({ field }) => (
+                        <FormControl><Textarea placeholder="Ex: Em uma escala de 0 a 10..." {...field} rows={5} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+
+                <FormField control={form.control} name="type" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Tipo de Resposta</FormLabel>
+                        <RadioGroup onValueChange={field.onChange} defaultValue={field.value} value={field.value} className="grid grid-cols-2 gap-2">
+                            {typeOptions.map(opt => (
+                                <FormItem key={opt.value}>
+                                    <FormControl>
+                                        <RadioGroupItem value={opt.value} id={opt.value} className="sr-only" />
+                                    </FormControl>
+                                    <Label htmlFor={opt.value} className={cn("flex flex-col items-center justify-center gap-2 rounded-md border-2 border-muted bg-popover p-6 hover:bg-accent hover:text-accent-foreground cursor-pointer", field.value === opt.value && "border-primary")}>
+                                        <opt.icon className="h-6 w-6" />
+                                        {opt.label}
+                                    </Label>
+                                </FormItem>
+                            ))}
+                        </RadioGroup>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+
+                {watchedValues.type === 'multiple-choice' && (
+                    <div className="space-y-4 rounded-md border p-4">
+                        <FormLabel>Opções de Resposta</FormLabel>
+                        <div className="space-y-2">
+                            {fields.map((field, index) => (
+                                    <FormField
+                                    key={field.id}
+                                    control={form.control}
+                                    name={`options.${index}.value`}
+                                    render={({ field: optionField }) => (
+                                            <FormItem className="flex items-center gap-2">
+                                            <FormControl>
+                                                <Input {...optionField} placeholder={`Opção ${index + 1}`} />
+                                            </FormControl>
+                                            <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 2}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            ))}
+                        </div>
+                            <Button type="button" variant="outline" size="sm" onClick={() => append({ value: '' })}>
+                            <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Opção
+                        </Button>
+                    </div>
+                )}
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField control={form.control} name="category" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Categoria</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    {allCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                    <SelectItem value="new" className="text-primary font-bold">
+                                        + Nova Categoria
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                    {watchedValues.category === 'new' && (
+                        <FormField control={form.control} name="newCategory" render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Categoria</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        {allCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                                        <SelectItem value="new" className="text-primary font-bold">
-                                            + Nova Categoria
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <FormLabel>Nome da Nova Categoria</FormLabel>
+                                <FormControl><Input {...field} placeholder="Ex: Cultura" /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )} />
-                        {watchedValues.category === 'new' && (
-                            <FormField control={form.control} name="newCategory" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Nome da Nova Categoria</FormLabel>
-                                    <FormControl><Input {...field} placeholder="Ex: Cultura" /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                        )}
-                    </div>
+                    )}
+                </div>
 
-                    <FormField control={form.control} name="isMandatory" render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                                <FormLabel>Obrigatória</FormLabel>
-                                <FormDescription>
-                                    O colaborador deverá responder esta pergunta para submeter.
-                                </FormDescription>
-                            </div>
-                            <FormControl>
-                                <Switch checked={field.value} onCheckedChange={field.onChange} />
-                            </FormControl>
-                        </FormItem>
-                    )} />
-                </form>
-            </ScrollArea>
+                <FormField control={form.control} name="isMandatory" render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <FormLabel>Obrigatória</FormLabel>
+                            <FormDescription>
+                                O colaborador deverá responder esta pergunta para submeter.
+                            </FormDescription>
+                        </div>
+                        <FormControl>
+                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                    </FormItem>
+                )} />
+            </form>
             <div className="flex flex-col gap-6">
                 <h3 className="text-lg font-semibold border-b pb-2">Preview da Pergunta</h3>
                 <Card className="bg-muted/50 flex-grow flex items-center">
