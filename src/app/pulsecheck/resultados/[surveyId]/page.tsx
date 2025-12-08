@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -313,20 +314,21 @@ export default function SurveyResultsPage() {
             const pdfHeight = pdf.internal.pageSize.getHeight();
             const imgWidth = canvas.width;
             const imgHeight = canvas.height;
-            const ratio = imgWidth / imgHeight;
-            const canvasPdfWidth = pdfWidth;
-            const canvasPdfHeight = canvasPdfWidth / ratio;
+            
+            // Calculate height of the image in the PDF
+            const ratio = imgWidth / pdfWidth;
+            const canvasImgHeight = imgHeight / ratio;
             
             let position = 0;
-            let heightLeft = imgHeight * pdfWidth / imgWidth;
+            let heightLeft = canvasImgHeight;
 
-            pdf.addImage(imgData, 'PNG', 0, position, canvasPdfWidth, canvasPdfHeight);
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, canvasImgHeight);
             heightLeft -= pdfHeight;
 
             while (heightLeft > 0) {
-                position = heightLeft - (imgHeight * pdfWidth / imgWidth);
+                position = -pdfHeight;
                 pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, canvasPdfWidth, canvasPdfHeight);
+                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, canvasImgHeight);
                 heightLeft -= pdfHeight;
             }
 
@@ -432,7 +434,7 @@ export default function SurveyResultsPage() {
                  </div>
             </div>
              {/* Hidden component for PDF rendering */}
-            <div className="absolute -left-[9999px] top-0 w-[800px] p-10 bg-white" ref={reportRef}>
+            <div className="absolute -left-[9999px] top-0 w-[794px] bg-white" ref={reportRef}>
                {client && survey && analytics && (
                  <ReportTemplate 
                    client={client} 
