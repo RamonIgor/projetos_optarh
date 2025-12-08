@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo } from 'react';
@@ -14,6 +13,7 @@ interface QuestionLibraryProps {
   libraryQuestions: Question[];
   selectedQuestions: SelectedQuestion[];
   onAdd: (question: Question) => void;
+  onAddNew: () => void;
   onImport: () => void;
   onExport: () => void;
 }
@@ -32,7 +32,7 @@ const categoryOrder = [
   'FEEDBACK ABERTO'
 ];
 
-export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, onImport, onExport }: QuestionLibraryProps) {
+export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, onAddNew, onImport, onExport }: QuestionLibraryProps) {
   const groupedQuestions = useMemo(() => {
     return libraryQuestions.reduce((acc, q) => {
       if (!acc[q.category]) {
@@ -57,15 +57,15 @@ export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, on
     <Card className="flex flex-col h-full">
       <CardHeader>
         <CardTitle className="whitespace-nowrap">Biblioteca de Perguntas</CardTitle>
-        <CardDescription>Adicione perguntas prontas ou trabalhe em massa.</CardDescription>
+        <CardDescription>Adicione perguntas prontas ou crie as suas.</CardDescription>
         <div className="pt-2 grid grid-cols-2 gap-2">
+            <Button className="w-full" variant="secondary" onClick={onAddNew}>
+                <Plus className="mr-2 h-4 w-4"/>
+                Criar Pergunta
+            </Button>
             <Button className="w-full" variant="outline" onClick={onImport}>
                 <Upload className="mr-2 h-4 w-4"/>
                 Importar
-            </Button>
-            <Button className="w-full" variant="outline" onClick={onExport} disabled={libraryQuestions.length === 0}>
-                <Download className="mr-2 h-4 w-4"/>
-                Exportar
             </Button>
         </div>
       </CardHeader>
@@ -106,6 +106,12 @@ export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, on
             </Accordion>
         </ScrollArea>
       </CardContent>
+       <CardFooter className="pt-4">
+         <Button className="w-full" variant="outline" onClick={onExport} disabled={libraryQuestions.length === 0}>
+            <Download className="mr-2 h-4 w-4"/>
+            Exportar Biblioteca para Excel
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

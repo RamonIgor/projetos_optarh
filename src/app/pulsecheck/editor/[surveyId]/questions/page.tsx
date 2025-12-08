@@ -1,16 +1,16 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, serverTimestamp, getDocs } from 'firebase/firestore';
-import { useFirestore, useClient } from '@/firebase';
+import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, serverTimestamp, getDocs, addDoc } from 'firebase/firestore';
+import { useFirestore, useClient, useUser } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { type Survey, type Question, type SelectedQuestion, type Client } from '@/types/activity';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, Send, ArrowRight, Upload } from 'lucide-react';
+import { Loader2, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import * as XLSX from 'xlsx';
+import { v4 as uuidv4 } from 'uuid';
 
 import { QuestionLibrary } from './_components/QuestionLibrary';
 import { SelectedQuestions } from './_components/SelectedQuestions';
@@ -21,6 +21,7 @@ export default function ConfigureQuestionsPage() {
     const { surveyId } = useParams();
     const router = useRouter();
     const db = useFirestore();
+    const { user } = useUser();
     const { clientId } = useClient();
     const { toast } = useToast();
 
@@ -106,7 +107,7 @@ export default function ConfigureQuestionsPage() {
         }
 
         const newQuestion: SelectedQuestion = {
-            id: `${question.id}-${Date.now()}`,
+            id: uuidv4(),
             questionId: question.id,
             text: questionText,
             type: question.type,
@@ -143,40 +144,62 @@ export default function ConfigureQuestionsPage() {
     }, [selectedQuestions, updateSurveyQuestions]);
 
     const handleOpenBuilderForEdit = (question: SelectedQuestion) => {
-        setQuestionToEdit(question);
+        if (question.questionId !== 'custom') {
+            const originalQuestion = libraryQuestions.find(libQ => libQ.id === question.questionId);
+             if (originalQuestion) {
+                setQuestionToEdit(originalQuestion as any);
+             } else {
+                 toast({ title: "Não é possível editar esta pergunta", description: "A pergunta original não foi encontrada na biblioteca.", variant: "destructive"});
+                 return;
+             }
+        } else {
+             setQuestionToEdit(question);
+        }
         setIsBuilderOpen(true);
     };
 
     const handleSaveFromBuilder = useCallback(async (formData: QuestionBuilderFormValues) => {
-        if (!questionToEdit) return; // Should not happen with the current UI
-
+        if (!user || !db) return;
+        
         const finalCategory = formData.category === 'new' ? formData.newCategory! : formData.category;
 
-        const questionData: Omit<SelectedQuestion, 'id' | 'questionId'> = {
-            text: formData.text,
-            type: formData.type,
-            category: finalCategory,
-            isMandatory: formData.isMandatory,
-            options: formData.type === 'multiple-choice' ? formData.options?.map(o => o.value) : null,
-        };
+        try {
+            // All new questions go to the global library now.
+            const newQuestionData = {
+                text: formData.text,
+                type: formData.type,
+                category: finalCategory,
+                isMandatory: formData.isMandatory,
+                options: formData.type === 'multiple-choice' ? formData.options?.map(o => o.value) : null,
+                isDefault: false,
+                createdBy: user.uid,
+                createdAt: serverTimestamp(),
+                order: (libraryQuestions.length + 1) * 10,
+                isNpsQuestion: formData.type === 'nps' && finalCategory.toUpperCase() === 'ENPS',
+            };
+            
+            const docRef = await addDoc(collection(db, 'pulse_check_questions'), newQuestionData);
+            
+            toast({
+                title: "Pergunta Adicionada à Biblioteca!",
+                description: `Sua nova pergunta está agora disponível na biblioteca na categoria "${finalCategory}".`,
+            });
 
-        const newQuestions = selectedQuestions.map(q => 
-            q.id === questionToEdit.id 
-            ? { ...q, ...questionData }
-            : q
-        );
-        
-        setSelectedQuestions(newQuestions);
-        await updateSurveyQuestions(newQuestions);
-        toast({ title: "Pergunta atualizada!", duration: 2000 });
-        setIsBuilderOpen(false);
+            // Auto-add the newly created question to the current survey
+            await handleAddQuestion({ ...newQuestionData, id: docRef.id, createdAt: new Date() });
 
-    }, [questionToEdit, selectedQuestions, updateSurveyQuestions, toast]);
+            setIsBuilderOpen(false);
+
+        } catch (error) {
+            console.error("Error saving new question:", error);
+            toast({ title: "Erro ao Salvar Pergunta", variant: "destructive" });
+        }
+    }, [user, db, libraryQuestions, toast, handleAddQuestion]);
 
     const handleSaveFromImporter = useCallback(async (importedQuestions: Omit<SelectedQuestion, 'id' | 'questionId'>[]) => {
         const newQuestions: SelectedQuestion[] = importedQuestions.map(q => ({
             ...q,
-            id: `custom-${Date.now()}-${Math.random()}`,
+            id: uuidv4(),
             questionId: 'custom', // Mark as custom/imported
         }));
 
@@ -204,7 +227,6 @@ export default function ConfigureQuestionsPage() {
             Categoria: q.category,
             Tipo: q.type,
             Opcoes: q.options ? q.options.join('|') : '',
-            Obrigatoria: q.isMandatory ? 'Sim' : 'Não',
         }));
 
         const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -259,6 +281,7 @@ export default function ConfigureQuestionsPage() {
                         libraryQuestions={libraryQuestions}
                         selectedQuestions={selectedQuestions}
                         onAdd={handleAddQuestion}
+                        onAddNew={() => { setQuestionToEdit(null); setIsBuilderOpen(true); }}
                         onImport={() => setIsImporterOpen(true)}
                         onExport={handleExportLibrary}
                     />
@@ -278,7 +301,6 @@ export default function ConfigureQuestionsPage() {
                 isOpen={isBuilderOpen}
                 onOpenChange={setIsBuilderOpen}
                 onSave={handleSaveFromBuilder}
-                questionToEdit={questionToEdit}
                 allCategories={allCategories}
             />
 

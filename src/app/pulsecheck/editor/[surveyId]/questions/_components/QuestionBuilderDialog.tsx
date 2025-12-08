@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { type Question, type SelectedQuestion } from '@/types/activity';
 import { cn } from '@/lib/utils';
+import { Loader2, PlusCircle, Trash2, Scale, List, Hash, TextCursorInput } from 'lucide-react';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
@@ -13,13 +13,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Scale, List, Hash, TextCursorInput, Loader2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-
 
 const questionBuilderSchema = z.object({
   text: z.string().min(5, "O texto da pergunta é muito curto.").max(500, "O texto da pergunta não pode exceder 500 caracteres."),
@@ -52,7 +50,6 @@ interface QuestionBuilderDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (questionData: QuestionBuilderFormValues) => void;
-  questionToEdit?: SelectedQuestion | Question | null;
   allCategories: string[];
 }
 
@@ -63,7 +60,7 @@ const typeOptions = [
     { value: 'open-text', label: 'Texto Aberto', icon: TextCursorInput },
 ] as const;
 
-export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, questionToEdit, allCategories }: QuestionBuilderDialogProps) {
+export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, allCategories }: QuestionBuilderDialogProps) {
   const form = useForm<QuestionBuilderFormValues>({
     resolver: zodResolver(questionBuilderSchema),
     defaultValues: {
@@ -89,27 +86,16 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, questionTo
 
   useEffect(() => {
     if (isOpen) {
-      if (questionToEdit) {
-        form.reset({
-          text: questionToEdit.text,
-          category: allCategories.includes(questionToEdit.category) ? questionToEdit.category : 'new',
-          newCategory: allCategories.includes(questionToEdit.category) ? '' : questionToEdit.category,
-          type: questionToEdit.type,
-          options: questionToEdit.options?.map(opt => ({ value: opt })) || [{ value: '' }, { value: '' }],
-          isMandatory: (questionToEdit as SelectedQuestion).isMandatory ?? true,
-        });
-      } else {
          form.reset({
             text: '',
             category: '',
             newCategory: '',
             type: 'likert',
-            options: [{ value: '' }, { value: '' }],
+            options: [{ value: 'Opção 1' }, { value: 'Opção 2' }],
             isMandatory: true,
          });
-      }
     }
-  }, [isOpen, questionToEdit, form, allCategories]);
+  }, [isOpen, form]);
 
   const onSubmit = (data: QuestionBuilderFormValues) => {
     onSave(data);
@@ -159,15 +145,14 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, questionTo
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>{questionToEdit ? "Editar Pergunta" : "Criar Nova Pergunta"}</DialogTitle>
+          <DialogTitle>Criar Nova Pergunta para a Biblioteca</DialogTitle>
           <DialogDescription>
-            {questionToEdit ? 'Modifique os detalhes da pergunta.' : 'Esta funcionalidade está desabilitada. Use a importação.'}
+            A pergunta criada será adicionada à biblioteca global e poderá ser usada em outras pesquisas.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
             <ScrollArea className="flex-1 -mr-6">
-                <fieldset disabled={!questionToEdit} className="disabled:opacity-50">
                 <div className="grid lg:grid-cols-2 gap-8 pr-6 pb-6">
                     <div className="space-y-8">
                         <FormField control={form.control} name="text" render={({ field }) => (
@@ -279,12 +264,11 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, questionTo
                         </Card>
                     </div>
                 </div>
-                </fieldset>
             </ScrollArea>
             <DialogFooter className="mt-auto pt-6 border-t">
                 <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
-                <Button type="submit" disabled={isSubmitting || !questionToEdit}>
-                   {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : 'Salvar Alterações'}
+                <Button type="submit" disabled={isSubmitting}>
+                   {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : 'Criar Pergunta'}
                 </Button>
             </DialogFooter>
           </form>
