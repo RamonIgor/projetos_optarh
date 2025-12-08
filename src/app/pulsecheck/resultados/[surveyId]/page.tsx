@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { useFirestore, useClient } from '@/firebase';
-import { type Survey, type Response as SurveyResponse, type SelectedQuestion, Answer } from '@/types/activity';
+import { type Survey, type Response as SurveyResponse, type SelectedQuestion, Answer, type Client } from '@/types/activity';
 import { Loader2, ArrowLeft, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -165,6 +165,7 @@ export default function SurveyResultsPage() {
     const { clientId } = useClient();
 
     const [survey, setSurvey] = useState<Survey | null>(null);
+    const [client, setClient] = useState<Client | null>(null);
     const [responses, setResponses] = useState<SurveyResponse[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -177,7 +178,15 @@ export default function SurveyResultsPage() {
         const surveyDocRef = doc(db, 'clients', clientId, 'surveys', surveyId as string);
         const unsubSurvey = onSnapshot(surveyDocRef, (docSnap) => {
             if (docSnap.exists()) {
-                setSurvey({ id: docSnap.id, ...docSnap.data() } as Survey);
+                const surveyData = { id: docSnap.id, ...docSnap.data() } as Survey;
+                setSurvey(surveyData);
+                // Fetch client data after getting survey
+                const clientDocRef = doc(db, 'clients', surveyData.clientId);
+                getDoc(clientDocRef).then(clientSnap => {
+                    if (clientSnap.exists()) {
+                        setClient(clientSnap.data() as Client);
+                    }
+                });
             } else {
                 router.push('/pulsecheck');
             }
@@ -200,6 +209,13 @@ export default function SurveyResultsPage() {
         };
 
     }, [surveyId, clientId, db, router]);
+    
+    const getPersonalizedQuestionText = useCallback((text: string) => {
+        if (client?.name && text.includes('[EMPRESA]')) {
+          return text.replace(/\[EMPRESA\]/g, client.name);
+        }
+        return text;
+    }, [client]);
 
     const answersByQuestion = useMemo(() => {
         const grouped = new Map<string, Answer[]>();
@@ -268,13 +284,19 @@ export default function SurveyResultsPage() {
             </div>
             
             <div className="space-y-6">
-                {survey.questions.map((question) => (
-                    <QuestionResultCard
-                        key={question.id}
-                        question={question}
-                        answers={answersByQuestion.get(question.id) || []}
-                    />
-                ))}
+                {survey.questions.map((question) => {
+                    const personalizedQuestion = {
+                        ...question,
+                        text: getPersonalizedQuestionText(question.text)
+                    };
+                    return (
+                        <QuestionResultCard
+                            key={question.id}
+                            question={personalizedQuestion}
+                            answers={answersByQuestion.get(question.id) || []}
+                        />
+                    );
+                })}
             </div>
 
         </div>
