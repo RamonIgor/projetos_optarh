@@ -39,58 +39,69 @@ export default function ConfigureQuestionsPage() {
     useEffect(() => {
         if (!clientId || !db) return;
 
-        let unsubSurvey: () => void, unsubLibrary: () => void, unsubClient: () => void;
+        let unsubSurvey: () => void | undefined;
+        let unsubClient: () => void | undefined;
+        let unsubClientLibrary: () => void | undefined;
 
         const fetchData = async () => {
-            // Fetch survey data
-            const surveyDocRef = doc(db, 'clients', clientId, 'surveys', surveyId as string);
-            unsubSurvey = onSnapshot(surveyDocRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const surveyData = { id: docSnap.id, ...docSnap.data() } as Survey;
-                    setSurvey(surveyData);
-                    setSelectedQuestions(surveyData.questions || []);
-                } else {
-                    toast({ title: "Pesquisa não encontrada", variant: "destructive" });
-                    router.push('/pulsecheck');
-                }
-            });
+            setIsLoading(true);
+            try {
+                // Fetch survey data
+                const surveyDocRef = doc(db, 'clients', clientId, 'surveys', surveyId as string);
+                unsubSurvey = onSnapshot(surveyDocRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const surveyData = { id: docSnap.id, ...docSnap.data() } as Survey;
+                        setSurvey(surveyData);
+                        setSelectedQuestions(surveyData.questions || []);
+                    } else {
+                        toast({ title: "Pesquisa não encontrada", variant: "destructive" });
+                        router.push('/pulsecheck');
+                    }
+                });
 
-            // Fetch client data
-            const clientDocRef = doc(db, 'clients', clientId);
-            unsubClient = onSnapshot(clientDocRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    setClient({ id: docSnap.id, ...docSnap.data() } as Client);
-                }
-            });
+                // Fetch client data
+                const clientDocRef = doc(db, 'clients', clientId);
+                unsubClient = onSnapshot(clientDocRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        setClient({ id: docSnap.id, ...docSnap.data() } as Client);
+                    }
+                });
 
-            // Fetch library questions (global + client-specific)
-            const questionsRef = collection(db, 'pulse_check_questions');
-            const globalQuery = query(questionsRef, where('clientId', '==', null));
-            const clientQuery = query(questionsRef, where('clientId', '==', clientId));
+                // Fetch library questions (initial load)
+                const questionsRef = collection(db, 'pulse_check_questions');
+                const globalQuery = query(questionsRef, where('clientId', '==', null));
+                
+                const globalSnapshot = await getDocs(globalQuery);
+                const globalQuestions = globalSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Question));
+                
+                // Set global questions first
+                setLibraryQuestions(globalQuestions);
 
-            const globalSnapshot = await getDocs(globalQuery);
-            const clientSnapshot = await getDocs(clientQuery);
+                // Then, listen for client-specific questions
+                const clientQuery = query(questionsRef, where('clientId', '==', clientId));
+                unsubClientLibrary = onSnapshot(clientQuery, (clientSnapshot) => {
+                    const clientQuestions = clientSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Question));
+                    // Combine with existing global questions
+                    setLibraryQuestions(prevLib => {
+                        const nonClientQuestions = prevLib.filter(q => q.clientId !== clientId && q.clientId !== null);
+                         return [...nonClientQuestions, ...globalQuestions, ...clientQuestions].sort((a,b) => a.order - b.order);
+                    });
+                });
 
-            const combinedQuestions = [
-                ...globalSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Question)),
-                ...clientSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Question)),
-            ];
-            
-            setLibraryQuestions(combinedQuestions.sort((a, b) => a.order - b.order));
-            
-            // Set loading to false after initial fetches
-            setIsLoading(false);
-        }
+            } catch (error) {
+                 console.error("Error fetching initial data:", error);
+                 toast({ title: "Erro ao carregar dados da biblioteca", variant: "destructive" });
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
-        fetchData().catch(err => {
-            console.error(err);
-            setIsLoading(false);
-            toast({ title: "Erro ao carregar dados", variant: "destructive" });
-        });
+        fetchData();
 
         return () => {
             unsubSurvey?.();
             unsubClient?.();
+            unsubClientLibrary?.();
         };
 
     }, [surveyId, clientId, db, router, toast]);
@@ -192,11 +203,10 @@ export default function ConfigureQuestionsPage() {
                 description: `Sua nova pergunta está agora disponível para este cliente.`,
             });
             
-            const newLibQuestion = { id: docRef.id, ...newQuestionData } as Question;
-            setLibraryQuestions(prev => [...prev, newLibQuestion].sort((a,b)=> a.order - b.order));
-
+            // The onSnapshot listener will automatically add the question to the UI
+            
             // Auto-add the newly created question to the current survey
-            await handleAddQuestion(newLibQuestion);
+            await handleAddQuestion({ id: docRef.id, ...newQuestionData } as Question);
 
             setIsBuilderOpen(false);
 
@@ -204,13 +214,13 @@ export default function ConfigureQuestionsPage() {
             console.error("Error saving new question:", error);
             toast({ title: "Erro ao Salvar Pergunta", variant: "destructive" });
         }
-    }, [user, db, libraryQuestions, toast, handleAddQuestion, clientId]);
+    }, [user, db, libraryQuestions.length, toast, handleAddQuestion, clientId]);
     
     const handleDeleteFromLibrary = useCallback(async (questionId: string) => {
         if (!db) return;
         try {
             await deleteDoc(doc(db, 'pulse_check_questions', questionId));
-            setLibraryQuestions(prev => prev.filter(q => q.id !== questionId));
+            // The onSnapshot listener will automatically update the UI
             toast({ title: "Pergunta excluída da biblioteca."});
         } catch (error) {
             console.error("Error deleting question from library:", error);
