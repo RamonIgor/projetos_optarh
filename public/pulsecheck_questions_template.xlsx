@@ -1,5 +1,0 @@
-Texto	Categoria	Tipo	Opcoes
-Em uma escala de 0 a 10, o quanto você recomendaria a [EMPRESA] como um ótimo lugar para trabalhar?	eNPS	nps	
-A empresa me oferece treinamentos visando o meu desenvolvimento profissional.	DESENVOLVIMENTO PROFISSIONAL	likert	
-Qual é a sua área/departamento?	DEMOGRAFIA	multiple-choice	Financeiro|Marketing|Tecnologia|RH
-Espaço aberto para você incluir sugestões sobre a empresa.	FEEDBACK ABERTO	open-text	

@@ -8,11 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, File, X, Download } from 'lucide-react';
+import { Loader2, Upload, File, X, Info } from 'lucide-react';
 import type { SelectedQuestion } from '@/types/activity';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Info } from 'lucide-react';
 
 interface ImportQuestionsDialogProps {
   isOpen: boolean;
@@ -165,12 +164,6 @@ export function ImportQuestionsDialog({ isOpen, onOpenChange, onImport }: Import
             <AlertDescription>
                 A primeira linha da sua planilha deve ser um cabeçalho com os títulos: <strong>Texto</strong>, <strong>Categoria</strong>, <strong>Tipo</strong> e <strong>Opcoes</strong>.
                 Os tipos válidos são: `likert`, `nps`, `multiple-choice`, ou `open-text`. A coluna `Opcoes` só é necessária para o tipo `multiple-choice`, com as opções separadas por `|`.
-                <a href="/pulsecheck_questions_template.xlsx" download className="mt-2 inline-block">
-                    <Button variant="link" className="p-0 h-auto">
-                        <Download className="mr-2 h-4 w-4"/>
-                        Baixar template de exemplo
-                    </Button>
-                </a>
             </AlertDescription>
           </Alert>
 
