@@ -245,10 +245,12 @@ export default function SurveyResultsPage() {
             return acc;
         }, {} as Record<string, Answer[]>);
 
-        const eNpsQuestion = survey.questions.find(q => q.isNpsQuestion);
+        // Find eNPS question (first by flag, then by category)
+        const eNpsQuestion = survey.questions.find(q => q.isNpsQuestion) || survey.questions.find(q => q.category === 'eNPS' && q.type === 'nps');
         const eNpsAnswers = eNpsQuestion ? (answersByQuestionId[eNpsQuestion.id] || []).map(a => a.answer as number) : [];
         const eNpsResult = calculateNPS(eNpsAnswers);
 
+        // Find Leadership NPS question
         const lNpsQuestion = survey.questions.find(q => q.category === 'LEADERSHIP NPS' && q.type === 'nps');
         const lNpsAnswers = lNpsQuestion ? (answersByQuestionId[lNpsQuestion.id] || []).map(a => a.answer as number) : [];
         const lNpsResult = calculateNPS(lNpsAnswers);
@@ -263,7 +265,9 @@ export default function SurveyResultsPage() {
             const category = categories[catName];
             const likertQuestions = category.questions.filter(q => q.type === 'likert');
             if (likertQuestions.length === 0) {
-                category.score = -1; // -1 to indicate no score
+                // If there are no likert questions, there is no score for the category.
+                // We keep the questions to display them individually (e.g., NPS questions).
+                category.score = -1; // Use -1 to indicate no score is applicable
                 return;
             }
             const totalScore = likertQuestions.reduce((sum, q) => {
@@ -314,8 +318,9 @@ export default function SurveyResultsPage() {
                     <h2 className="text-2xl font-bold flex items-center gap-2"><ListTree className="h-6 w-6 text-primary" /> Resultados por Categoria</h2>
                     {analytics ? (
                          <Accordion type="multiple" defaultValue={Object.keys(analytics.categories)} className="w-full">
-                             {Object.entries(analytics.categories).filter(([,catData]) => catData.score !== -1).map(([name, data]) => {
+                             {Object.entries(analytics.categories).map(([name, data]) => {
                                  const status = getCategoryStatus(data.score);
+                                 const hasScore = data.score !== -1;
                                  return (
                                      <AccordionItem key={name} value={name}>
                                          <AccordionTrigger className="hover:no-underline">
@@ -324,10 +329,14 @@ export default function SurveyResultsPage() {
                                                      <p className="font-bold text-lg">{name}</p>
                                                      <p className="text-sm text-muted-foreground">{data.questions.length} perguntas</p>
                                                  </div>
-                                                 <div className="flex items-center gap-4 w-1/3">
-                                                      <Progress value={data.score} indicatorClassName={status.color} />
-                                                     <span className={cn("font-bold text-lg w-28 text-right", status.textColor)}>{data.score}% <span className='text-sm text-muted-foreground'> de favorabilidade</span></span>
-                                                 </div>
+                                                 {hasScore ? (
+                                                    <div className="flex items-center gap-4 w-1/3">
+                                                         <Progress value={data.score} indicatorClassName={status.color} />
+                                                        <span className={cn("font-bold text-lg w-28 text-right", status.textColor)}>{data.score}% <span className='text-sm text-muted-foreground'> de favorabilidade</span></span>
+                                                    </div>
+                                                 ) : (
+                                                    <div className="w-1/3"></div>
+                                                 )}
                                              </div>
                                          </AccordionTrigger>
                                          <AccordionContent className="space-y-4 pt-4">
