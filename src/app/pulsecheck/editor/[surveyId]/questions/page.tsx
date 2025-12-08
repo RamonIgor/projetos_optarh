@@ -10,7 +10,6 @@ import { type Survey, type Question, type SelectedQuestion, type Client } from '
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
-import * as XLSX from 'xlsx';
 import { v4 as uuidv4 } from 'uuid';
 
 import { QuestionLibrary } from './_components/QuestionLibrary';
@@ -268,28 +267,6 @@ export default function ConfigureQuestionsPage() {
 
     }, [user, db, clientId, libraryQuestions.length, toast]);
     
-    const handleExportLibrary = () => {
-        if (libraryQuestions.length === 0) {
-            toast({ title: "Biblioteca vazia", description: "Não há perguntas para exportar.", variant: 'default' });
-            return;
-        }
-
-        const dataToExport = libraryQuestions.map(q => ({
-            Texto: q.text,
-            Categoria: q.category,
-            Tipo: q.type,
-            Opcoes: q.options ? q.options.join('|') : '',
-        }));
-
-        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Biblioteca de Perguntas");
-
-        XLSX.writeFile(workbook, "OptaRH_Biblioteca_PulseCheck.xlsx");
-        
-        toast({ title: "Exportação iniciada!", description: "Seu arquivo será baixado em breve." });
-    };
-
     const handleNextStep = () => {
         if(selectedQuestions.length === 0) {
             toast({ title: "Nenhuma pergunta selecionada", description: "Adicione ao menos uma pergunta para continuar.", variant: "destructive"});
@@ -335,7 +312,6 @@ export default function ConfigureQuestionsPage() {
                         onAdd={handleAddQuestion}
                         onAddNew={() => { setQuestionToEdit(null); setIsBuilderOpen(true); }}
                         onImport={() => setIsImporterOpen(true)}
-                        onExport={handleExportLibrary}
                         onDeleteFromLibrary={handleDeleteFromLibrary}
                     />
                 </div>

@@ -7,7 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Upload, Plus, Check, Download, Trash2 } from 'lucide-react';
+import { Upload, Plus, Check, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface QuestionLibraryProps {
@@ -16,7 +16,6 @@ interface QuestionLibraryProps {
   onAdd: (question: Question) => void;
   onAddNew: () => void;
   onImport: () => void;
-  onExport: () => void;
   onDeleteFromLibrary: (questionId: string) => void;
 }
 
@@ -34,7 +33,7 @@ const categoryOrder = [
   'FEEDBACK ABERTO'
 ];
 
-export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, onAddNew, onImport, onExport, onDeleteFromLibrary }: QuestionLibraryProps) {
+export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, onAddNew, onImport, onDeleteFromLibrary }: QuestionLibraryProps) {
   const groupedQuestions = useMemo(() => {
     return libraryQuestions.reduce((acc, q) => {
       if (!acc[q.category]) {
@@ -135,12 +134,6 @@ export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, on
             </Accordion>
         </ScrollArea>
       </CardContent>
-       <CardFooter className="pt-4">
-         <Button className="w-full" variant="outline" onClick={onExport} disabled={libraryQuestions.length === 0}>
-            <Download className="mr-2 h-4 w-4"/>
-            Exportar Biblioteca para Excel
-        </Button>
-      </CardFooter>
     </Card>
   );
 }
