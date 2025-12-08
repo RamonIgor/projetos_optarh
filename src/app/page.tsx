@@ -11,6 +11,7 @@ import { useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 
 const allProducts = {
   process_flow: {
@@ -108,7 +109,7 @@ export default function ProductPortalPage() {
 
       <div className="relative z-10 flex min-h-screen flex-col">
         <header className="container mx-auto px-6 py-6 flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-slate-800">OPTA RH</h1>
+            <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} unoptimized />
             <Button variant="link" className="text-slate-500" onClick={handleLogout}>
                 Sair
                 <LogOut className="ml-2 h-4 w-4" />
