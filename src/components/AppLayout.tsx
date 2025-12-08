@@ -113,89 +113,35 @@ const ProcessFlowNav = () => {
 
 
 const PulseCheckNav = () => {
-  const db = useFirestore();
-  const { clientId } = useClient();
   const pathname = usePathname();
-  const [responses, setResponses] = useState<SurveyResponse[]>([]);
-
-  useEffect(() => {
-    if (!db || !clientId) {
-      setResponses([]);
-      return;
-    }
-    const q = query(collection(db, 'pulse_check_responses'), where('clientId', '==', clientId));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setResponses(snapshot.docs.map(doc => doc.data() as SurveyResponse));
-    });
-    return () => unsubscribe();
-  }, [db, clientId]);
-
-  const hasClientAndResponses = !!clientId && responses.length > 0;
+  const isEditorActive = pathname.startsWith('/pulsecheck/editor');
   
   const navItems = [
     { href: '/pulsecheck', label: 'Minhas Pesquisas', icon: AreaChart },
   ];
 
-  const resultsItem = { href: '/pulsecheck', label: 'Resultados', icon: BarChart3, disabled: !hasClientAndResponses };
-  
   if (!pathname.startsWith('/pulsecheck')) {
     return null;
   }
   
-  const isEditorActive = pathname.startsWith('/pulsecheck/editor');
-
-  const renderNavItem = (item: typeof navItems[0]) => {
-    const isActive = pathname === item.href && !isEditorActive;
-    return (
-      <Link
-        key={item.href}
-        href={item.href}
-        className={cn(
-          "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
-          isActive ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground",
-        )}
-      >
-        <item.icon className="h-4 w-4" />
-        <span>{item.label}</span>
-      </Link>
-    );
-  };
-
-  const renderResultsLink = () => {
-    const link = (
-      <Link
-        key={resultsItem.href}
-        href={resultsItem.disabled ? '#' : resultsItem.href}
-        className={cn(
-          "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
-          "text-muted-foreground hover:text-foreground",
-          resultsItem.disabled && "opacity-50 cursor-not-allowed"
-        )}
-        aria-disabled={resultsItem.disabled}
-        onClick={(e) => {
-          if (resultsItem.disabled) e.preventDefault();
-        }}
-      >
-        <resultsItem.icon className="h-4 w-4" />
-        <span>{resultsItem.label}</span>
-      </Link>
-    );
-
-     if (resultsItem.disabled) {
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>{link}</TooltipTrigger>
-          <TooltipContent><p>Selecione um cliente e tenha respostas para ver os resultados.</p></TooltipContent>
-        </Tooltip>
-      );
-    }
-    return link;
-  }
-  
   return (
     <nav className="flex flex-wrap p-1.5 rounded-full bg-background/50 backdrop-blur-sm border border-black/5 items-center gap-1 shadow-sm">
-      {navItems.map(renderNavItem)}
-      {renderResultsLink()}
+      {navItems.map(item => {
+        const isActive = pathname === item.href && !isEditorActive;
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={cn(
+              "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+              isActive ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <item.icon className="h-4 w-4" />
+            <span>{item.label}</span>
+          </Link>
+        )
+      })}
     </nav>
   );
 };
