@@ -132,7 +132,7 @@ export default function ProcessFlowLayout({
   
   return canRender ? (
      <TooltipProvider>
-        <AppLayout hasActivities={false} unclassifiedCount={0} navContent={<ProcessFlowNav />}>
+        <AppLayout>
             {children}
         </AppLayout>
      </TooltipProvider>
