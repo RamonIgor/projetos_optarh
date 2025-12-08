@@ -1,3 +1,4 @@
+
 import type { Timestamp } from 'firebase/firestore';
 
 export interface Client {
@@ -90,6 +91,7 @@ export interface Survey {
   clientId: string;
   status: 'draft' | 'active' | 'closed';
   questions: SelectedQuestion[]; // Changed from questionIds
+  totalParticipants: number;
   isAnonymous: boolean;
   createdAt: Timestamp | Date;
   opensAt: Timestamp | Date;

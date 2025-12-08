@@ -7,7 +7,7 @@ import { doc, getDoc, collection, query, where, onSnapshot, Timestamp } from 'fi
 import { useFirestore, useClient } from '@/firebase';
 import { type Survey, type Response as SurveyResponse, type SelectedQuestion, Answer, type Client } from '@/types/activity';
 import { Loader2, ArrowLeft, Download, Users, TrendingUp, MessageSquare, ListTree, Target, Clock } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Bar, Cell, PieChart, Pie } from 'recharts';
@@ -285,6 +285,8 @@ export default function SurveyResultsPage() {
         return <div>Pesquisa não encontrada.</div>;
     }
 
+    const responseRate = survey.totalParticipants > 0 ? (responses.length / survey.totalParticipants) * 100 : 0;
+
     return (
         <div className="max-w-7xl mx-auto w-full">
             <div className="flex justify-between items-start mb-8">
@@ -297,7 +299,7 @@ export default function SurveyResultsPage() {
             </div>
             
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <StatCard title="Taxa de Resposta" value={`${responses.length}/120*`} description="*Número de participantes fixo" icon={Users} />
+                <StatCard title="Taxa de Resposta" value={`${responseRate.toFixed(1)}%`} description={`${responses.length} de ${survey.totalParticipants} respostas`} icon={Users} />
                 <NpsStatCard title="eNPS" npsResult={analytics?.eNpsResult || null} />
                 <NpsStatCard title="Liderança NPS" npsResult={analytics?.lNpsResult || null} />
                 <StatCard title="Tempo Médio" value={analytics?.averageTime ? `${analytics.averageTime} min` : 'N/A'} description="Tempo médio de resposta" icon={Clock} />

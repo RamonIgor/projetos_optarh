@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useTransition } from 'react';
@@ -5,10 +6,10 @@ import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { doc, setDoc, getDoc, serverTimestamp, Timestamp, collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, Timestamp, collection } from 'firebase/firestore';
 import { useFirestore, useClient } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { type Survey, type Client } from '@/types/activity';
+import { type Survey } from '@/types/activity';
 import { motion } from 'framer-motion';
 
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Loader2, CalendarIcon, Info, ChevronRight, Ban, Building } from 'lucide-react';
+import { Loader2, CalendarIcon, Info, ChevronRight, Building, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -28,6 +29,7 @@ import { cn } from '@/lib/utils';
 const surveyFormSchema = z.object({
   title: z.string().min(3, "O nome da pesquisa é obrigatório e deve ter no mínimo 3 caracteres."),
   description: z.string().optional(),
+  totalParticipants: z.coerce.number().int().positive("O número de participantes deve ser maior que zero."),
   opensAt: z.date({ required_error: "A data de início é obrigatória." }),
   closesAt: z.date({ required_error: "A data de término é obrigatória." }),
   isAnonymous: z.boolean().default(true),
@@ -56,6 +58,7 @@ export default function SurveyEditorPage() {
       title: "",
       description: "",
       isAnonymous: true,
+      totalParticipants: 1,
     }
   });
 
@@ -184,7 +187,7 @@ export default function SurveyEditorPage() {
                                 </FormItem>
                             )} />
                             
-                            <div className="grid md:grid-cols-2 gap-8">
+                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                                 <FormField control={form.control} name="opensAt" render={({ field }) => (
                                     <FormItem className="flex flex-col">
                                         <FormLabel>Data de Início</FormLabel>
@@ -220,6 +223,18 @@ export default function SurveyEditorPage() {
                                                 <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
                                             </PopoverContent>
                                         </Popover>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                                <FormField control={form.control} name="totalParticipants" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Total de Participantes</FormLabel>
+                                        <FormControl>
+                                            <div className="relative">
+                                                <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                <Input type="number" placeholder="Ex: 150" {...field} className="pl-9" />
+                                            </div>
+                                        </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )} />

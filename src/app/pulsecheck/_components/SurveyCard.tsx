@@ -14,6 +14,7 @@ import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { calculateNPS } from '@/lib/pulsecheck-analytics';
 
 interface SurveyCardProps {
   survey: Survey;
@@ -27,25 +28,6 @@ const statusConfig: Record<Survey['status'], { label: string; color: string; }> 
   active: { label: "Ativa", color: "bg-green-200 text-green-800 animate-pulse" },
   closed: { label: "Encerrada", color: "bg-red-200 text-red-800" },
 };
-
-function calculateNPS(responses: SurveyResponse[]) {
-    // Apenas um exemplo simplificado. A lógica real dependeria de como
-    // a pergunta NPS é identificada nas respostas.
-    const npsAnswers = responses
-        .flatMap(r => Object.values(r.answers))
-        .filter(a => typeof a.answer === 'number' && a.questionText.toLowerCase().includes('nps'))
-        .map(a => a.answer as number);
-
-    if (npsAnswers.length === 0) return null;
-
-    const promoters = npsAnswers.filter(score => score >= 9).length;
-    const detractors = npsAnswers.filter(score => score <= 6).length;
-    
-    const promoterPercentage = (promoters / npsAnswers.length) * 100;
-    const detractorPercentage = (detractors / npsAnswers.length) * 100;
-
-    return Math.round(promoterPercentage - detractorPercentage);
-}
 
 function toDate(dateValue: Date | Timestamp | string): Date {
     if (dateValue instanceof Timestamp) {
@@ -74,7 +56,6 @@ export function SurveyCard({ survey, responses, onDelete, onDuplicate }: SurveyC
   const config = statusConfig[status];
 
   const handleCopyLink = () => {
-    // Combine client ID and survey ID to create a unique, directly resolvable identifier
     const publicId = `${survey.clientId}_${survey.id}`;
     const surveyUrl = `${window.location.origin}/survey/${publicId}`;
 
@@ -93,11 +74,22 @@ export function SurveyCard({ survey, responses, onDelete, onDuplicate }: SurveyC
     });
   };
 
-  // Placeholder para o número de participantes. A lógica real seria mais complexa.
-  const totalParticipants = 120;
+  const totalParticipants = survey.totalParticipants || 0;
   const responseRate = totalParticipants > 0 ? (responses.length / totalParticipants) * 100 : 0;
 
-  const npsScore = useMemo(() => calculateNPS(responses), [responses]);
+  const { npsScore } = useMemo(() => {
+    const npsQuestion = survey.questions.find(q => q.isNpsQuestion || q.category.toUpperCase() === 'ENPS');
+    if (!npsQuestion) return { npsScore: null };
+    
+    const npsAnswers = responses
+        .map(r => r.answers[npsQuestion.id]?.answer)
+        .filter((answer): answer is number => typeof answer === 'number');
+
+    if (npsAnswers.length === 0) return { npsScore: null };
+
+    const { score } = calculateNPS(npsAnswers);
+    return { npsScore: score };
+  }, [responses, survey.questions]);
   
   const startDate = format(surveyOpensAt, 'dd/MM/yy', { locale: ptBR });
   const endDate = format(surveyClosesAt, 'dd/MM/yy', { locale: ptBR });
@@ -154,7 +146,7 @@ export function SurveyCard({ survey, responses, onDelete, onDuplicate }: SurveyC
         {npsScore !== null ? (
             <div className="text-center w-full">
                 <p className="text-sm text-muted-foreground">eNPS</p>
-                <p className="text-3xl font-bold">{npsScore}</p>
+                <p className="text-3xl font-bold">{npsScore > 0 ? `+${npsScore}` : npsScore}</p>
             </div>
         ) : (
             <div className="text-center w-full text-sm text-muted-foreground py-4">
