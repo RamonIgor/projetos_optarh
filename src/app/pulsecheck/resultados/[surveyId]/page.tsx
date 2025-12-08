@@ -231,11 +231,12 @@ export default function SurveyResultsPage() {
         
         const findNpsQuestion = (category: string) => {
             const normalizedCategory = category.toLowerCase();
-            return survey.questions.find(q => q.type === 'nps' && q.category.toLowerCase() === normalizedCategory);
+            const q = survey.questions.find(q => q.category.toLowerCase() === normalizedCategory);
+            return q && q.type === 'nps' ? q : null;
         }
 
         const eNpsQuestion = findNpsQuestion('enps');
-        const lNpsQuestion = findNpsQuestion('Liderança NPS');
+        const lNpsQuestion = findNpsQuestion('liderança nps');
 
         const eNpsAnswers = eNpsQuestion ? (answersByQuestionId[eNpsQuestion.id] || []).map(a => a.answer as number) : [];
         const lNpsAnswers = lNpsQuestion ? (answersByQuestionId[lNpsQuestion.id] || []).map(a => a.answer as number) : [];

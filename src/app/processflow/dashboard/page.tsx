@@ -134,7 +134,7 @@ export default function DashboardPage() {
 
 
     const categoryChartData: CategoryChartData[] = useMemo(() => [
-        { name: 'DP', value: stats.byCategory['DP'] || 0, fill: 'hsl(var(--primary))' },
+        { name: 'DP', value: stats.byCategory['DP'] || 0, fill: '#6d28d9' },
         { name: 'RH', value: stats.byCategory['RH'] || 0, fill: '#16a34a' },
         { name: 'Compartilhado', value: stats.byCategory['Compartilhado'] || 0, fill: '#2563eb' }
     ].filter(item => item.value > 0), [stats.byCategory]);

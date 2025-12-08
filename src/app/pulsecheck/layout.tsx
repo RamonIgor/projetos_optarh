@@ -49,7 +49,7 @@ export default function PulseCheckLayout({
   
   return (
     <AppLayout>
-      <div className="w-full">
+      <div className="w-full theme-pulsecheck">
          {children}
       </div>
     </AppLayout>
