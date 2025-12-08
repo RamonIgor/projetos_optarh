@@ -114,9 +114,10 @@ const ProcessFlowNav = () => {
 
 const PulseCheckNav = () => {
   const pathname = usePathname();
+  const router = useRouter();
 
   const navItems = [
-    { href: '/pulsecheck', label: 'Meus Resultados', icon: AreaChart },
+    { href: '/pulsecheck', label: 'Minhas Pesquisas', icon: AreaChart },
   ];
   
   if (!pathname.startsWith('/pulsecheck')) {
@@ -145,6 +146,11 @@ const PulseCheckNav = () => {
   return (
     <nav className="flex flex-wrap p-1.5 rounded-full bg-background/50 backdrop-blur-sm border border-black/5 items-center gap-1 shadow-sm">
       {navItems.map(renderNavItem)}
+       <div className="h-4 border-l border-border mx-1"></div>
+       <Button variant="ghost" size="sm" className="rounded-full" onClick={() => router.push('/pulsecheck/editor')}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Novo Questionário
+       </Button>
     </nav>
   );
 };
