@@ -138,7 +138,7 @@ export default function ProductPortalPage() {
                           initial={{ opacity: 0, y: 50 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.5, delay: 0.2 * index }}
-                          className="relative group"
+                          className="relative"
                       >
                         <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-3xl blur opacity-10 group-hover:opacity-30 transition duration-1000"></div>
                         <div className="relative bg-white rounded-3xl p-8 shadow-[0_10px_40px_rgba(0,0,0,0.05)] h-full flex flex-col">
@@ -156,17 +156,17 @@ export default function ProductPortalPage() {
                           <p className="mt-3 text-base text-slate-600 flex-grow">{product.description}</p>
                           
                           {hasAccess ? (
-                             <Button onClick={() => handleCtaClick(true, product)} className={cn("mt-8 w-full h-14 text-lg rounded-xl bg-gradient-to-r text-white transition-shadow shadow-lg hover:shadow-xl", product.gradient)}>
+                             <Button onClick={() => handleCtaClick(true, product)} className={cn("mt-8 w-full h-14 text-lg rounded-xl bg-gradient-to-r text-white transition-shadow shadow-lg hover:shadow-xl group", product.gradient)}>
                                 Acessar
                                 <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                             </Button>
                           ) : (
                             <div
                               onClick={() => handleCtaClick(false, product)}
-                              className="relative mt-8 p-0.5 bg-gradient-to-r from-orange-400 to-red-500 rounded-xl cursor-pointer group-hover:from-orange-500 group-hover:to-red-600 transition-all"
+                              className="relative mt-8 p-0.5 bg-gradient-to-r from-orange-400 to-red-500 rounded-xl cursor-pointer hover:from-orange-500 hover:to-red-600 transition-all"
                             >
-                              <div className="w-full h-full bg-white rounded-[10px] px-6 py-3.5 transition-all group-hover:bg-transparent">
-                                <span className="font-bold text-lg text-center block bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent transition-all group-hover:text-white">
+                              <div className="w-full h-full bg-white rounded-[10px] px-6 py-3.5 transition-all hover:bg-transparent">
+                                <span className="font-bold text-lg text-center block bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent transition-all hover:text-white">
                                   Falar com Consultor
                                 </span>
                               </div>
