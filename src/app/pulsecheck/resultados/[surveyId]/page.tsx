@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -146,9 +145,6 @@ function QuestionResultCard({ question, answers }: { question: SelectedQuestion,
         <Card className="shadow-sm">
             <CardHeader>
                 <CardTitle>{question.text}</CardTitle>
-                <CardDescription>
-                    <Badge variant="outline">{question.type}</Badge>
-                </CardDescription>
             </CardHeader>
             <CardContent>
                 {renderContent()}

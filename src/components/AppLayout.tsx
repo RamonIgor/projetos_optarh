@@ -116,8 +116,7 @@ const PulseCheckNav = () => {
   const pathname = usePathname();
 
   const navItems = [
-    { href: '/pulsecheck', label: 'Minhas Pesquisas', icon: AreaChart },
-    { href: '/pulsecheck/editor/novo', label: 'Nova Pesquisa', icon: PlusCircle, isEditor: true },
+    { href: '/pulsecheck', label: 'Meus Resultados', icon: AreaChart },
   ];
   
   if (!pathname.startsWith('/pulsecheck')) {
@@ -127,7 +126,7 @@ const PulseCheckNav = () => {
   const isEditorActive = pathname.startsWith('/pulsecheck/editor');
 
   const renderNavItem = (item: typeof navItems[0]) => {
-    const isActive = isEditorActive ? item.isEditor : pathname === item.href;
+    const isActive = pathname === item.href && !isEditorActive;
     return (
       <Link
         key={item.href}
