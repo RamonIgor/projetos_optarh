@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, serverTimestamp, getDocs } from 'firebase/firestore';
 import { useFirestore, useClient } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { type Survey, type Question, type SelectedQuestion, type Client } from '@/types/activity';
@@ -66,7 +66,7 @@ export default function ConfigureQuestionsPage() {
             });
             
             // Wait for initial fetches to complete to set loading to false
-            await Promise.all([getDoc(surveyDocRef), getDoc(clientDocRef), getDoc(questionsQuery.get())]);
+            await Promise.all([getDoc(surveyDocRef), getDoc(clientDocRef), getDocs(questionsQuery)]);
             setIsLoading(false);
         }
 
