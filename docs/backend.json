@@ -18,6 +18,14 @@
           "format": "date-time",
           "description": "Timestamp de quando o cliente foi cadastrado."
         },
+        "products": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["process_flow", "pulse_check"]
+          },
+          "description": "Lista de produtos que o cliente contratou."
+        },
         "pulseCheckSettings": {
           "type": ["object", "null"],
           "description": "Configurações específicas para o produto PulseCheck.",

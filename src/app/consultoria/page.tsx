@@ -23,7 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, CalendarIcon, Trash2, Edit, BarChart, LineChart, FileText, CheckSquare, PieChart as PieChartIcon, Shuffle, Clock, Building, Wrench, LogOut, ArrowLeft, Settings, UserPlus, KeyRound } from 'lucide-react';
+import { Loader2, PlusCircle, CalendarIcon, Trash2, Edit, BarChart, LineChart, FileText, CheckSquare, PieChart as PieChartIcon, Shuffle, Clock, Building, Wrench, LogOut, ArrowLeft, Settings, UserPlus, KeyRound, Workflow, BarChart2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -42,12 +42,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuPortal
 } from "@/components/ui/dropdown-menu";
 import { UserManagementDialog } from '@/components/UserManagementDialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { signOut } from 'firebase/auth';
 
 const CategoryChart = dynamic(() => import('@/components/CategoryChart'), {
@@ -60,6 +57,95 @@ const newClientSchema = z.object({
 });
 type NewClientFormValues = z.infer<typeof newClientSchema>;
 
+
+const productsAvailable = [
+    { id: 'process_flow', label: 'ProcessFlow', icon: Workflow },
+    { id: 'pulse_check', label: 'PulseCheck', icon: BarChart2 },
+]
+
+function ClientSettingsDialog({ client, onFinished }: { client: Client | null, onFinished: () => void }) {
+    const db = useFirestore();
+    const { toast } = useToast();
+    const [isSaving, startSaving] = useTransition();
+    const [open, setOpen] = useState(false);
+    const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+
+    useEffect(() => {
+        if (client) {
+            setSelectedProducts(client.products || []);
+        }
+    }, [client]);
+
+    const handleProductChange = (productId: string, checked: boolean) => {
+        setSelectedProducts(prev =>
+            checked ? [...prev, productId] : prev.filter(id => id !== productId)
+        );
+    };
+
+    const handleSave = () => {
+        if (!db || !client) return;
+        startSaving(async () => {
+            try {
+                const clientRef = doc(db, 'clients', client.id);
+                await updateDoc(clientRef, {
+                    products: selectedProducts,
+                });
+                toast({ title: "Produtos do cliente atualizados!" });
+                onFinished();
+                setOpen(false);
+            } catch (error) {
+                console.error("Error updating client products:", error);
+                toast({ title: "Erro ao salvar", variant: "destructive" });
+            }
+        });
+    };
+
+    if (!client) return null;
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="icon" disabled={!client}>
+                    <Settings className="h-4 w-4" />
+                    <span className="sr-only">Configurações do Cliente</span>
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Gerenciar Produtos do Cliente</DialogTitle>
+                    <DialogDescription>
+                        Habilite ou desabilite o acesso aos produtos para <strong>{client.name}</strong>.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                    <Label>Produtos Contratados</Label>
+                    <div className="space-y-3 rounded-md border p-4">
+                        {productsAvailable.map(product => (
+                            <div key={product.id} className="flex items-center space-x-3">
+                                <Checkbox
+                                    id={`client-product-${product.id}`}
+                                    checked={selectedProducts.includes(product.id)}
+                                    onCheckedChange={(checked) => handleProductChange(product.id, !!checked)}
+                                />
+                                <product.icon className="h-5 w-5 text-muted-foreground" />
+                                <Label htmlFor={`client-product-${product.id}`} className="font-normal cursor-pointer">
+                                    {product.label}
+                                </Label>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+                    <Button onClick={handleSave} disabled={isSaving}>
+                        {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Salvar Alterações
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 function AddClientDialog({ onClientAdded, children }: { onClientAdded: (clientId: string) => void, children: React.ReactNode }) {
     const db = useFirestore();
@@ -79,6 +165,7 @@ function AddClientDialog({ onClientAdded, children }: { onClientAdded: (clientId
                 const docRef = await addDoc(collection(db, 'clients'), {
                     name: data.name,
                     userIds: [],
+                    products: [], // Initialize with no products
                     createdAt: serverTimestamp(),
                 });
                 toast({ title: "Cliente adicionado com sucesso!" });
@@ -367,6 +454,7 @@ const StatCard = ({ title, value, icon, children, className }: { title: string, 
 
 function ClientSelector({ clients, onClientAdded }: { clients: Client[], onClientAdded: (id: string) => void }) {
     const { selectedClientId, setSelectedClientId } = useClient();
+    const selectedClient = clients.find(c => c.id === selectedClientId);
 
     if (clients.length === 0) {
         return (
@@ -391,8 +479,9 @@ function ClientSelector({ clients, onClientAdded }: { clients: Client[], onClien
                     ))}
                 </SelectContent>
             </Select>
+             <ClientSettingsDialog client={selectedClient} onFinished={() => {}} />
             <AddClientDialog onClientAdded={onClientAdded}>
-                 <Button variant="default" size="icon">
+                 <Button variant="outline" size="icon">
                     <PlusCircle className="h-4 w-4" />
                     <span className="sr-only">Adicionar Novo Cliente</span>
                 </Button>
@@ -901,4 +990,3 @@ export default function ConsultancyPage() {
         </div>
     );
 }
-

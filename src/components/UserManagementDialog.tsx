@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Loader2, UserPlus } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
-import { getFirestore, setDoc, doc, collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { getFirestore, setDoc, doc, collection, getDocs, orderBy, query, getDoc } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 import { useFirestore as useDb } from '@/firebase';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -42,8 +42,21 @@ function CreateUserForm({ onFinished, clients, isLoadingClients }: { onFinished:
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [selectedClientId, setSelectedClientId] = useState('');
-    const [selectedProducts, setSelectedProducts] = useState<string[]>(['process_flow']);
+    const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+    const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
     const [isSubmitting, startTransition] = useTransition();
+
+    useEffect(() => {
+        if (selectedClientId) {
+            const clientData = clients.find(c => c.id === selectedClientId) || null;
+            setSelectedClient(clientData);
+            // Reset selected products when client changes
+            setSelectedProducts([]);
+        } else {
+            setSelectedClient(null);
+            setSelectedProducts([]);
+        }
+    }, [selectedClientId, clients]);
 
     const handleProductChange = (productId: string, checked: boolean) => {
         setSelectedProducts(prev => 
@@ -66,7 +79,6 @@ function CreateUserForm({ onFinished, clients, isLoadingClients }: { onFinished:
                 const newUser = userCredential.user;
 
                 // 2. Create user profile in Firestore using the primary, authenticated instance
-                // This ensures the write operation is performed by the logged-in consultant
                 await setDoc(doc(db, "users", newUser.uid), {
                     clientId: selectedClientId,
                     products: selectedProducts,
@@ -101,6 +113,8 @@ function CreateUserForm({ onFinished, clients, isLoadingClients }: { onFinished:
         });
     };
 
+    const clientAllowedProducts = productsAvailable.filter(p => selectedClient?.products?.includes(p.id as any));
+
     return (
         <form onSubmit={handleRegister} className="py-4 space-y-4">
             <div className="grid gap-2">
@@ -132,19 +146,27 @@ function CreateUserForm({ onFinished, clients, isLoadingClients }: { onFinished:
             </div>
              <div className="grid gap-2">
                 <Label>Produtos Acessíveis</Label>
-                <div className="space-y-2 rounded-md border p-2">
-                    {productsAvailable.map(product => (
-                         <div key={product.id} className="flex items-center space-x-2">
-                            <Checkbox 
-                                id={`product-${product.id}`}
-                                checked={selectedProducts.includes(product.id)}
-                                onCheckedChange={(checked) => handleProductChange(product.id, !!checked)}
-                            />
-                            <Label htmlFor={`product-${product.id}`} className="font-normal cursor-pointer">
-                                {product.label}
-                            </Label>
-                        </div>
-                    ))}
+                <div className="space-y-2 rounded-md border p-2 min-h-[80px]">
+                    {selectedClient ? (
+                        clientAllowedProducts.length > 0 ? (
+                            clientAllowedProducts.map(product => (
+                                <div key={product.id} className="flex items-center space-x-2">
+                                    <Checkbox 
+                                        id={`product-${product.id}`}
+                                        checked={selectedProducts.includes(product.id)}
+                                        onCheckedChange={(checked) => handleProductChange(product.id, !!checked)}
+                                    />
+                                    <Label htmlFor={`product-${product.id}`} className="font-normal cursor-pointer">
+                                        {product.label}
+                                    </Label>
+                                </div>
+                            ))
+                        ) : (
+                             <p className="text-sm text-muted-foreground p-4 text-center">Este cliente não possui produtos contratados. Habilite-os no painel da consultoria.</p>
+                        )
+                    ) : (
+                        <p className="text-sm text-muted-foreground p-4 text-center">Selecione um cliente para ver os produtos disponíveis.</p>
+                    )}
                 </div>
             </div>
              <p className="text-sm text-muted-foreground !mt-2">
