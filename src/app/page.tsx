@@ -163,10 +163,10 @@ export default function ProductPortalPage() {
                           ) : (
                             <div
                               onClick={() => handleCtaClick(false, product)}
-                              className="relative mt-8 p-0.5 bg-gradient-to-r from-orange-400 to-red-500 rounded-xl cursor-pointer hover:from-orange-500 hover:to-red-600 transition-all"
+                              className="relative mt-8 p-0.5 bg-gradient-to-r from-orange-400 to-red-500 rounded-xl cursor-pointer group"
                             >
-                              <div className="w-full h-full bg-white rounded-[10px] px-6 py-3.5 transition-all hover:bg-transparent">
-                                <span className="font-bold text-lg text-center block bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent transition-all hover:text-white">
+                              <div className="w-full h-full bg-white rounded-[10px] px-6 py-3.5 transition-all group-hover:bg-transparent">
+                                <span className="font-bold text-lg text-center block bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent transition-all group-hover:text-white">
                                   Falar com Consultor
                                 </span>
                               </div>
