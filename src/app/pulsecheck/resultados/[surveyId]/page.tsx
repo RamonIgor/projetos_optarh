@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, onSnapshot, Timestamp, collectionGroup } from 'firebase/firestore';
 import { useFirestore, useClient } from '@/firebase';
 import { type Survey, type Response as SurveyResponse, type SelectedQuestion, type Answer, type Client } from '@/types/activity';
 import { Loader2, ArrowLeft, Download, Users, TrendingUp, MessageSquare, ListTree, Target, Clock } from 'lucide-react';
@@ -196,82 +195,62 @@ export default function SurveyResultsPage() {
             setIsLoading(false);
             return;
         }
-
+    
         let unsubResponses: (() => void) | null = null;
-        
-        // This is a hacky way to find the clientId from surveyId as we don't have it in the URL
-        const findSurveyAndListen = async () => {
-            const surveyCollectionGroup = collectionGroup(db, 'surveys');
-            const q = query(surveyCollectionGroup, where('__name__', '==', `clients/${surveyId.toString().replace('_', '/surveys/')}`));
-
-            try {
-                const surveySnap = await getDoc(doc(db, `clients/${surveyId.toString().replace('_', '/surveys/')}`))
-                
-                if (!surveySnap.exists()) {
-                    // Fallback for old URL structure
-                    const [clientId, trueSurveyId] = (surveyId as string).split('_');
-                    if (clientId && trueSurveyId) {
-                       const surveyDocRef = doc(db, 'clients', clientId, 'surveys', trueSurveyId);
-                       const surveyDocSnap = await getDoc(surveyDocRef);
-                        if(surveyDocSnap.exists()) {
-                            const surveyData = { id: surveyDocSnap.id, ...surveyDocSnap.data() } as Survey;
-                            setSurvey(surveyData);
-                            
-                            const clientDocRef = doc(db, 'clients', surveyData.clientId);
-                            const clientSnap = await getDoc(clientDocRef);
-                            if (clientSnap.exists()) {
-                                setClient(clientSnap.data() as Client);
-                            }
-
-                            const responsesQuery = query(
-                                collection(db, 'pulse_check_responses'),
-                                where('surveyId', '==', surveyData.id),
-                                where('clientId', '==', surveyData.clientId)
-                            );
-                            unsubResponses = onSnapshot(responsesQuery, (responsesSnap) => {
-                                setResponses(responsesSnap.docs.map(d => d.data() as SurveyResponse));
-                                setIsLoading(false);
-                            });
-                            return;
-                        }
-                    }
-                    
-                    setIsLoading(false);
-                    return;
-                }
-
+        let unsubSurvey: (() => void) | null = null;
+    
+        const [clientId, trueSurveyId] = (surveyId as string).split('_');
+    
+        if (!clientId || !trueSurveyId) {
+            setIsLoading(false);
+            return;
+        }
+    
+        const surveyDocRef = doc(db, 'clients', clientId, 'surveys', trueSurveyId);
+    
+        unsubSurvey = onSnapshot(surveyDocRef, async (surveySnap) => {
+            if (surveySnap.exists()) {
                 const surveyData = { id: surveySnap.id, ...surveySnap.data() } as Survey;
                 setSurvey(surveyData);
-
+    
+                // Fetch client data once survey is loaded
                 const clientDocRef = doc(db, 'clients', surveyData.clientId);
                 const clientSnap = await getDoc(clientDocRef);
                 if (clientSnap.exists()) {
                     setClient(clientSnap.data() as Client);
                 }
-                
+    
+                // Now that we have the correct survey and client IDs, set up responses listener
+                if (unsubResponses) {
+                    unsubResponses(); // Unsubscribe from previous listener if it exists
+                }
                 const responsesQuery = query(
                     collection(db, 'pulse_check_responses'),
                     where('surveyId', '==', surveyData.id),
                     where('clientId', '==', surveyData.clientId)
                 );
-                
+    
                 unsubResponses = onSnapshot(responsesQuery, (responsesSnap) => {
-                    const responsesData = responsesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SurveyResponse));
-                    setResponses(responsesData);
+                    setResponses(responsesSnap.docs.map(d => d.data() as SurveyResponse));
                     setIsLoading(false);
-                }, () => setIsLoading(false));
-                
-            } catch (e) {
-                 setIsLoading(false);
+                }, (error) => {
+                    console.error("Error fetching responses:", error);
+                    setIsLoading(false);
+                });
+    
+            } else {
+                setIsLoading(false);
             }
-        };
-
-        findSurveyAndListen();
-
+        }, (error) => {
+            console.error("Error fetching survey:", error);
+            setIsLoading(false);
+        });
+    
         return () => {
+            if (unsubSurvey) unsubSurvey();
             if (unsubResponses) unsubResponses();
         };
-    }, [surveyId, db, router]);
+    }, [surveyId, db]);
     
     const getPersonalizedQuestionText = useCallback((text: string) => {
         return (client?.name && text.includes('[EMPRESA]')) ? text.replace(/\[EMPRESA\]/g, client.name) : text;
@@ -326,8 +305,8 @@ export default function SurveyResultsPage() {
     };
 
     const analytics = useMemo(() => {
-        if (!survey || responses.length === 0) return null;
-
+        if (!survey || !client || responses.length === 0) return null;
+    
         const answersByQuestionId = responses.reduce((acc, res) => {
             Object.entries(res.answers).forEach(([qId, answer]) => {
                 if (!acc[qId]) acc[qId] = [];
@@ -335,40 +314,40 @@ export default function SurveyResultsPage() {
             });
             return acc;
         }, {} as Record<string, Answer[]>);
-
+    
         const findNpsQuestion = (category: string) => {
             const normalizedCategory = category.toLowerCase();
             const q = survey.questions.find(q => q.category.toLowerCase() === normalizedCategory);
             return q && q.type === 'nps' ? q : null;
         };
-
+    
         const eNpsQuestion = findNpsQuestion('enps');
         const lNpsQuestion = findNpsQuestion('liderança nps');
-
+    
         const eNpsAnswers = eNpsQuestion ? (answersByQuestionId[eNpsQuestion.id] || []).map(a => a.answer as number) : [];
         const lNpsAnswers = lNpsQuestion ? (answersByQuestionId[lNpsQuestion.id] || []).map(a => a.answer as number) : [];
-
+    
         const eNpsResult = calculateNPS(eNpsAnswers);
         const lNpsResult = calculateNPS(lNpsAnswers);
-
+    
         const categories = survey.questions.reduce((acc, q) => {
             if (q.category === 'eNPS' || q.category === 'Liderança NPS' || q.category === 'DEMOGRAFIA' || q.category === 'FEEDBACK ABERTO') return acc;
             if (!acc[q.category]) acc[q.category] = { questions: [], score: 0, status: 'bom' };
             acc[q.category].questions.push(q);
             return acc;
         }, {} as Record<string, { questions: SelectedQuestion[], score: number, status: ReturnType<typeof getCategoryStatus> }>);
-
+    
         Object.keys(categories).forEach(catName => {
             const category = categories[catName];
             const categoryResult = calculateCategoryScore(category.questions, answersByQuestionId);
             category.score = categoryResult.score;
             category.status = categoryResult.status;
         });
-
+    
         const openFeedback = survey.questions
             .filter(q => q.type === 'open-text')
             .flatMap(q => (answersByQuestionId[q.id] || []).map(a => a.answer as string).filter(Boolean));
-
+    
         const durations = responses
             .map(r => {
                 if (r.startedAt && r.submittedAt) {
@@ -381,21 +360,21 @@ export default function SurveyResultsPage() {
                 return null;
             })
             .filter((d): d is number => d !== null && d >= 0);
-
+    
         const averageTime = durations.length > 0 ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
-
+    
         const topIssues = getTopIssues(categories);
-        const topStrengths = getTopIssues(categories).reverse();
-
+        const topStrengths = [...topIssues].reverse();
+    
         return { eNpsResult, lNpsResult, categories, openFeedback, answersByQuestionId, averageTime, topIssues, topStrengths };
-    }, [survey, responses]);
+    }, [survey, responses, client]);
 
 
      if (isLoading) {
         return <div className="flex items-center justify-center min-h-[60vh] w-full"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
     }
     
-    if (!survey) {
+    if (!survey || !client) {
         return <div className="flex items-center justify-center min-h-[60vh] w-full"><p>Pesquisa não encontrada.</p></div>
     }
 
