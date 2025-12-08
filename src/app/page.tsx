@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase/auth/use-user';
 import { useClient } from '@/firebase/auth/use-client';
-import { Loader2, LogOut, ArrowRight, Workflow, BarChart2 } from 'lucide-react';
+import { Loader2, LogOut, ArrowRight, Workflow, BarChart2, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -108,10 +108,18 @@ export default function ProductPortalPage() {
       <div className="relative z-10 flex min-h-screen flex-col">
         <header className="container mx-auto px-6 py-6 flex justify-between items-center">
             <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} unoptimized />
-            <Button variant="link" className="text-slate-500" onClick={handleLogout}>
-                Sair
-                <LogOut className="ml-2 h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-4">
+              {isConsultant && (
+                <Button variant="outline" onClick={() => router.push('/consultoria')}>
+                  <Wrench className="mr-2 h-4 w-4" />
+                  Painel
+                </Button>
+              )}
+              <Button variant="link" className="text-slate-500" onClick={handleLogout}>
+                  Sair
+                  <LogOut className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
         </header>
 
         <main className="flex flex-1 flex-col items-center justify-center p-6">
