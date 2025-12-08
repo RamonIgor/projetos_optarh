@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -262,7 +263,6 @@ export default function SurveyResultsPage() {
         const durations = responses
             .map(r => {
                 if (r.startedAt && r.submittedAt) {
-                    // Ensure both are Date objects before calculating
                     const start = r.startedAt instanceof Timestamp ? r.startedAt.toDate() : new Date(r.startedAt);
                     const end = r.submittedAt instanceof Timestamp ? r.submittedAt.toDate() : new Date(r.submittedAt);
                     if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
