@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -180,7 +181,7 @@ function QuestionResultCard({ question, answers }: { question: SelectedQuestion,
 }
 
 export default function SurveyResultsPage() {
-    const { surveyId: publicId } = useParams();
+    const { clientId, surveyId } = useParams();
     const router = useRouter();
     const db = useFirestore();
     const reportRef = useRef<HTMLDivElement>(null);
@@ -192,70 +193,68 @@ export default function SurveyResultsPage() {
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const [error, setError] = useState<string | null>(null);
     
-    useEffect(() => {
-        if (!db || !publicId) {
+     useEffect(() => {
+        if (!db || !clientId || !surveyId) {
             setError("Link de pesquisa inválido.");
             setIsLoading(false);
             return;
         }
-    
+
+        let unsubSurvey: (() => void) | null = null;
         let unsubResponses: (() => void) | null = null;
-        
-        // This is a hacky way to find the clientId from surveyId as we don't have it in the URL
-        const findSurveyAndListen = async () => {
-            const surveyCollectionGroup = collectionGroup(db, 'surveys');
-            const q = query(surveyCollectionGroup, where('id', '==', publicId.toString()));
+        let unsubClient: (() => void) | null = null;
 
+        const loadAllData = async () => {
+            setIsLoading(true);
             try {
-                const surveyQuerySnapshot = await getDocs(q);
-
-                if (surveyQuerySnapshot.empty) {
-                    setError("Pesquisa não encontrada.");
-                    setIsLoading(false);
-                    return;
-                }
-                
-                const surveyDoc = surveyQuerySnapshot.docs[0];
-                const surveyData = { id: surveyDoc.id, ...surveyDoc.data() } as Survey;
-
-                setSurvey(surveyData);
-                
-                // Fetch client data
-                const clientDocRef = doc(db, 'clients', surveyData.clientId);
-                const clientSnap = await getDoc(clientDocRef);
-                if (clientSnap.exists()) {
-                    setClient(clientSnap.data() as Client);
-                }
-
-                // Listen for responses
-                const responsesQuery = query(
-                    collection(db, 'pulse_check_responses'),
-                    where('surveyId', '==', surveyData.id),
-                    where('clientId', '==', surveyData.clientId)
-                );
-
-                unsubResponses = onSnapshot(responsesQuery, (responsesSnap) => {
-                    setResponses(responsesSnap.docs.map(d => d.data() as SurveyResponse));
-                    setIsLoading(false);
-                }, (error) => {
-                    console.error("Error fetching responses:", error);
-                    setError("Erro ao carregar as respostas.");
-                    setIsLoading(false);
+                // Fetch Survey
+                const surveyDocRef = doc(db, 'clients', clientId as string, 'surveys', surveyId as string);
+                unsubSurvey = onSnapshot(surveyDocRef, (surveySnap) => {
+                    if (surveySnap.exists()) {
+                        setSurvey({ id: surveySnap.id, ...surveySnap.data() } as Survey);
+                    } else {
+                        setError("Pesquisa não encontrada.");
+                        setIsLoading(false);
+                    }
                 });
 
+                // Fetch Client
+                const clientDocRef = doc(db, 'clients', clientId as string);
+                 unsubClient = onSnapshot(clientDocRef, (clientSnap) => {
+                    if (clientSnap.exists()) {
+                       setClient({ id: clientSnap.id, ...clientSnap.data() } as Client);
+                    }
+                });
+
+                // Fetch Responses
+                const responsesQuery = query(
+                    collection(db, 'pulse_check_responses'),
+                    where('surveyId', '==', surveyId),
+                    where('clientId', '==', clientId)
+                );
+                unsubResponses = onSnapshot(responsesQuery, (responsesSnap) => {
+                    setResponses(responsesSnap.docs.map(d => d.data() as SurveyResponse));
+                });
+                
+                // Wait for initial fetch to be sure
+                await Promise.all([getDoc(surveyDocRef), getDoc(clientDocRef), getDocs(responsesQuery)]);
+
             } catch (err) {
-                console.error("Error finding survey:", err);
-                setError("Ocorreu um erro ao localizar a pesquisa.");
+                console.error("Error loading survey data:", err);
+                setError("Erro ao carregar dados da pesquisa.");
+            } finally {
                 setIsLoading(false);
             }
         };
 
-        findSurveyAndListen();
-    
+        loadAllData();
+
         return () => {
-            if (unsubResponses) unsubResponses();
+            unsubSurvey?.();
+            unsubResponses?.();
+            unsubClient?.();
         };
-    }, [publicId, db]);
+    }, [clientId, surveyId, db]);
     
     const getPersonalizedQuestionText = useCallback((text: string) => {
         return (client?.name && text.includes('[EMPRESA]')) ? text.replace(/\[EMPRESA\]/g, client.name) : text;
@@ -391,6 +390,7 @@ export default function SurveyResultsPage() {
                     </CardHeader>
                     <CardContent>
                         <p className="text-lg">{error}</p>
+                        <Button variant="outline" onClick={() => router.push('/pulsecheck')} className="mt-4"><ArrowLeft className="mr-2 h-4 w-4" />Voltar para o Painel</Button>
                     </CardContent>
                 </Card>
             </div>
@@ -514,4 +514,3 @@ export default function SurveyResultsPage() {
     );
 }
 
-    

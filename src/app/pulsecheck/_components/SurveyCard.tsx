@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { type Survey, type Response as SurveyResponse } from '@/types/activity';
@@ -56,8 +57,8 @@ export function SurveyCard({ survey, responses, onDelete, onDuplicate }: SurveyC
   const config = statusConfig[status];
 
   const handleCopyLink = () => {
-    const publicId = `${survey.clientId}_${survey.id}`;
-    const surveyUrl = `${window.location.origin}/survey/${publicId}`;
+    // OLD: const publicId = `${survey.clientId}_${survey.id}`;
+    const surveyUrl = `${window.location.origin}/survey/${survey.clientId}/${survey.id}`;
 
     navigator.clipboard.writeText(surveyUrl).then(() => {
       toast({
@@ -73,6 +74,10 @@ export function SurveyCard({ survey, responses, onDelete, onDuplicate }: SurveyC
       });
     });
   };
+
+  const handleResultsClick = () => {
+    router.push(`/pulsecheck/resultados/${survey.clientId}/${survey.id}`);
+  }
 
   const totalParticipants = survey.totalParticipants || 0;
   const responseRate = totalParticipants > 0 ? (responses.length / totalParticipants) * 100 : 0;
@@ -113,7 +118,7 @@ export function SurveyCard({ survey, responses, onDelete, onDuplicate }: SurveyC
               <DropdownMenuItem onClick={() => router.push(`/pulsecheck/editor/${survey.id}`)}>
                 <Edit className="mr-2 h-4 w-4" /> Editar
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push(`/pulsecheck/resultados/${survey.id}`)} disabled={responses.length === 0}>
+              <DropdownMenuItem onClick={handleResultsClick} disabled={responses.length === 0}>
                 <BarChart2 className="mr-2 h-4 w-4" /> Ver Resultados
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onDuplicate}>

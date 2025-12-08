@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -27,7 +28,7 @@ const generateToken = () => {
 }
 
 export default function SurveyResponsePage() {
-  const { surveyId: publicId } = useParams();
+  const { clientId, surveyId } = useParams();
   const db = useFirestore();
   const { toast } = useToast();
 
@@ -44,17 +45,9 @@ export default function SurveyResponsePage() {
   const [startedAt, setStartedAt] = useState<Date | null>(null);
   const [respondentToken, setRespondentToken] = useState<string | null>(null);
   
-  const [clientId, surveyId] = useMemo(() => {
-    const idString = Array.isArray(publicId) ? publicId[0] : publicId;
-    const parts = idString.split('_');
-    if (parts.length < 2) return [null, null];
-    // Rejoin in case the surveyId itself contains underscores
-    return [parts[0], parts.slice(1).join('_')];
-  }, [publicId]);
-
   useEffect(() => {
     setStartedAt(new Date());
-
+    
     if (!surveyId) {
         setError("Link de pesquisa inválido.");
         setIsLoading(false);
@@ -88,7 +81,7 @@ export default function SurveyResponsePage() {
             return;
         }
 
-        const surveyDocRef = doc(db, 'clients', clientId, 'surveys', surveyId);
+        const surveyDocRef = doc(db, 'clients', clientId as string, 'surveys', surveyId as string);
         const surveyDocSnap = await getDoc(surveyDocRef);
         
         if (surveyDocSnap.exists()) {
@@ -183,7 +176,7 @@ export default function SurveyResponsePage() {
   const handlePrev = () => {
     setValidationError(null);
     if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
+      setCurrentStep(currentStep + 1);
     }
   };
   
@@ -228,7 +221,7 @@ export default function SurveyResponsePage() {
         await addDoc(collection(db, 'pulse_check_responses'), responseData);
         setHasSubmitted(true);
         if (surveyId) {
-            localStorage.removeItem(`survey_answers_${surveyId}`);
+            localStorage.removeItem(`survey_answers_${surveyId as string}`);
         }
 
     } catch (error) {
