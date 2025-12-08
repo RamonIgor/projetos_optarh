@@ -7,7 +7,7 @@ import * as z from 'zod';
 import { type Question, type SelectedQuestion } from '@/types/activity';
 import { cn } from '@/lib/utils';
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -151,128 +151,130 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, questionTo
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-full flex flex-col">
-        <DialogHeader>
-          <DialogTitle>{questionToEdit ? "Editar Pergunta" : "Criar Nova Pergunta"}</DialogTitle>
-          <DialogDescription>
-            Crie uma pergunta personalizada que será adicionada a esta pesquisa.
-          </DialogDescription>
-        </DialogHeader>
         <Form {...form}>
-          <div className="grid lg:grid-cols-2 gap-8 flex-1 min-h-0">
-            <div className="space-y-8">
-                <FormField control={form.control} name="text" render={({ field }) => (
-                    <FormItem>
-                        <div className="flex justify-between items-baseline">
-                            <FormLabel>Texto da Pergunta</FormLabel>
-                            <span className="text-xs text-muted-foreground">{field.value.length} / 500</span>
-                        </div>
-                        <FormControl><Textarea placeholder="Ex: Em uma escala de 0 a 10..." {...field} rows={5} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-
-                <FormField control={form.control} name="type" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Tipo de Resposta</FormLabel>
-                        <RadioGroup onValueChange={field.onChange} defaultValue={field.value} value={field.value} className="grid grid-cols-2 gap-2">
-                            {typeOptions.map(opt => (
-                                <FormItem key={opt.value}>
-                                    <FormControl>
-                                        <RadioGroupItem value={opt.value} id={opt.value} className="sr-only" />
-                                    </FormControl>
-                                    <Label htmlFor={opt.value} className={cn("flex flex-col items-center justify-center gap-2 rounded-md border-2 border-muted bg-popover p-6 hover:bg-accent hover:text-accent-foreground cursor-pointer", field.value === opt.value && "border-primary")}>
-                                        <opt.icon className="h-6 w-6" />
-                                        {opt.label}
-                                    </Label>
-                                </FormItem>
-                            ))}
-                        </RadioGroup>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-
-                {watchedValues.type === 'multiple-choice' && (
-                    <div className="space-y-4 rounded-md border p-4">
-                        <FormLabel>Opções de Resposta</FormLabel>
-                        <div className="space-y-2">
-                            {fields.map((field, index) => (
-                                    <FormField
-                                    key={field.id}
-                                    control={form.control}
-                                    name={`options.${index}.value`}
-                                    render={({ field: optionField }) => (
-                                            <FormItem className="flex items-center gap-2">
-                                            <FormControl>
-                                                <Input {...optionField} placeholder={`Opção ${index + 1}`} />
-                                            </FormControl>
-                                            <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 2}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            ))}
-                        </div>
-                            <Button type="button" variant="outline" size="sm" onClick={() => append({ value: '' })}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Opção
-                        </Button>
-                    </div>
-                )}
-                <div className="grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="category" render={({ field }) => (
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <DialogHeader>
+              <DialogTitle>{questionToEdit ? "Editar Pergunta" : "Criar Nova Pergunta"}</DialogTitle>
+              <DialogDescription>
+                Crie uma pergunta personalizada que será adicionada a esta pesquisa.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid lg:grid-cols-2 gap-8 flex-1 min-h-0 py-4">
+                <div className="space-y-8">
+                    <FormField control={form.control} name="text" render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Categoria</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    {allCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                                    <SelectItem value="new" className="text-primary font-bold">
-                                        + Nova Categoria
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <div className="flex justify-between items-baseline">
+                                <FormLabel>Texto da Pergunta</FormLabel>
+                                <span className="text-xs text-muted-foreground">{field.value.length} / 500</span>
+                            </div>
+                            <FormControl><Textarea placeholder="Ex: Em uma escala de 0 a 10..." {...field} rows={5} /></FormControl>
                             <FormMessage />
                         </FormItem>
                     )} />
-                    {watchedValues.category === 'new' && (
-                        <FormField control={form.control} name="newCategory" render={({ field }) => (
+
+                    <FormField control={form.control} name="type" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Tipo de Resposta</FormLabel>
+                            <RadioGroup onValueChange={field.onChange} defaultValue={field.value} value={field.value} className="grid grid-cols-2 gap-2">
+                                {typeOptions.map(opt => (
+                                    <FormItem key={opt.value}>
+                                        <FormControl>
+                                            <RadioGroupItem value={opt.value} id={opt.value} className="sr-only" />
+                                        </FormControl>
+                                        <Label htmlFor={opt.value} className={cn("flex flex-col items-center justify-center gap-2 rounded-md border-2 border-muted bg-popover p-6 hover:bg-accent hover:text-accent-foreground cursor-pointer", field.value === opt.value && "border-primary")}>
+                                            <opt.icon className="h-6 w-6" />
+                                            {opt.label}
+                                        </Label>
+                                    </FormItem>
+                                ))}
+                            </RadioGroup>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+
+                    {watchedValues.type === 'multiple-choice' && (
+                        <div className="space-y-4 rounded-md border p-4">
+                            <FormLabel>Opções de Resposta</FormLabel>
+                            <div className="space-y-2">
+                                {fields.map((field, index) => (
+                                        <FormField
+                                        key={field.id}
+                                        control={form.control}
+                                        name={`options.${index}.value`}
+                                        render={({ field: optionField }) => (
+                                                <FormItem className="flex items-center gap-2">
+                                                <FormControl>
+                                                    <Input {...optionField} placeholder={`Opção ${index + 1}`} />
+                                                </FormControl>
+                                                <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 2}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                ))}
+                            </div>
+                                <Button type="button" variant="outline" size="sm" onClick={() => append({ value: '' })}>
+                                <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Opção
+                            </Button>
+                        </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField control={form.control} name="category" render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Nome da Nova Categoria</FormLabel>
-                                <FormControl><Input {...field} placeholder="Ex: Cultura" /></FormControl>
+                                <FormLabel>Categoria</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        {allCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                        <SelectItem value="new" className="text-primary font-bold">
+                                            + Nova Categoria
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage />
                             </FormItem>
                         )} />
-                    )}
-                </div>
+                        {watchedValues.category === 'new' && (
+                            <FormField control={form.control} name="newCategory" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Nome da Nova Categoria</FormLabel>
+                                    <FormControl><Input {...field} placeholder="Ex: Cultura" /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                        )}
+                    </div>
 
-                <FormField control={form.control} name="isMandatory" render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                            <FormLabel>Obrigatória</FormLabel>
-                            <FormDescription>
-                                O colaborador deverá responder esta pergunta para submeter.
-                            </FormDescription>
-                        </div>
-                        <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                    </FormItem>
-                )} />
+                    <FormField control={form.control} name="isMandatory" render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                                <FormLabel>Obrigatória</FormLabel>
+                                <FormDescription>
+                                    O colaborador deverá responder esta pergunta para submeter.
+                                </FormDescription>
+                            </div>
+                            <FormControl>
+                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                        </FormItem>
+                    )} />
+                </div>
+                <div className="flex flex-col gap-6">
+                    <h3 className="text-lg font-semibold border-b pb-2">Preview da Pergunta</h3>
+                    <Card className="bg-muted/50 flex-grow flex items-center">
+                        <CardContent className="p-6 w-full">
+                            {renderPreview()}
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
-            <div className="flex flex-col gap-6">
-                <h3 className="text-lg font-semibold border-b pb-2">Preview da Pergunta</h3>
-                <Card className="bg-muted/50 flex-grow flex items-center">
-                    <CardContent className="p-6 w-full">
-                        {renderPreview()}
-                    </CardContent>
-                </Card>
-            </div>
-          </div>
-          <div className="mt-auto pt-6 flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
-              <Button type="button" onClick={form.handleSubmit(onSubmit)}>Adicionar Pergunta</Button>
-          </div>
+            <DialogFooter className="mt-auto pt-6">
+                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+                <Button type="submit">Adicionar Pergunta</Button>
+            </DialogFooter>
+          </form>
         </Form>
       </DialogContent>
     </Dialog>
