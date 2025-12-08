@@ -183,7 +183,6 @@ export default function SurveyResultsPage() {
     const { surveyId } = useParams();
     const router = useRouter();
     const db = useFirestore();
-    const { clientId } = useClient();
     const reportRef = useRef<HTMLDivElement>(null);
 
     const [survey, setSurvey] = useState<Survey | null>(null);
@@ -193,30 +192,63 @@ export default function SurveyResultsPage() {
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
     useEffect(() => {
-        if (!clientId || !db || !surveyId) {
+        if (!db || !surveyId) {
             setIsLoading(false);
             return;
         }
 
         let unsubResponses: (() => void) | null = null;
+        
+        // This is a hacky way to find the clientId from surveyId as we don't have it in the URL
+        const findSurveyAndListen = async () => {
+            const surveyCollectionGroup = collectionGroup(db, 'surveys');
+            const q = query(surveyCollectionGroup, where('__name__', '==', `clients/${surveyId.toString().replace('_', '/surveys/')}`));
 
-        const surveyDocRef = doc(db, 'clients', clientId, 'surveys', surveyId as string);
-        const unsubSurvey = onSnapshot(surveyDocRef, (surveySnap) => {
-            if (surveySnap.exists()) {
+            try {
+                const surveySnap = await getDoc(doc(db, `clients/${surveyId.toString().replace('_', '/surveys/')}`))
+                
+                if (!surveySnap.exists()) {
+                    // Fallback for old URL structure
+                    const [clientId, trueSurveyId] = (surveyId as string).split('_');
+                    if (clientId && trueSurveyId) {
+                       const surveyDocRef = doc(db, 'clients', clientId, 'surveys', trueSurveyId);
+                       const surveyDocSnap = await getDoc(surveyDocRef);
+                        if(surveyDocSnap.exists()) {
+                            const surveyData = { id: surveyDocSnap.id, ...surveyDocSnap.data() } as Survey;
+                            setSurvey(surveyData);
+                            
+                            const clientDocRef = doc(db, 'clients', surveyData.clientId);
+                            const clientSnap = await getDoc(clientDocRef);
+                            if (clientSnap.exists()) {
+                                setClient(clientSnap.data() as Client);
+                            }
+
+                            const responsesQuery = query(
+                                collection(db, 'pulse_check_responses'),
+                                where('surveyId', '==', surveyData.id),
+                                where('clientId', '==', surveyData.clientId)
+                            );
+                            unsubResponses = onSnapshot(responsesQuery, (responsesSnap) => {
+                                setResponses(responsesSnap.docs.map(d => d.data() as SurveyResponse));
+                                setIsLoading(false);
+                            });
+                            return;
+                        }
+                    }
+                    
+                    setIsLoading(false);
+                    return;
+                }
+
                 const surveyData = { id: surveySnap.id, ...surveySnap.data() } as Survey;
                 setSurvey(surveyData);
 
-                // Fetch client data
                 const clientDocRef = doc(db, 'clients', surveyData.clientId);
-                getDoc(clientDocRef).then(clientSnap => {
-                    if (clientSnap.exists()) {
-                        setClient(clientSnap.data() as Client);
-                    }
-                });
-
-                // Now that we have the survey's clientId, we can query for responses
-                if (unsubResponses) unsubResponses(); // Unsubscribe from previous listener if any
-
+                const clientSnap = await getDoc(clientDocRef);
+                if (clientSnap.exists()) {
+                    setClient(clientSnap.data() as Client);
+                }
+                
                 const responsesQuery = query(
                     collection(db, 'pulse_check_responses'),
                     where('surveyId', '==', surveyData.id),
@@ -227,23 +259,19 @@ export default function SurveyResultsPage() {
                     const responsesData = responsesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SurveyResponse));
                     setResponses(responsesData);
                     setIsLoading(false);
-                }, () => {
-                    setIsLoading(false);
-                });
-
-            } else {
-                router.push('/pulsecheck');
-                setIsLoading(false);
+                }, () => setIsLoading(false));
+                
+            } catch (e) {
+                 setIsLoading(false);
             }
-        }, () => {
-            setIsLoading(false);
-        });
+        };
+
+        findSurveyAndListen();
 
         return () => {
-            unsubSurvey();
             if (unsubResponses) unsubResponses();
         };
-    }, [surveyId, clientId, db, router]);
+    }, [surveyId, db, router]);
     
     const getPersonalizedQuestionText = useCallback((text: string) => {
         return (client?.name && text.includes('[EMPRESA]')) ? text.replace(/\[EMPRESA\]/g, client.name) : text;
@@ -298,7 +326,7 @@ export default function SurveyResultsPage() {
     };
 
     const analytics = useMemo(() => {
-        if (!survey || !responses || !client) return null;
+        if (!survey || responses.length === 0) return null;
 
         const answersByQuestionId = responses.reduce((acc, res) => {
             Object.entries(res.answers).forEach(([qId, answer]) => {
@@ -360,11 +388,28 @@ export default function SurveyResultsPage() {
         const topStrengths = getTopIssues(categories).reverse();
 
         return { eNpsResult, lNpsResult, categories, openFeedback, answersByQuestionId, averageTime, topIssues, topStrengths };
-    }, [survey, responses, client]);
+    }, [survey, responses]);
 
 
-     if (isLoading || !analytics || !survey || !client) {
+     if (isLoading) {
         return <div className="flex items-center justify-center min-h-[60vh] w-full"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
+    }
+    
+    if (!survey) {
+        return <div className="flex items-center justify-center min-h-[60vh] w-full"><p>Pesquisa não encontrada.</p></div>
+    }
+
+    if (!analytics) {
+        return (
+            <div className="max-w-7xl mx-auto w-full">
+                 <Button variant="ghost" onClick={() => router.push('/pulsecheck')} className="mb-4"><ArrowLeft className="mr-2 h-4 w-4" />Voltar para o Painel</Button>
+                <h1 className="text-4xl font-bold text-primary">{survey.title}</h1>
+                <p className="mt-2 text-lg text-muted-foreground">{survey.description}</p>
+                <div className="flex items-center justify-center min-h-[40vh] flex-col">
+                    <p className="text-lg text-muted-foreground">Ainda não há respostas para esta pesquisa.</p>
+                </div>
+            </div>
+        )
     }
     
     const responseRate = survey.totalParticipants > 0 ? (responses.length / survey.totalParticipants) * 100 : 0;
