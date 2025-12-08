@@ -85,11 +85,14 @@ service cloud.firestore {
     // --- PulseCheck Specific Collections ---
     
     match /pulse_check_questions/{questionId} {
-      // Allow reading a question if it's global OR if it belongs to the user's client and they have PulseCheck access.
-      allow get, list: if isSignedIn() && (isQuestionGlobal() || (isQuestionForClient(getUserData(request.auth.uid).clientId) && hasProductAccess('pulse_check')));
+      // Allow reading a question if it's global OR if the user is a consultant.
+      // Non-consultant users can only read questions for their own client if they have PulseCheck access.
+      allow get: if isSignedIn() && (isQuestionGlobal() || isConsultant() || (isQuestionForClient(getUserData(request.auth.uid).clientId) && hasProductAccess('pulse_check')));
+      allow list: if isConsultant() || (
+        isSignedIn() && hasProductAccess('pulse_check')
+      );
       
       // Only consultants can create, update, or delete question templates.
-      // When creating/updating, they can either make it global (clientId=null) or assign it to a client.
       allow write: if isConsultant();
     }
     
@@ -113,5 +116,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
