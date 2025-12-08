@@ -305,7 +305,7 @@ export default function SurveyResultsPage() {
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <StatCard title="Taxa de Resposta" value={`${responses.length}/120*`} description="*Número de participantes fixo" icon={Users} />
                 <NpsStatCard title="eNPS" npsResult={analytics?.eNpsResult || null} />
-                <NpsStatCard title="Leadership NPS" npsResult={analytics?.lNpsResult || null} />
+                <NpsStatCard title="Liderança NPS" npsResult={analytics?.lNpsResult || null} />
                 <StatCard title="Tempo Médio" value="8 min*" description="*Cálculo em desenvolvimento" icon={Clock} />
             </div>
 
@@ -326,7 +326,7 @@ export default function SurveyResultsPage() {
                                                  </div>
                                                  <div className="flex items-center gap-4 w-1/3">
                                                       <Progress value={data.score} indicatorClassName={status.color} />
-                                                     <span className={cn("font-bold text-lg", status.textColor)}>{data.score}%</span>
+                                                     <span className={cn("font-bold text-lg w-28 text-right", status.textColor)}>{data.score}% <span className='text-sm text-muted-foreground'> de favorabilidade</span></span>
                                                  </div>
                                              </div>
                                          </AccordionTrigger>
