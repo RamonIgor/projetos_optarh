@@ -22,6 +22,10 @@ import { OpenTextQuestion } from './_components/OpenTextQuestion';
 import { ThankYouScreen } from './_components/ThankYouScreen';
 
 
+const generateToken = () => {
+    return Math.random().toString(36).substring(2) + Date.now().toString(36);
+}
+
 export default function SurveyResponsePage() {
   const { surveyId: publicId } = useParams();
   const db = useFirestore();
@@ -38,6 +42,7 @@ export default function SurveyResponsePage() {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [startedAt, setStartedAt] = useState<Date | null>(null);
+  const [respondentToken, setRespondentToken] = useState<string | null>(null);
   
   const [clientId, surveyId] = useMemo(() => {
     const idString = Array.isArray(publicId) ? publicId[0] : publicId;
@@ -50,7 +55,19 @@ export default function SurveyResponsePage() {
   useEffect(() => {
     setStartedAt(new Date());
 
-    if (!surveyId) return;
+    if (!surveyId) {
+        setError("Link de pesquisa inválido.");
+        setIsLoading(false);
+        return;
+    }
+    
+    // Manage anonymous respondent token
+    let token = localStorage.getItem(`survey_token_${surveyId}`);
+    if (!token) {
+        token = generateToken();
+        localStorage.setItem(`survey_token_${surveyId}`, token);
+    }
+    setRespondentToken(token);
 
     if (!db || !clientId) {
       setError("Link de pesquisa inválido ou corrompido.");
@@ -60,6 +77,17 @@ export default function SurveyResponsePage() {
     
     const fetchSurveyData = async () => {
       try {
+        // Check if this token has already submitted a response
+        const responsesRef = collection(db, 'pulse_check_responses');
+        const q = query(responsesRef, where('surveyId', '==', surveyId), where('respondentToken', '==', token));
+        const existingResponseSnap = await getDocs(q);
+        
+        if (!existingResponseSnap.empty) {
+            setHasSubmitted(true);
+            setIsLoading(false);
+            return;
+        }
+
         const surveyDocRef = doc(db, 'clients', clientId, 'surveys', surveyId);
         const surveyDocSnap = await getDoc(surveyDocRef);
         
@@ -182,6 +210,7 @@ export default function SurveyResponsePage() {
             surveyId: survey!.id,
             clientId: client!.id,
             respondentId: null, // For now, only anonymous
+            respondentToken: respondentToken,
             answers: Object.entries(answers).reduce((acc, [questionId, answer]) => {
                 const question = survey?.questions.find(q => q.id === questionId);
                 if (question) {
@@ -317,4 +346,3 @@ export default function SurveyResponsePage() {
     </div>
   );
 }
-

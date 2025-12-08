@@ -108,6 +108,7 @@ export interface Response {
   surveyId: string;
   clientId: string;
   respondentId: string | null; // UID or null for anonymous
+  respondentToken?: string | null; // Anonymous unique identifier for a browser
   answers: Record<string, Answer>; // Key is questionId
   submittedAt: Timestamp | Date;
   startedAt?: Timestamp | Date;
