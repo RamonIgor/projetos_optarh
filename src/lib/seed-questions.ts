@@ -40,11 +40,11 @@ const defaultQuestions: Omit<Question, 'id' | 'createdAt' | 'createdBy'>[] = [
         isNpsQuestion: true,
         isDefault: true,
     },
-    // --- LEADERSHIP NPS ---
+    // --- Liderança NPS ---
     {
         text: 'Avaliando as práticas de gestão de pessoas de sua liderança, em uma escala de 0 a 10, o quanto você recomendaria sua liderança como um guia eficaz para a equipe?',
         type: 'nps',
-        category: 'LEADERSHIP NPS',
+        category: 'Liderança NPS',
         order: 5,
         isMandatory: true,
         isDefault: true,
@@ -196,3 +196,5 @@ export async function seedDefaultQuestions(db: Firestore) {
     
     return { addedCount, skippedCount };
 }
+
+    

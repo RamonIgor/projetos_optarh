@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -229,8 +228,9 @@ export default function SurveyResultsPage() {
             return acc;
         }, {} as Record<string, Answer[]>);
 
-        const findNpsQuestion = (category: 'eNPS' | 'Liderança NPS') => {
-            return survey.questions.find(q => q.type === 'nps' && q.category.toUpperCase() === category.toUpperCase()) || null;
+        const findNpsQuestion = (category: string) => {
+            const normalizedCategory = category.toLowerCase();
+            return survey.questions.find(q => q.type === 'nps' && q.category.toLowerCase() === normalizedCategory) || null;
         }
 
         const eNpsQuestion = findNpsQuestion('eNPS');
@@ -366,3 +366,5 @@ export default function SurveyResultsPage() {
         </div>
     );
 }
+
+    
