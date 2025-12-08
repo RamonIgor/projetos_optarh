@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -5,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, onSnapshot, Timestamp, collectionGroup } from 'firebase/firestore';
 import { useFirestore, useClient } from '@/firebase';
 import { type Survey, type Response as SurveyResponse, type SelectedQuestion, type Answer, type Client } from '@/types/activity';
-import { Loader2, ArrowLeft, Download, Users, TrendingUp, MessageSquare, ListTree, Target, Clock } from 'lucide-react';
+import { Loader2, ArrowLeft, Download, Users, TrendingUp, MessageSquare, ListTree, Target, Clock, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -179,7 +180,7 @@ function QuestionResultCard({ question, answers }: { question: SelectedQuestion,
 }
 
 export default function SurveyResultsPage() {
-    const { surveyId } = useParams();
+    const { surveyId: publicId } = useParams();
     const router = useRouter();
     const db = useFirestore();
     const reportRef = useRef<HTMLDivElement>(null);
@@ -189,68 +190,74 @@ export default function SurveyResultsPage() {
     const [responses, setResponses] = useState<SurveyResponse[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-
+    const [error, setError] = useState<string | null>(null);
+    
     useEffect(() => {
-        if (!db || !surveyId) {
+        if (!db || !publicId) {
+            setError("Link de pesquisa inválido.");
             setIsLoading(false);
             return;
         }
     
-        let unsubResponses: (() => void) | null = null;
         let unsubSurvey: (() => void) | null = null;
-    
-        const [clientId, trueSurveyId] = (surveyId as string).split('_');
-    
-        if (!clientId || !trueSurveyId) {
-            setIsLoading(false);
-            return;
-        }
-    
-        const surveyDocRef = doc(db, 'clients', clientId, 'surveys', trueSurveyId);
-    
-        unsubSurvey = onSnapshot(surveyDocRef, async (surveySnap) => {
-            if (surveySnap.exists()) {
-                const surveyData = { id: surveySnap.id, ...surveySnap.data() } as Survey;
+        let unsubResponses: (() => void) | null = null;
+
+        const findSurveyAndListen = async () => {
+            const surveyCollectionGroup = collectionGroup(db, 'surveys');
+            const surveyIdStr = Array.isArray(publicId) ? publicId[0] : publicId;
+            const q = query(surveyCollectionGroup, where('id', '==', surveyIdStr));
+
+            try {
+                const surveyQuerySnapshot = await getDocs(q);
+
+                if (surveyQuerySnapshot.empty) {
+                    setError("Pesquisa não encontrada.");
+                    setIsLoading(false);
+                    return;
+                }
+                
+                const surveyDoc = surveyQuerySnapshot.docs[0];
+                const surveyData = { id: surveyDoc.id, ...surveyDoc.data() } as Survey;
+
                 setSurvey(surveyData);
-    
-                // Fetch client data once survey is loaded
+                
+                // Fetch client data
                 const clientDocRef = doc(db, 'clients', surveyData.clientId);
                 const clientSnap = await getDoc(clientDocRef);
                 if (clientSnap.exists()) {
                     setClient(clientSnap.data() as Client);
                 }
-    
-                // Now that we have the correct survey and client IDs, set up responses listener
-                if (unsubResponses) {
-                    unsubResponses(); // Unsubscribe from previous listener if it exists
-                }
+
+                // Listen for responses
                 const responsesQuery = query(
                     collection(db, 'pulse_check_responses'),
                     where('surveyId', '==', surveyData.id),
                     where('clientId', '==', surveyData.clientId)
                 );
-    
+
                 unsubResponses = onSnapshot(responsesQuery, (responsesSnap) => {
                     setResponses(responsesSnap.docs.map(d => d.data() as SurveyResponse));
                     setIsLoading(false);
                 }, (error) => {
                     console.error("Error fetching responses:", error);
+                    setError("Erro ao carregar as respostas.");
                     setIsLoading(false);
                 });
-    
-            } else {
+
+            } catch (err) {
+                console.error("Error finding survey:", err);
+                setError("Ocorreu um erro ao localizar a pesquisa.");
                 setIsLoading(false);
             }
-        }, (error) => {
-            console.error("Error fetching survey:", error);
-            setIsLoading(false);
-        });
+        };
+
+        findSurveyAndListen();
     
         return () => {
             if (unsubSurvey) unsubSurvey();
             if (unsubResponses) unsubResponses();
         };
-    }, [surveyId, db]);
+    }, [publicId, db]);
     
     const getPersonalizedQuestionText = useCallback((text: string) => {
         return (client?.name && text.includes('[EMPRESA]')) ? text.replace(/\[EMPRESA\]/g, client.name) : text;
@@ -374,6 +381,24 @@ export default function SurveyResultsPage() {
         return <div className="flex items-center justify-center min-h-[60vh] w-full"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
     }
     
+    if (error) {
+        return (
+            <div className="flex h-screen items-center justify-center p-4">
+                <Card className="w-full max-w-lg text-center">
+                     <CardHeader>
+                        <CardTitle className="flex items-center justify-center gap-2 text-destructive">
+                            <AlertTriangle className="h-8 w-8" />
+                            Acesso Inválido
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-lg">{error}</p>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+    
     if (!survey || !client) {
         return <div className="flex items-center justify-center min-h-[60vh] w-full"><p>Pesquisa não encontrada.</p></div>
     }
@@ -490,3 +515,5 @@ export default function SurveyResultsPage() {
         </div>
     );
 }
+
+    
