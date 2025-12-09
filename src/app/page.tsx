@@ -33,12 +33,12 @@ const allProducts = {
 };
 
 const futureProducts = [
-    { name: 'PerformanceFlow', description: 'Avaliação de Desempenho', icon: Star },
-    { name: 'CareerPath', description: 'Plano de Cargos, Carreiras e Salários', icon: Briefcase },
-    { name: 'BonusCalc', description: 'Cálculo de PPR/PLR', icon: DollarSign },
-    { name: 'GrowthPlan', description: 'Planejamento de Desenvolvimento Individual', icon: Target },
-    { name: 'MarketPay', description: 'Serviço de Pesquisa Salarial', icon: Bot },
-    { name: 'JobDesign', description: 'Serviço de Descrição de Cargos', icon: BookText },
+    { name: 'PerformanceFlow', description: 'Avaliação de Desempenho', icon: Star, color: 'sky' },
+    { name: 'CareerPath', description: 'Plano de Cargos, Carreiras e Salários', icon: Briefcase, color: 'emerald' },
+    { name: 'BonusCalc', description: 'Cálculo de PPR/PLR', icon: DollarSign, color: 'rose' },
+    { name: 'GrowthPlan', description: 'Planejamento de Desenvolvimento Individual', icon: Target, color: 'amber' },
+    { name: 'MarketPay', description: 'Serviço de Pesquisa Salarial', icon: Bot, color: 'teal' },
+    { name: 'JobDesign', description: 'Serviço de Descrição de Cargos', icon: BookText, color: 'cyan' },
 ]
 
 type ProductKey = keyof typeof allProducts;
@@ -204,7 +204,18 @@ export default function ProductPortalPage() {
                     Próximas Soluções no Roadmap
                 </motion.h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                    {futureProducts.map((product, index) => (
+                    {futureProducts.map((product, index) => {
+                      const colors = {
+                        sky: { bg: 'bg-sky-100', text: 'text-sky-600' },
+                        emerald: { bg: 'bg-emerald-100', text: 'text-emerald-600' },
+                        rose: { bg: 'bg-rose-100', text: 'text-rose-600' },
+                        amber: { bg: 'bg-amber-100', text: 'text-amber-600' },
+                        teal: { bg: 'bg-teal-100', text: 'text-teal-600' },
+                        cyan: { bg: 'bg-cyan-100', text: 'text-cyan-600' },
+                      };
+                      const colorClass = colors[product.color as keyof typeof colors] || colors.sky;
+
+                      return (
                         <motion.div
                             key={product.name}
                             initial={{ opacity: 0, y: 20 }}
@@ -212,17 +223,17 @@ export default function ProductPortalPage() {
                             transition={{ duration: 0.5, delay: 1 + index * 0.1 }}
                         >
                             <div className="bg-white/50 border border-gray-200 rounded-2xl p-4 text-center h-full flex flex-col justify-center items-center opacity-70">
-                                <div className="h-10 w-10 rounded-full flex items-center justify-center bg-gray-200 mb-3 text-purple-500">
+                                <div className={cn("h-10 w-10 rounded-full flex items-center justify-center mb-3", colorClass.bg, colorClass.text)}>
                                     {createElement(product.icon, { className: "h-5 w-5" })}
                                 </div>
-                                <div className="flex-grow">
+                                <div className="flex-grow flex flex-col justify-center">
                                   <h4 className="text-sm font-bold text-slate-600">{product.name}</h4>
                                   <p className="text-xs text-slate-500">{product.description}</p>
                                 </div>
-                                <div className="mt-2 text-xs font-bold text-purple-500">EM BREVE</div>
+                                <div className={cn("mt-2 text-xs font-bold", colorClass.text)}>EM BREVE</div>
                             </div>
                         </motion.div>
-                    ))}
+                    )})}
                 </div>
             </div>
         </main>
