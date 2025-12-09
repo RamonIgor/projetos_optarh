@@ -419,7 +419,7 @@ export default function ClassificationPage() {
                     <div className="grid md:grid-cols-2 gap-8 flex-1">
                       {/* Coluna da Esquerda */}
                       <div className="flex flex-col space-y-6">
-                          <h2 className="text-2xl font-bold mb-2">{currentActivity.nome}</h2>
+                          <h2 className="text-xl font-bold mb-2">{currentActivity.nome}</h2>
                           <div>
                               <label className="text-lg font-semibold mb-4 block">1. Categoria</label>
                               <div className="flex flex-col gap-4">
