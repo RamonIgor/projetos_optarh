@@ -44,7 +44,7 @@ const defaultQuestions: Omit<Question, 'id' | 'createdAt' | 'createdBy'>[] = [
     {
         text: 'Avaliando as práticas de gestão de pessoas de sua liderança, em uma escala de 0 a 10, o quanto você recomendaria sua liderança como um guia eficaz para a equipe?',
         type: 'nps',
-        category: 'Liderança NPS',
+        category: 'LEADERSHIP NPS',
         order: 5,
         isMandatory: true,
         isDefault: true,

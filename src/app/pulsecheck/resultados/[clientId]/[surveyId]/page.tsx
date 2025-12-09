@@ -320,7 +320,7 @@ export default function SurveyResultsPage() {
         };
     
         const eNpsQuestion = findNpsQuestion('enps');
-        const lNpsQuestion = findNpsQuestion('liderança nps');
+        const lNpsQuestion = findNpsQuestion('leadership nps');
     
         const eNpsAnswers = eNpsQuestion ? (answersByQuestionId[eNpsQuestion.id] || []).map(a => a.answer as number) : [];
         const lNpsAnswers = lNpsQuestion ? (answersByQuestionId[lNpsQuestion.id] || []).map(a => a.answer as number) : [];
@@ -329,7 +329,7 @@ export default function SurveyResultsPage() {
         const lNpsResult = calculateNPS(lNpsAnswers);
     
         const categories = survey.questions.reduce((acc, q) => {
-            if (q.category.toLowerCase() === 'enps' || q.category.toLowerCase() === 'liderança nps' || q.category === 'DEMOGRAFIA' || q.category === 'FEEDBACK ABERTO') return acc;
+            if (q.category.toLowerCase() === 'enps' || q.category.toLowerCase() === 'leadership nps' || q.category === 'DEMOGRAFIA' || q.category === 'FEEDBACK ABERTO') return acc;
             if (!acc[q.category]) acc[q.category] = { questions: [], score: 0, status: 'bom' };
             acc[q.category].questions.push(q);
             return acc;

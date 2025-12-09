@@ -22,7 +22,7 @@ interface QuestionLibraryProps {
 const categoryOrder = [
   'DEMOGRAFIA',
   'eNPS',
-  'LEADERSHIP NPS',
+  'Liderança NPS',
   'DESENVOLVIMENTO PROFISSIONAL',
   'RECONHECIMENTO E REMUNERAÇÃO',
   'AMBIENTE DE TRABALHO',
@@ -36,10 +36,12 @@ const categoryOrder = [
 export function QuestionLibrary({ libraryQuestions, selectedQuestions, onAdd, onAddNew, onImport, onDeleteFromLibrary }: QuestionLibraryProps) {
   const groupedQuestions = useMemo(() => {
     return libraryQuestions.reduce((acc, q) => {
-      if (!acc[q.category]) {
-        acc[q.category] = [];
+      // Map "LEADERSHIP NPS" to "Liderança NPS" for display purposes
+      const displayCategory = q.category === 'LEADERSHIP NPS' ? 'Liderança NPS' : q.category;
+      if (!acc[displayCategory]) {
+        acc[displayCategory] = [];
       }
-      acc[q.category].push(q);
+      acc[displayCategory].push(q);
       return acc;
     }, {} as Record<string, Question[]>);
   }, [libraryQuestions]);
