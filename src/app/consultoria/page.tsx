@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { type ConsultancyAction, type Activity, type Client } from '@/types/activity';
+import { type ConsultancyAction, type Activity, type Client, type Suggestion } from '@/types/activity';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -23,8 +23,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, CalendarIcon, Trash2, Edit, BarChart, LineChart, FileText, CheckSquare, PieChart as PieChartIcon, Shuffle, Clock, Building, Wrench, LogOut, ArrowLeft, Settings, UserPlus, KeyRound, Workflow, BarChart2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { Loader2, PlusCircle, CalendarIcon, Trash2, Edit, BarChart, LineChart, FileText, CheckSquare, PieChart as PieChartIcon, Shuffle, Clock, Building, Wrench, LogOut, ArrowLeft, Settings, UserPlus, KeyRound, Workflow, BarChart2, Bell } from 'lucide-react';
+import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, Bar, XAxis, YAxis, CartesianGrid, ComposedChart } from 'recharts';
@@ -47,6 +47,7 @@ import { UserManagementDialog } from '@/components/UserManagementDialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { signOut } from 'firebase/auth';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 
 const CategoryChart = dynamic(() => import('@/components/CategoryChart'), {
     ssr: false,
@@ -63,6 +64,13 @@ const productsAvailable = [
     { id: 'process_flow', label: 'ProcessFlow', icon: Workflow },
     { id: 'pulse_check', label: 'PulseCheck', icon: BarChart2 },
 ]
+
+const suggestionStatusConfig: Record<Suggestion['status'], { label: string; color: string }> = {
+    new: { label: 'Novo', color: 'bg-blue-500' },
+    in_review: { label: 'Em Análise', color: 'bg-yellow-500' },
+    implemented: { label: 'Implementado', color: 'bg-green-500' },
+    declined: { label: 'Recusado', color: 'bg-gray-500' },
+}
 
 function ClientSettingsDialog({ client, onFinished }: { client: Client | null, onFinished: () => void }) {
     const db = useFirestore();
@@ -502,6 +510,7 @@ export default function ConsultancyPage() {
     
     const [actions, setActions] = useState<ConsultancyAction[]>([]);
     const [activities, setActivities] = useState<Activity[]>([]);
+    const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(false);
     const [isLoadingClients, setIsLoadingClients] = useState(true);
     const [isDeleting, startDeleteTransition] = useTransition();
@@ -523,7 +532,7 @@ export default function ConsultancyPage() {
         }
     }, [user, userLoading, router, isConsultant]);
 
-    // Effect to fetch the list of clients for consultants
+    // Effect to fetch the list of clients and suggestions for consultants
     useEffect(() => {
         if (!isConsultant || !db || !user) {
             setIsLoadingClients(false);
@@ -540,8 +549,17 @@ export default function ConsultancyPage() {
             console.error("Error fetching clients:", err);
             setIsLoadingClients(false);
         });
+        
+        const suggestionsQuery = query(collection(db, 'system_suggestions'), orderBy('createdAt', 'desc'));
+        const unsubSuggestions = onSnapshot(suggestionsQuery, (snapshot) => {
+            const suggestionsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Suggestion));
+            setSuggestions(suggestionsData);
+        });
 
-        return () => unsubClients();
+        return () => {
+          unsubClients();
+          unsubSuggestions();
+        };
     }, [db, isConsultant, user]);
 
     const handleClientAdded = useCallback((newClientId: string) => {
@@ -650,6 +668,19 @@ export default function ConsultancyPage() {
         setDialogOpen(false);
         setEditingAction(null);
     }
+    
+    const handleStatusChange = async (suggestionId: string, newStatus: Suggestion['status']) => {
+        if (!db) return;
+        const suggestionRef = doc(db, 'system_suggestions', suggestionId);
+        try {
+            await updateDoc(suggestionRef, { status: newStatus });
+            toast({ title: 'Status da sugestão atualizado!' });
+        } catch (error) {
+            toast({ title: 'Erro ao atualizar status', variant: 'destructive' });
+            console.error('Error updating suggestion status:', error);
+        }
+    };
+
 
     const actionChartData = useMemo(() => {
         const statusCounts = actions.reduce((acc, action) => {
@@ -706,6 +737,8 @@ export default function ConsultancyPage() {
         }
         return <ClientSelector clients={allClients} onClientAdded={handleClientAdded} />;
     };
+
+    const newSuggestionCount = useMemo(() => suggestions.filter(s => s.status === 'new').length, [suggestions]);
 
     const isLoadingPage = userLoading || isClientLoading;
 
@@ -790,7 +823,8 @@ export default function ConsultancyPage() {
             </Dialog>
         
             {!selectedClientId && isConsultant ? (
-                    <Card className="mt-8">
+                <div className="grid md:grid-cols-2 gap-8">
+                    <Card className="md:col-span-2">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-3 text-2xl">
                             <Building className="h-8 w-8 text-muted-foreground" />
@@ -808,6 +842,7 @@ export default function ConsultancyPage() {
                         )}
                     </CardContent>
                     </Card>
+                </div>
             ) : isLoadingData ? (
                 <div className="flex justify-center items-center h-[50vh]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
             ) : (
@@ -873,125 +908,128 @@ export default function ConsultancyPage() {
                     </StatCard>
                 </CardContent>
             </Card>
-
-                <Card>
-                <CardHeader>
-                    <CardTitle className="text-2xl">Plano de Ação da Consultoria</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <Card className="lg:col-span-1">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Status das Ações</CardTitle>
-                                <BarChart className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                {actions.length > 0 ? (
-                                <ResponsiveContainer width="100%" height={250}>
-                                    <PieChart>
-                                        <Pie data={actionChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} labelLine={false} label={({ cx, cy, midAngle, innerRadius, outerRadius, value, index }) => {
-                                            const RADIAN = Math.PI / 180;
-                                            const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                                            const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                                            const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                                            return (
-                                                <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
-                                                    {value}
-                                                </text>
-                                            );
-                                        }}>
-                                            {actionChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
-                                        </Pie>
-                                        <Tooltip />
-                                        <Legend />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                                ) : <p className="text-sm text-muted-foreground text-center pt-10">Sem dados para exibir.</p>}
-                            </CardContent>
-                        </Card>
-                        <Card className="lg:col-span-2">
-                            <CardHeader className='pb-2'>
-                                <CardTitle className="text-sm font-medium flex items-center justify-between">
-                                    <span>Análise de Desempenho (% Concluído)</span>
-                                    <LineChart className="h-4 w-4 text-muted-foreground" />
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                {actions.length > 0 ? (
-                                <ResponsiveContainer width="100%" height={250}>
-                                    <ComposedChart data={actionPerformanceData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 10 }} />
-                                        <YAxis />
-                                        <Tooltip />
-                                        <Legend />
-                                        <Bar dataKey="concluido" name="% Concluído" barSize={20} fill="#48BB78" />
-                                    </ComposedChart>
-                                </ResponsiveContainer>
-                                ) : <p className="text-sm text-muted-foreground text-center pt-10">Sem dados para exibir.</p>}
-                            </CardContent>
-                        </Card>
-                    </div>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[30%]">Ação</TableHead>
-                                <TableHead>Responsável</TableHead>
-                                <TableHead>Período</TableHead>
-                                <TableHead>% Concluído</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Ações</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {actions.length > 0 ? actions.map(action => (
-                                <TableRow key={action.id}>
-                                    <TableCell className="font-medium">{action.acao}</TableCell>
-                                    <TableCell>{action.responsavel}</TableCell>
-                                    <TableCell>
-                                        {format(action.data_inicio as Date, 'dd/MM/yy')} - {format(action.data_termino as Date, 'dd/MM/yy')}
-                                    </TableCell>
-                                    <TableCell>{action.percentual_concluido}%</TableCell>
-                                    <TableCell>
-                                        <span className={cn("px-2 py-1 text-xs rounded-full text-white", statusConfig[action.status].color)}>
-                                            {statusConfig[action.status].label}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => handleEdit(action)}>
-                                            <Edit className="h-4 w-4" />
-                                        </Button>
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" disabled={isDeleting}>
-                                                    <Trash2 className="h-4 w-4 text-red-500" />
+                <div className="grid lg:grid-cols-3 gap-8">
+                    <Card className="lg:col-span-2">
+                        <CardHeader>
+                            <CardTitle className="text-2xl">Plano de Ação da Consultoria</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[30%]">Ação</TableHead>
+                                        <TableHead>Responsável</TableHead>
+                                        <TableHead>Período</TableHead>
+                                        <TableHead>% Concluído</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead className="text-right">Ações</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {actions.length > 0 ? actions.map(action => (
+                                        <TableRow key={action.id}>
+                                            <TableCell className="font-medium">{action.acao}</TableCell>
+                                            <TableCell>{action.responsavel}</TableCell>
+                                            <TableCell>
+                                                {format(action.data_inicio as Date, 'dd/MM/yy')} - {format(action.data_termino as Date, 'dd/MM/yy')}
+                                            </TableCell>
+                                            <TableCell>{action.percentual_concluido}%</TableCell>
+                                            <TableCell>
+                                                <span className={cn("px-2 py-1 text-xs rounded-full text-white", statusConfig[action.status].color)}>
+                                                    {statusConfig[action.status].label}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="ghost" size="icon" onClick={() => handleEdit(action)}>
+                                                    <Edit className="h-4 w-4" />
                                                 </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                                                    <AlertDialogDescription>Essa ação não pode ser desfeita. Isso excluirá permanentemente a ação.</AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDelete(action.id)}>Excluir</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </TableCell>
-                                </TableRow>
-                            )) : (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center">Nenhuma ação cadastrada ainda.</TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-                </Card>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="ghost" size="icon" disabled={isDeleting}>
+                                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                                            <AlertDialogDescription>Essa ação não pode ser desfeita. Isso excluirá permanentemente a ação.</AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDelete(action.id)}>Excluir</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </TableCell>
+                                        </TableRow>
+                                    )) : (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="h-24 text-center">Nenhuma ação cadastrada ainda.</TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                    <Card className="lg:col-span-1">
+                        <CardHeader>
+                            <CardTitle className="text-2xl flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Bell className="h-6 w-6"/>
+                                    Caixa de Sugestões
+                                </div>
+                                {newSuggestionCount > 0 && (
+                                    <Badge variant="destructive" className="animate-pulse">{newSuggestionCount}</Badge>
+                                )}
+                            </CardTitle>
+                             <CardDescription>Visualize e gerencie o feedback dos usuários.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                           <ScrollArea className="h-[300px] pr-4 -mr-4">
+                                <div className="space-y-4">
+                                {suggestions.length > 0 ? suggestions.map(suggestion => (
+                                    <div key={suggestion.id} className="text-sm p-3 rounded-md border bg-muted/50">
+                                        <p className="italic">"{suggestion.text}"</p>
+                                        <p className="text-xs text-muted-foreground mt-2">
+                                            Enviado por: {suggestion.userEmail}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            Em: {format(suggestion.createdAt.toDate(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                        </p>
+                                         <div className="mt-3 flex justify-end items-center gap-2">
+                                            <Label>Status:</Label>
+                                            <Select
+                                                defaultValue={suggestion.status}
+                                                onValueChange={(value) => handleStatusChange(suggestion.id, value as Suggestion['status'])}
+                                            >
+                                                <SelectTrigger className="h-8 text-xs w-[120px]">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {Object.entries(suggestionStatusConfig).map(([key, { label }]) => (
+                                                        <SelectItem key={key} value={key} className="text-xs">
+                                                            {label}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="text-center py-10">
+                                        <p className="text-muted-foreground">Nenhuma sugestão recebida.</p>
+                                    </div>
+                                )}
+                                </div>
+                           </ScrollArea>
+                        </CardContent>
+                    </Card>
+                </div>
                 </>
             )}
         </div>
     );
 }
 
+
+    
