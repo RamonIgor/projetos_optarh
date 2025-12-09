@@ -355,7 +355,7 @@ export default function ClassificationPage() {
             <ChevronsRight className="h-4 w-4" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-[300px] p-0">
+        <SheetContent side="left" className="w-full max-w-sm p-0">
           <SheetHeader className="p-4 border-b">
             <SheetTitle>Revisão de Atividades</SheetTitle>
           </SheetHeader>
@@ -406,92 +406,96 @@ export default function ClassificationPage() {
                 className="flex-1 flex flex-col"
             >
             {currentActivity ? (
-              <Card className="shadow-lg overflow-hidden flex-1 flex flex-col">
-                 <CardHeader className="bg-muted/30 border-b p-4 md:p-6">
-                    <p className="text-lg font-semibold">{currentActivity.nome}</p>
-                </CardHeader>
-                <CardContent className="p-6 md:p-8 flex-1 flex flex-col">
-                    <div className="space-y-8 flex-1">
-                        <div>
-                            <h3 className="text-lg font-semibold mb-4">1. Categoria</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                              <CategoryButton category="DP" selected={currentCategory === 'DP'} onClick={() => setCurrentCategory('DP')} color="purple">DP</CategoryButton>
-                              <CategoryButton category="RH" selected={currentCategory === 'RH'} onClick={() => setCurrentCategory('RH')} color="green">RH</CategoryButton>
-                              <CategoryButton category="Compartilhado" selected={currentCategory === 'Compartilhado'} onClick={() => setCurrentCategory('Compartilhado')} color="blue">Compartilhado</CategoryButton>
-                            </div>
-                        </div>
-
-                        <div>
-                            <h3 className="text-lg font-semibold mb-4">2. Detalhes da Atividade</h3>
-                            <Textarea 
-                              id="justification"
-                              value={currentJustification}
-                              onChange={(e) => setCurrentJustification(e.target.value)}
-                              placeholder="Justifique por que esta atividade pertence à categoria selecionada..." 
-                              className="min-h-[100px] text-base"
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                             <div>
-                                <h3 className="text-lg font-semibold mb-4">3. Responsável</h3>
-                                <Input 
-                                  id="responsible" 
-                                  value={currentResponsible}
-                                  onChange={(e) => setCurrentResponsible(e.target.value)}
-                                  placeholder="Nome do responsável" 
-                                  className="text-base h-11" />
+              <div className="flex-1 flex flex-col gap-6">
+                <Card>
+                    <CardHeader>
+                        <p className="text-lg font-semibold">{currentActivity.nome}</p>
+                    </CardHeader>
+                </Card>
+                <Card className="shadow-lg overflow-hidden flex-1 flex flex-col">
+                  <CardContent className="p-6 md:p-8 flex-1 flex flex-col">
+                      <div className="space-y-8 flex-1">
+                          <div>
+                              <h3 className="text-lg font-semibold mb-4">1. Categoria</h3>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <CategoryButton category="DP" selected={currentCategory === 'DP'} onClick={() => setCurrentCategory('DP')} color="purple">DP</CategoryButton>
+                                <CategoryButton category="RH" selected={currentCategory === 'RH'} onClick={() => setCurrentCategory('RH')} color="green">RH</CategoryButton>
+                                <CategoryButton category="Compartilhado" selected={currentCategory === 'Compartilhado'} onClick={() => setCurrentCategory('Compartilhado')} color="blue">Compartilhado</CategoryButton>
                               </div>
-                              <div>
-                                <h3 className="text-lg font-semibold mb-4">4. Recorrência</h3>
-                                <Select value={currentRecurrence || ''} onValueChange={(value) => setCurrentRecurrence(value as any)}>
-                                  <SelectTrigger className="text-base h-11" id="recurrence">
-                                    <SelectValue placeholder="Selecione a frequência" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="Diária">Diária</SelectItem>
-                                    <SelectItem value="Semanal">Semanal</SelectItem>
-                                    <SelectItem value="Mensal">Mensal</SelectItem>
-                                    <SelectItem value="Trimestral">Trimestral</SelectItem>
-                                    <SelectItem value="Anual">Anual</SelectItem>
-                                    <SelectItem value="Sob demanda">Sob demanda</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                        </div>
-                         <div className="pt-2">
-                              <CommentSheet 
-                                  activity={currentActivity}
-                                  newComment={newComment}
-                                  setNewComment={setNewComment}
-                                  onAddComment={handleAddComment}
-                                  isSaving={isSaving}
+                          </div>
+
+                          <div>
+                              <h3 className="text-lg font-semibold mb-4">2. Detalhes da Atividade</h3>
+                              <Textarea 
+                                id="justification"
+                                value={currentJustification}
+                                onChange={(e) => setCurrentJustification(e.target.value)}
+                                placeholder="Justifique por que esta atividade pertence à categoria selecionada..." 
+                                className="min-h-[100px] text-base"
                               />
                           </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div>
+                                  <h3 className="text-lg font-semibold mb-4">3. Responsável</h3>
+                                  <Input 
+                                    id="responsible" 
+                                    value={currentResponsible}
+                                    onChange={(e) => setCurrentResponsible(e.target.value)}
+                                    placeholder="Nome do responsável" 
+                                    className="text-base h-11" />
+                                </div>
+                                <div>
+                                  <h3 className="text-lg font-semibold mb-4">4. Recorrência</h3>
+                                  <Select value={currentRecurrence || ''} onValueChange={(value) => setCurrentRecurrence(value as any)}>
+                                    <SelectTrigger className="text-base h-11" id="recurrence">
+                                      <SelectValue placeholder="Selecione a frequência" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Diária">Diária</SelectItem>
+                                      <SelectItem value="Semanal">Semanal</SelectItem>
+                                      <SelectItem value="Mensal">Mensal</SelectItem>
+                                      <SelectItem value="Trimestral">Trimestral</SelectItem>
+                                      <SelectItem value="Anual">Anual</SelectItem>
+                                      <SelectItem value="Sob demanda">Sob demanda</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                          </div>
+                          <div className="pt-2">
+                                <CommentSheet 
+                                    activity={currentActivity}
+                                    newComment={newComment}
+                                    setNewComment={setNewComment}
+                                    onAddComment={handleAddComment}
+                                    isSaving={isSaving}
+                                />
+                            </div>
+                      </div>
+
+
+                      <div className="mt-10 pt-6 border-t flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div>
+                            {currentActivity.status !== 'brainstorm' && (
+                                <Button variant="outline" onClick={handleRevertToBrainstorm} disabled={isSaving}>
+                                  <RotateCcw className="mr-2 h-4 w-4"/> Reverter
+                                </Button>
+                            )}
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-4">
+                          <Button onClick={() => handleSaveAndSelectNext()} disabled={isSaving}>
+                              Salvar e Próximo
+                            </Button>
+                          <Button onClick={handleApprove} disabled={isApproveDisabled || isSaving} className="bg-green-600 hover:bg-green-700">
+                            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Check className="mr-2 h-4 w-4"/>}
+                            Aprovar Atividade
+                          </Button>
+                        </div>
                     </div>
 
-
-                    <div className="mt-10 pt-6 border-t flex flex-col sm:flex-row justify-between items-center gap-4">
-                      <div>
-                          {currentActivity.status !== 'brainstorm' && (
-                              <Button variant="outline" onClick={handleRevertToBrainstorm} disabled={isSaving}>
-                                <RotateCcw className="mr-2 h-4 w-4"/> Reverter
-                              </Button>
-                          )}
-                      </div>
-                      <div className="flex flex-col sm:flex-row gap-4">
-                        <Button onClick={() => handleSaveAndSelectNext()} disabled={isSaving}>
-                            Salvar e Próximo
-                          </Button>
-                        <Button onClick={handleApprove} disabled={isApproveDisabled || isSaving} className="bg-green-600 hover:bg-green-700">
-                          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Check className="mr-2 h-4 w-4"/>}
-                          Aprovar Atividade
-                        </Button>
-                      </div>
-                  </div>
-
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </div>
             ) : (
               <div className="text-center py-20 flex-1 flex flex-col items-center justify-center bg-muted/50 rounded-lg border-2 border-dashed">
                   {isLoading ? (
@@ -563,7 +567,7 @@ function CommentSheet({activity, newComment, setNewComment, onAddComment, isSavi
                     Ver / Adicionar Comentários ({activity.comentarios?.length || 0})
                 </Button>
             </SheetTrigger>
-            <SheetContent>
+            <SheetContent className="sm:max-w-md">
                 <SheetHeader>
                 <SheetTitle>Comentários sobre: {activity.nome}</SheetTitle>
                 </SheetHeader>
