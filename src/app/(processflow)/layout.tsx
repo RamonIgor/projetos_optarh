@@ -44,7 +44,7 @@ const ProcessFlowNav = () => {
 
   const navItems = [
     { href: '/processflow/brainstorm', label: 'Brainstorm', icon: ListTodo },
-    { href: '/processflow/classificacao', label: 'Classificação', icon: LayoutGrid, count: unclassifiedCount, disabled: unclassifiedCount === 0 },
+    { href: '/processflow/classificacao', label: 'Classificação', icon: LayoutGrid, count: unclassifiedCount, disabled: !hasActivities && unclassifiedCount === 0 },
     { href: '/processflow/transicao', label: 'Transição', icon: Shuffle, disabled: !hasActivities },
     { href: '/processflow/operacional', label: 'Operacional', icon: PlayCircle, disabled: !hasActivities },
     { href: '/processflow/dashboard', label: 'Dashboard', icon: BarChart3, disabled: !hasActivities },
