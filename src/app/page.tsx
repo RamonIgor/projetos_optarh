@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, createElement } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase/auth/use-user';
 import { useClient } from '@/firebase/auth/use-client';
@@ -33,12 +33,12 @@ const allProducts = {
 };
 
 const futureProducts = [
-    { name: 'PerformanceFlow', description: 'Avaliação de Desempenho', icon: <Star /> },
-    { name: 'CareerPath', description: 'Plano de Cargos, Carreiras e Salários', icon: <Briefcase /> },
-    { name: 'BonusCalc', description: 'Cálculo de PPR/PLR', icon: <DollarSign /> },
-    { name: 'GrowthPlan', description: 'Planejamento de Desenvolvimento Individual', icon: <Target /> },
-    { name: 'MarketPay', description: 'Serviço de Pesquisa Salarial', icon: <Bot /> },
-    { name: 'JobDesign', description: 'Serviço de Descrição de Cargos', icon: <BookText /> },
+    { name: 'PerformanceFlow', description: 'Avaliação de Desempenho', icon: Star },
+    { name: 'CareerPath', description: 'Plano de Cargos, Carreiras e Salários', icon: Briefcase },
+    { name: 'BonusCalc', description: 'Cálculo de PPR/PLR', icon: DollarSign },
+    { name: 'GrowthPlan', description: 'Planejamento de Desenvolvimento Individual', icon: Target },
+    { name: 'MarketPay', description: 'Serviço de Pesquisa Salarial', icon: Bot },
+    { name: 'JobDesign', description: 'Serviço de Descrição de Cargos', icon: BookText },
 ]
 
 type ProductKey = keyof typeof allProducts;
@@ -213,7 +213,7 @@ export default function ProductPortalPage() {
                         >
                             <div className="bg-white/50 border border-gray-200 rounded-2xl p-4 text-center h-full flex flex-col justify-center items-center opacity-70">
                                 <div className="h-10 w-10 rounded-full flex items-center justify-center bg-gray-200 mb-3 text-gray-500">
-                                    {product.icon}
+                                    {createElement(product.icon)}
                                 </div>
                                 <h4 className="text-sm font-bold text-slate-600">{product.name}</h4>
                                 <p className="text-xs text-slate-500">{product.description}</p>
