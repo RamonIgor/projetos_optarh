@@ -1,10 +1,16 @@
 "use client";
 
 import { motion } from 'framer-motion';
-import { CheckCircle2 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { CheckCircle2, X } from 'lucide-react';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 export function ThankYouScreen() {
+
+    const handleClose = () => {
+        window.close();
+    }
+
     return (
         <div className="flex h-full flex-col items-center justify-center p-4">
              <motion.div
@@ -33,6 +39,12 @@ export function ThankYouScreen() {
                             Sua opinião é muito importante para nós e ajuda a construir um ambiente de trabalho cada vez melhor.
                         </p>
                     </CardContent>
+                    <CardFooter className="bg-muted/50 p-4 justify-center">
+                        <Button onClick={handleClose}>
+                            <X className="mr-2 h-4 w-4" />
+                            Fechar
+                        </Button>
+                    </CardFooter>
                 </Card>
              </motion.div>
         </div>
