@@ -39,7 +39,7 @@ const futureProducts = [
     { name: 'BonusCalc', description: 'Cálculo de PPR/PLR', icon: DollarSign, color: 'rose' },
     { name: 'MyCompass', description: 'Planejamento de Desenvolvimento Individual', icon: Target, color: 'amber' },
     { name: 'PayBenchmark', description: 'Serviço de Pesquisa Salarial', icon: Bot, color: 'teal' },
-    { name: 'JobDesign', description: 'Serviço de Descrição de Cargos', icon: BookText, color: 'cyan' },
+    { name: 'RoleBlueprint', description: 'Serviço de Descrição de Cargos', icon: BookText, color: 'cyan' },
 ]
 
 type ProductKey = keyof typeof allProducts;
