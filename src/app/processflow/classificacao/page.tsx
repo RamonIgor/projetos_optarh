@@ -204,38 +204,38 @@ export default function ClassificationPage() {
     return (
       <>
         <div className="md:col-span-1">
-            <Card>
-                <CardHeader className="p-3">
-                    <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="pendentes">Pendentes ({pendingActivities.length})</TabsTrigger>
-                            <TabsTrigger value="aprovadas">Aprovadas ({approvedActivities.length})</TabsTrigger>
-                        </TabsList>
-                    </Tabs>
-                </CardHeader>
-                <CardContent className="p-3">
-                    <TabsContent value="pendentes">
-                        <ActivityList 
-                          title="Pendentes"
-                          activities={pendingActivities} 
-                          selectedActivityId={selectedActivityId} 
-                          onSelectActivity={setSelectedActivityId} 
-                          allActivities={allActivities}
-                          emptyMessage="Nenhuma atividade pendente!"
-                        />
-                    </TabsContent>
-                    <TabsContent value="aprovadas">
-                        <ActivityList 
-                          title="Aprovadas"
-                          activities={approvedActivities} 
-                          selectedActivityId={selectedActivityId} 
-                          onSelectActivity={setSelectedActivityId} 
-                          allActivities={allActivities}
-                          emptyMessage="Nenhuma atividade aprovada ainda."
-                        />
-                    </TabsContent>
-                </CardContent>
-            </Card>
+          <Card>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <CardHeader className="p-3">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="pendentes">Pendentes ({pendingActivities.length})</TabsTrigger>
+                    <TabsTrigger value="aprovadas">Aprovadas ({approvedActivities.length})</TabsTrigger>
+                  </TabsList>
+              </CardHeader>
+              <CardContent className="p-3">
+                <TabsContent value="pendentes">
+                  <ActivityList
+                    title="Pendentes"
+                    activities={pendingActivities}
+                    selectedActivityId={selectedActivityId}
+                    onSelectActivity={setSelectedActivityId}
+                    allActivities={allActivities}
+                    emptyMessage="Nenhuma atividade pendente!"
+                  />
+                </TabsContent>
+                <TabsContent value="aprovadas">
+                  <ActivityList
+                    title="Aprovadas"
+                    activities={approvedActivities}
+                    selectedActivityId={selectedActivityId}
+                    onSelectActivity={setSelectedActivityId}
+                    allActivities={allActivities}
+                    emptyMessage="Nenhuma atividade aprovada ainda."
+                  />
+                </TabsContent>
+              </CardContent>
+            </Tabs>
+          </Card>
         </div>
 
         <div className="md:col-span-2">
@@ -358,5 +358,3 @@ export default function ClassificationPage() {
     </div>
   );
 }
-
-    
