@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, CheckCircle, RotateCcw, AlertTriangle, Info, ListChecks, Building, User, Users } from 'lucide-react';
+import { Loader2, CheckCircle, RotateCcw, AlertTriangle, Info, ListChecks, Building, User, Users, Undo2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -152,10 +152,10 @@ export default function ClassificationPage() {
     }
   }, [activeActivity]);
 
-  const handleUpdate = async (newStatus: 'aguardando_consenso' | 'aprovada') => {
+  const handleUpdate = async (newStatus: 'aguardando_consenso' | 'aprovada' | 'brainstorm') => {
     if (!activeActivity || !clientId) return;
 
-    if (!categoria || !justificativa || !responsavel || !recorrencia) {
+    if (newStatus !== 'brainstorm' && (!categoria || !justificativa || !responsavel || !recorrencia)) {
       toast({
         title: "Campos obrigatórios",
         description: "Categoria, justificativa, responsável e recorrência são necessários para avançar.",
@@ -174,18 +174,24 @@ export default function ClassificationPage() {
         responsavel,
         recorrencia: recorrencia as Activity['recorrencia'],
         status: newStatus,
+        dataAprovacao: newStatus === 'aprovada' ? serverTimestamp() : null,
       };
-
-      if (newStatus === 'aprovada') {
-        updateData.dataAprovacao = serverTimestamp();
-      }
 
       await updateDoc(docRef, updateData);
 
+      let toastTitle = '';
+      if(newStatus === 'aprovada') toastTitle = 'Atividade Aprovada!';
+      else if (newStatus === 'aguardando_consenso') toastTitle = 'Atividade Salva!';
+      else if (newStatus === 'brainstorm') toastTitle = 'Atividade Revertida!';
+
       toast({
-        title: `Atividade ${newStatus === 'aprovada' ? 'Aprovada' : 'Salva'}!`,
+        title: toastTitle,
         description: `"${getActivityName(activeActivity, allActivities)}" foi atualizada com sucesso.`
       });
+      
+      if(newStatus === 'brainstorm'){
+          setActiveTab('pendentes');
+      }
 
     } catch (error) {
       console.error("Error updating activity:", error);
@@ -320,19 +326,28 @@ export default function ClassificationPage() {
                     {activeActivity.status === 'aprovada' && (
                         <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
                             <h4 className="font-semibold text-green-800 flex items-center gap-2"><CheckCircle className="h-5 w-5"/>Atividade Aprovada</h4>
-                            <p className="text-sm text-green-700 mt-1">Esta atividade já foi aprovada. As alterações aqui serão salvas, mas não mudarão o status.</p>
+                            <p className="text-sm text-green-700 mt-1">Esta atividade já foi aprovada. As alterações aqui serão salvas, mas não mudarão o status. Para reclassificar, reverta para brainstorm.</p>
                         </div>
                     )}
                     
                     <div className="border-t pt-6 flex flex-col sm:flex-row justify-end items-center gap-4">
-                        <Button variant="outline" size="lg" onClick={() => handleUpdate('aguardando_consenso')} disabled={isSaving || activeActivity.status === 'aprovada'}>
-                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RotateCcw className="mr-2 h-4 w-4"/>}
-                        Salvar e Mover para Consenso
-                        </Button>
-                        <Button size="lg" onClick={() => handleUpdate('aprovada')} disabled={isSaving}>
-                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4"/>}
-                        Aprovar Atividade
-                        </Button>
+                        {activeActivity.status === 'aprovada' ? (
+                            <Button variant="destructive" size="lg" onClick={() => handleUpdate('brainstorm')} disabled={isSaving}>
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Undo2 className="mr-2 h-4 w-4"/>}
+                                Reverter para Brainstorm
+                            </Button>
+                        ) : (
+                            <>
+                                <Button variant="outline" size="lg" onClick={() => handleUpdate('aguardando_consenso')} disabled={isSaving}>
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RotateCcw className="mr-2 h-4 w-4"/>}
+                                Salvar e Mover para Consenso
+                                </Button>
+                                <Button size="lg" onClick={() => handleUpdate('aprovada')} disabled={isSaving}>
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4"/>}
+                                Aprovar Atividade
+                                </Button>
+                            </>
+                        )}
                     </div>
                 </CardContent>
                 </Card>
@@ -358,3 +373,5 @@ export default function ClassificationPage() {
     </div>
   );
 }
+
+    
