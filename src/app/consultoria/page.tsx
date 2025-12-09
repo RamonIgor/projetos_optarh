@@ -11,7 +11,7 @@ import * as z from 'zod';
 import { type ConsultancyAction, type Activity, type Client, type Suggestion } from '@/types/activity';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -912,62 +912,124 @@ export default function ConsultancyPage() {
                         <CardHeader>
                             <CardTitle className="text-2xl">Plano de Ação da Consultoria</CardTitle>
                         </CardHeader>
-                        <CardContent className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-[30%] min-w-[200px]">Ação</TableHead>
-                                        <TableHead>Responsável</TableHead>
-                                        <TableHead>Período</TableHead>
-                                        <TableHead>% Concluído</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-right">Ações</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {actions.length > 0 ? actions.map(action => (
-                                        <TableRow key={action.id}>
-                                            <TableCell className="font-medium">{action.acao}</TableCell>
-                                            <TableCell>{action.responsavel}</TableCell>
-                                            <TableCell>
-                                                {format(action.data_inicio as Date, 'dd/MM/yy')} - {format(action.data_termino as Date, 'dd/MM/yy')}
-                                            </TableCell>
-                                            <TableCell>{action.percentual_concluido}%</TableCell>
-                                            <TableCell>
-                                                <span className={cn("px-2 py-1 text-xs rounded-full text-white", statusConfig[action.status].color)}>
-                                                    {statusConfig[action.status].label}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <Button variant="ghost" size="icon" onClick={() => handleEdit(action)}>
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button variant="ghost" size="icon" disabled={isDeleting}>
-                                                            <Trash2 className="h-4 w-4 text-red-500" />
-                                                        </Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                                                            <AlertDialogDescription>Essa ação não pode ser desfeita. Isso excluirá permanentemente a ação.</AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => handleDelete(action.id)}>Excluir</AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </TableCell>
-                                        </TableRow>
-                                    )) : (
+                        <CardContent>
+                            {/* Desktop Table */}
+                            <div className="hidden md:block">
+                                <Table>
+                                    <TableHeader>
                                         <TableRow>
-                                            <TableCell colSpan={6} className="h-24 text-center">Nenhuma ação cadastrada ainda.</TableCell>
+                                            <TableHead className="w-[30%] min-w-[200px]">Ação</TableHead>
+                                            <TableHead>Responsável</TableHead>
+                                            <TableHead>Período</TableHead>
+                                            <TableHead>% Concluído</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead className="text-right">Ações</TableHead>
                                         </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {actions.length > 0 ? actions.map(action => (
+                                            <TableRow key={action.id}>
+                                                <TableCell className="font-medium">{action.acao}</TableCell>
+                                                <TableCell>{action.responsavel}</TableCell>
+                                                <TableCell>
+                                                    {format(action.data_inicio as Date, 'dd/MM/yy')} - {format(action.data_termino as Date, 'dd/MM/yy')}
+                                                </TableCell>
+                                                <TableCell>{action.percentual_concluido}%</TableCell>
+                                                <TableCell>
+                                                    <span className={cn("px-2 py-1 text-xs rounded-full text-white", statusConfig[action.status].color)}>
+                                                        {statusConfig[action.status].label}
+                                                    </span>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button variant="ghost" size="icon" onClick={() => handleEdit(action)}>
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="ghost" size="icon" disabled={isDeleting}>
+                                                                <Trash2 className="h-4 w-4 text-red-500" />
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                                                <AlertDialogDescription>Essa ação não pode ser desfeita. Isso excluirá permanentemente a ação.</AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleDelete(action.id)}>Excluir</AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                </TableCell>
+                                            </TableRow>
+                                        )) : (
+                                            <TableRow>
+                                                <TableCell colSpan={6} className="h-24 text-center">Nenhuma ação cadastrada ainda.</TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            {/* Mobile Card List */}
+                            <div className="md:hidden space-y-4">
+                                {actions.length > 0 ? actions.map(action => (
+                                    <Card key={action.id} className="bg-muted/50">
+                                        <CardHeader>
+                                            <CardTitle>{action.acao}</CardTitle>
+                                            <div className="flex items-center gap-2 pt-2">
+                                                 <Badge variant="outline" className={cn(statusConfig[action.status].color, "text-white whitespace-nowrap")}>
+                                                    {statusConfig[action.status].label}
+                                                </Badge>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent className="space-y-3 text-sm">
+                                            <div>
+                                                <Label className="text-xs font-semibold">Responsável</Label>
+                                                <p className="font-medium">{action.responsavel}</p>
+                                            </div>
+                                            <div>
+                                                <Label className="text-xs font-semibold">Período</Label>
+                                                <p>{format(action.data_inicio as Date, 'dd/MM/yy')} - {format(action.data_termino as Date, 'dd/MM/yy')}</p>
+                                            </div>
+                                            <div>
+                                                <Label className="text-xs font-semibold">Progresso</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <Progress value={action.percentual_concluido} className="w-full h-2" />
+                                                    <span className="font-semibold">{action.percentual_concluido}%</span>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                        <CardFooter>
+                                            <Button variant="outline" size="sm" onClick={() => handleEdit(action)} className="w-full">
+                                                <Edit className="h-4 w-4 mr-2" />
+                                                Editar
+                                            </Button>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" disabled={isDeleting} className="text-red-500">
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                                        <AlertDialogDescription>Essa ação não pode ser desfeita. Isso excluirá permanentemente a ação.</AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDelete(action.id)}>Excluir</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </CardFooter>
+                                    </Card>
+                                )) : (
+                                     <div className="text-center py-16">
+                                        <p className="text-muted-foreground">Nenhuma ação cadastrada ainda.</p>
+                                    </div>
+                                )}
+                            </div>
                         </CardContent>
                     </Card>
                     <Card className="lg:col-span-1">
@@ -1029,5 +1091,3 @@ export default function ConsultancyPage() {
         </div>
     );
 }
-
-    
