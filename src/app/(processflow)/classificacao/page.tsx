@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -8,7 +7,7 @@ import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
 import { type Activity, type ActivityComment } from '@/types/activity';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle as UiCardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -23,7 +22,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -328,8 +327,6 @@ export default function ClassificationPage() {
     setCurrentActivityId(id);
   }
   
-  const unclassifiedCount = useMemo(() => allActivities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [allActivities]);
-
   if (isLoadingPage || (isLoading && allActivities.length === 0)) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] w-full">
@@ -410,8 +407,8 @@ export default function ClassificationPage() {
             >
             {currentActivity ? (
               <Card className="shadow-lg overflow-hidden flex-1 flex flex-col">
-                <CardHeader className="bg-muted/30 border-b p-4 md:p-6">
-                    <UiCardTitle className="text-2xl font-bold">{currentActivity.nome}</UiCardTitle>
+                 <CardHeader className="bg-muted/30 border-b p-4 md:p-6">
+                    <h2 className="text-xl font-bold">{currentActivity.nome}</h2>
                 </CardHeader>
                 <CardContent className="p-6 md:p-8 flex-1 flex flex-col">
                   <div className="grid md:grid-cols-2 gap-x-8 gap-y-10 flex-1">
@@ -615,5 +612,3 @@ function CommentSheet({activity, newComment, setNewComment, onAddComment, isSavi
         </Sheet>
     )
 }
-
-    
