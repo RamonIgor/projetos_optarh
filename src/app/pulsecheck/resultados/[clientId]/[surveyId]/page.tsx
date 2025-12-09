@@ -5,7 +5,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, onSnapshot, Timestamp, getDocs } from 'firebase/firestore';
-import { useFirestore, useClient } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { type Survey, type Response as SurveyResponse, type SelectedQuestion, type Answer, type Client } from '@/types/activity';
 import { Loader2, ArrowLeft, Download, Users, TrendingUp, MessageSquare, ListTree, Target, Clock, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -200,41 +200,48 @@ export default function SurveyResultsPage() {
             return;
         }
 
-        let unsubSurvey: (() => void) | null = null;
-        let unsubResponses: (() => void) | null = null;
-        let unsubClient: (() => void) | null = null;
-        
+        let unsubSurvey: (() => void) | undefined;
+        let unsubResponses: (() => void) | undefined;
+        let unsubClient: (() => void) | undefined;
+
         const loadInitialData = async () => {
-             setIsLoading(true);
+            setIsLoading(true);
             try {
-                // Fetch Survey first
+                // Fetch Survey first to get the correct clientId for responses
                 const surveyDocRef = doc(db, 'clients', clientId as string, 'surveys', surveyId as string);
-                unsubSurvey = onSnapshot(surveyDocRef, (surveySnap) => {
-                    if (surveySnap.exists()) {
-                         const surveyData = { id: surveySnap.id, ...surveySnap.data() } as Survey;
-                        setSurvey(surveyData);
+                const surveySnap = await getDoc(surveyDocRef);
 
-                        // Listen for Responses, now that we have a valid survey
-                        const responsesQuery = query(
-                            collection(db, 'pulse_check_responses'),
-                            where('surveyId', '==', surveyId)
-                        );
-                        unsubResponses = onSnapshot(responsesQuery, (responsesSnap) => {
-                            setResponses(responsesSnap.docs.map(d => d.data() as SurveyResponse));
-                        });
+                if (!surveySnap.exists()) {
+                    setError("Pesquisa não encontrada.");
+                    setIsLoading(false);
+                    return;
+                }
+                
+                const surveyData = { id: surveySnap.id, ...surveySnap.data() } as Survey;
+                setSurvey(surveyData);
 
-                    } else {
-                        setError("Pesquisa não encontrada.");
-                        setIsLoading(false);
+                // Now listen for changes with the correct survey data
+                unsubSurvey = onSnapshot(surveyDocRef, (snap) => {
+                    if (snap.exists()) {
+                        setSurvey({ id: snap.id, ...snap.data() } as Survey);
                     }
                 });
 
-                // Listen for Client
-                const clientDocRef = doc(db, 'clients', clientId as string);
-                unsubClient = onSnapshot(clientDocRef, (clientSnap) => {
+                // Fetch Client
+                const clientDocRef = doc(db, 'clients', surveyData.clientId);
+                 unsubClient = onSnapshot(clientDocRef, (clientSnap) => {
                     if (clientSnap.exists()) {
                         setClient({ id: clientSnap.id, ...clientSnap.data() } as Client);
                     }
+                });
+
+                // Fetch Responses
+                const responsesQuery = query(
+                    collection(db, 'pulse_check_responses'),
+                    where('surveyId', '==', surveyId)
+                );
+                 unsubResponses = onSnapshot(responsesQuery, (responsesSnap) => {
+                    setResponses(responsesSnap.docs.map(d => d.data() as SurveyResponse));
                 });
                 
             } catch(err) {
