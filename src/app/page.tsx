@@ -37,8 +37,8 @@ const futureProducts = [
     { name: 'PerformanceTrack', description: 'Avaliação de Desempenho', icon: Star, color: 'sky' },
     { name: 'CareerPath', description: 'Plano de Cargos, Carreiras e Salários', icon: Briefcase, color: 'emerald' },
     { name: 'BonusCalc', description: 'Cálculo de PPR/PLR', icon: DollarSign, color: 'rose' },
-    { name: 'GrowthPlan', description: 'Planejamento de Desenvolvimento Individual', icon: Target, color: 'amber' },
-    { name: 'MarketPay', description: 'Serviço de Pesquisa Salarial', icon: Bot, color: 'teal' },
+    { name: 'MyCompass', description: 'Planejamento de Desenvolvimento Individual', icon: Target, color: 'amber' },
+    { name: 'PayBenchmark', description: 'Serviço de Pesquisa Salarial', icon: Bot, color: 'teal' },
     { name: 'JobDesign', description: 'Serviço de Descrição de Cargos', icon: BookText, color: 'cyan' },
 ]
 
