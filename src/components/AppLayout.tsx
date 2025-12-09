@@ -27,6 +27,8 @@ import Image from 'next/image';
 import {
   Sheet,
   SheetContent,
+  SheetHeader,
+  SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useState, useMemo, useEffect } from 'react';
@@ -256,11 +258,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-full max-w-xs p-0">
+                <SheetHeader className="p-4 border-b">
+                    <SheetTitle>
+                        <Link href="/" onClick={() => setMobileMenuOpen(false)}>
+                            <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} className="cursor-pointer" unoptimized/>
+                        </Link>
+                    </SheetTitle>
+                </SheetHeader>
                 <div className="p-4">
-                  <Link href="/" onClick={() => setMobileMenuOpen(false)}>
-                    <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} className="cursor-pointer mb-8" unoptimized/>
-                  </Link>
-                  
                   <div className="flex flex-col gap-2" onClick={() => setMobileMenuOpen(false)}>
                        <ProcessFlowNav />
                        <PulseCheckNav />
