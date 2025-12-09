@@ -6,7 +6,6 @@ import { useFirestore, useClient } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
 import { type Activity } from '@/types/activity';
-import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -225,7 +224,6 @@ export default function TransitionPage() {
         return activity.nome;
     };
     
-    const unclassifiedCount = 0; // On this page, all are classified/approved.
     const allResponsibles = useMemo(() => Array.from(new Set(allActivities.map(a => a.responsavel).filter(Boolean))), [allActivities]);
 
     const filteredActivities = useMemo(() => {
@@ -249,149 +247,143 @@ export default function TransitionPage() {
     
     if (isLoadingPage || isLoading) {
         return (
-            <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
-                <div className="flex items-center justify-center min-h-[60vh] w-full">
-                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                </div>
-            </AppLayout>
+            <div className="flex items-center justify-center min-h-[60vh] w-full">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
         );
     }
     
     if (allActivities.length === 0 && !isClientLoading) {
         return (
-           <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={false}>
-            <div className="text-center py-20">
-              <h1 className="mt-4 text-3xl font-bold">Nenhuma atividade aprovada</h1>
-              <p className="mt-2 text-lg text-muted-foreground">Classifique e aprove atividades para iniciar o plano de transição.</p>
-              <Button onClick={() => router.push('/processflow/classificacao')} className="mt-6">
-                Ir para Classificação
-              </Button>
-            </div>
-          </AppLayout>
+           <div className="text-center py-20 flex-1">
+            <h1 className="mt-4 text-3xl font-bold">Nenhuma atividade aprovada</h1>
+            <p className="mt-2 text-lg text-muted-foreground">Classifique e aprove atividades para iniciar o plano de transição.</p>
+            <Button onClick={() => router.push('/processflow/classificacao')} className="mt-6">
+              Ir para Classificação
+            </Button>
+          </div>
         )
     }
 
     return (
-        <AppLayout unclassifiedCount={unclassifiedCount} hasActivities={allActivities.length > 0}>
-          <div className="max-w-7xl mx-auto w-full">
-            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">Plano de Transição</h1>
-                <p className="mt-4 text-lg text-muted-foreground">Acompanhe a transferência de responsabilidades das atividades aprovadas.</p>
-            </motion.div>
-            
-             <div className="my-8">
-                <Progress value={stats.progress} />
-                <p className="text-right text-sm text-muted-foreground mt-2">{Math.round(stats.progress)}% das transições concluídas</p>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-8">
-                <StatCard title="Atividades no Plano" value={stats.total} icon={<Shuffle className="h-6 w-6 text-muted-foreground" />} />
-                <StatCard title="Aguardando Transição" value={stats.toTransfer} icon={<Clock className="h-6 w-6 text-gray-500" />} />
-                <StatCard title="Em Transição" value={stats.inTransition} icon={<PlayCircle className="h-6 w-6 text-yellow-500" />} />
-                <StatCard title="Concluídas" value={stats.concluded} icon={<CheckCircle2 className="h-6 w-6 text-green-500" />} />
-                <StatCard title="Atrasadas" value={stats.overdue} icon={<AlertCircle className="h-6 w-6 text-red-500" />} />
-            </div>
-
-            <Card>
-                <CardHeader>
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                            <SelectTrigger className="w-full sm:w-[200px]">
-                                <SelectValue placeholder="Filtrar por categoria" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todas as Categorias</SelectItem>
-                                <SelectItem value="DP">DP</SelectItem>
-                                <SelectItem value="RH">RH</SelectItem>
-                                <SelectItem value="Compartilhado">Compartilhado</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="w-full sm:w-[200px]">
-                                <SelectValue placeholder="Filtrar por status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos os Status</SelectItem>
-                                {Object.entries(transitionStatusConfig).map(([key, config]) => (
-                                    (key !== 'undefined') && <SelectItem key={key} value={key}>{config.label}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <Select value={responsibleFilter} onValueChange={setResponsibleFilter}>
-                            <SelectTrigger className="w-full sm:w-[200px]">
-                                <SelectValue placeholder="Filtrar por responsável" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos os Responsáveis</SelectItem>
-                                {allResponsibles.map(r => <SelectItem key={r} value={r!}>{r}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[30%]">Atividade</TableHead>
-                                <TableHead>Categoria</TableHead>
-                                <TableHead>Responsáveis</TableHead>
-                                <TableHead>Prazo</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Ações</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredActivities.length > 0 ? filteredActivities.map(activity => {
-                                const statusConfig = transitionStatusConfig[activity.statusTransicao] || transitionStatusConfig.undefined;
-                                const categoryStyles = {
-                                    DP: 'bg-purple-100 text-purple-800 border-purple-200',
-                                    RH: 'bg-green-100 text-green-800 border-green-200',
-                                    Compartilhado: 'bg-blue-100 text-blue-800 border-blue-200',
-                                };
-                                return (
-                                <TableRow key={activity.id}>
-                                    <TableCell className="font-medium">{getActivityName(activity, allActivities)}</TableCell>
-                                    <TableCell>
-                                         <Badge variant="outline" className={cn(activity.categoria ? categoryStyles[activity.categoria as keyof typeof categoryStyles] : '')}>
-                                            {activity.categoria}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex flex-col">
-                                            <span className="font-semibold">{activity.responsavel}</span>
-                                            {activity.responsavelAnterior && <span className="text-xs text-muted-foreground">de: {activity.responsavelAnterior}</span>}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        {activity.prazoTransicao ? format((activity.prazoTransicao as any).toDate(), 'dd/MM/yyyy') : <span className="text-muted-foreground">-</span>}
-                                        {activity.prazoTransicao && isPast((activity.prazoTransicao as any).toDate()) && activity.statusTransicao !== 'concluida' && (
-                                            <p className="text-xs text-red-500">Atrasado</p>
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant="outline" className={cn(statusConfig.color, "whitespace-nowrap")}>
-                                            {statusConfig.label}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <EditTransitionModal activity={activity}>
-                                            <Button size="sm" variant="ghost">
-                                                <Edit className="h-4 w-4 mr-2" />
-                                                Editar
-                                            </Button>
-                                        </EditTransitionModal>
-                                    </TableCell>
-                                </TableRow>
-                            )}) : (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center">Nenhuma atividade encontrada com os filtros selecionados.</TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+        <div className="max-w-7xl mx-auto w-full">
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+              <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">Plano de Transição</h1>
+              <p className="mt-4 text-lg text-muted-foreground">Acompanhe a transferência de responsabilidades das atividades aprovadas.</p>
+          </motion.div>
+          
+            <div className="my-8">
+              <Progress value={stats.progress} />
+              <p className="text-right text-sm text-muted-foreground mt-2">{Math.round(stats.progress)}% das transições concluídas</p>
           </div>
-        </AppLayout>
+
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 mb-8">
+              <StatCard title="Atividades no Plano" value={stats.total} icon={<Shuffle className="h-6 w-6 text-muted-foreground" />} />
+              <StatCard title="Aguardando Transição" value={stats.toTransfer} icon={<Clock className="h-6 w-6 text-gray-500" />} />
+              <StatCard title="Em Transição" value={stats.inTransition} icon={<PlayCircle className="h-6 w-6 text-yellow-500" />} />
+              <StatCard title="Concluídas" value={stats.concluded} icon={<CheckCircle2 className="h-6 w-6 text-green-500" />} />
+              <StatCard title="Atrasadas" value={stats.overdue} icon={<AlertCircle className="h-6 w-6 text-red-500" />} />
+          </div>
+
+          <Card>
+              <CardHeader>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                      <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                          <SelectTrigger className="w-full sm:w-[200px]">
+                              <SelectValue placeholder="Filtrar por categoria" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="all">Todas as Categorias</SelectItem>
+                              <SelectItem value="DP">DP</SelectItem>
+                              <SelectItem value="RH">RH</SelectItem>
+                              <SelectItem value="Compartilhado">Compartilhado</SelectItem>
+                          </SelectContent>
+                      </Select>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                          <SelectTrigger className="w-full sm:w-[200px]">
+                              <SelectValue placeholder="Filtrar por status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="all">Todos os Status</SelectItem>
+                              {Object.entries(transitionStatusConfig).map(([key, config]) => (
+                                  (key !== 'undefined') && <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                              ))}
+                          </SelectContent>
+                      </Select>
+                      <Select value={responsibleFilter} onValueChange={setResponsibleFilter}>
+                          <SelectTrigger className="w-full sm:w-[200px]">
+                              <SelectValue placeholder="Filtrar por responsável" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="all">Todos os Responsáveis</SelectItem>
+                              {allResponsibles.map(r => <SelectItem key={r} value={r!}>{r}</SelectItem>)}
+                          </SelectContent>
+                      </Select>
+                  </div>
+              </CardHeader>
+              <CardContent className="overflow-x-auto">
+                  <Table>
+                      <TableHeader>
+                          <TableRow>
+                              <TableHead className="w-[30%] min-w-[250px]">Atividade</TableHead>
+                              <TableHead>Categoria</TableHead>
+                              <TableHead>Responsáveis</TableHead>
+                              <TableHead>Prazo</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead className="text-right">Ações</TableHead>
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          {filteredActivities.length > 0 ? filteredActivities.map(activity => {
+                              const statusConfig = transitionStatusConfig[activity.statusTransicao] || transitionStatusConfig.undefined;
+                              const categoryStyles = {
+                                  DP: 'bg-purple-100 text-purple-800 border-purple-200',
+                                  RH: 'bg-green-100 text-green-800 border-green-200',
+                                  Compartilhado: 'bg-blue-100 text-blue-800 border-blue-200',
+                              };
+                              return (
+                              <TableRow key={activity.id}>
+                                  <TableCell className="font-medium">{getActivityName(activity, allActivities)}</TableCell>
+                                  <TableCell>
+                                        <Badge variant="outline" className={cn(activity.categoria ? categoryStyles[activity.categoria as keyof typeof categoryStyles] : '')}>
+                                          {activity.categoria}
+                                      </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                      <div className="flex flex-col">
+                                          <span className="font-semibold">{activity.responsavel}</span>
+                                          {activity.responsavelAnterior && <span className="text-xs text-muted-foreground">de: {activity.responsavelAnterior}</span>}
+                                      </div>
+                                  </TableCell>
+                                  <TableCell>
+                                      {activity.prazoTransicao ? format((activity.prazoTransicao as any).toDate(), 'dd/MM/yyyy') : <span className="text-muted-foreground">-</span>}
+                                      {activity.prazoTransicao && isPast((activity.prazoTransicao as any).toDate()) && activity.statusTransicao !== 'concluida' && (
+                                          <p className="text-xs text-red-500">Atrasado</p>
+                                      )}
+                                  </TableCell>
+                                  <TableCell>
+                                      <Badge variant="outline" className={cn(statusConfig.color, "whitespace-nowrap")}>
+                                          {statusConfig.label}
+                                      </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                      <EditTransitionModal activity={activity}>
+                                          <Button size="sm" variant="ghost">
+                                              <Edit className="h-4 w-4 mr-2" />
+                                              Editar
+                                          </Button>
+                                      </EditTransitionModal>
+                                  </TableCell>
+                              </TableRow>
+                          )}) : (
+                              <TableRow>
+                                  <TableCell colSpan={6} className="h-24 text-center">Nenhuma atividade encontrada com os filtros selecionados.</TableCell>
+                              </TableRow>
+                          )}
+                      </TableBody>
+                  </Table>
+              </CardContent>
+          </Card>
+        </div>
     );
 }

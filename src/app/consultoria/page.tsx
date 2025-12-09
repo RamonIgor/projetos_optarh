@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useTransition, useCallback } from 'react';
@@ -507,13 +506,13 @@ export default function ConsultancyPage() {
     const router = useRouter();
     const { toast } = useToast();
 
-    const [allClients, setAllClients = useState<Client[]>([]);
+    const [allClients, setAllClients] = useState<Client[]>([]);
     
-    const [actions, setActions = useState<ConsultancyAction[]>([]);
-    const [activities, setActivities = useState<Activity[]>([]);
-    const [suggestions, setSuggestions = useState<Suggestion[]>([]);
-    const [isLoadingData, setIsLoadingData = useState(false);
-    const [isLoadingClients, setIsLoadingClients = useState(true);
+    const [actions, setActions] = useState<ConsultancyAction[]>([]);
+    const [activities, setActivities] = useState<Activity[]>([]);
+    const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+    const [isLoadingData, setIsLoadingData] = useState(false);
+    const [isLoadingClients, setIsLoadingClients] = useState(true);
     const [isDeleting, startDeleteTransition] = useTransition();
     
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -858,7 +857,7 @@ export default function ConsultancyPage() {
                         </p>
                         <Progress value={(clientStats.approved / (clientStats.total || 1)) * 100} className="mt-2 h-2" />
                     </StatCard>
-                        <Card className="shadow-lg">
+                        <Card className="shadow-lg md:col-span-2 lg:col-span-1">
                         <CardHeader>
                             <CardTitle className="text-md font-medium text-muted-foreground flex items-center gap-2"><PieChartIcon className="h-5 w-5" />Divisão por Categoria</CardTitle>
                         </CardHeader>
@@ -913,11 +912,11 @@ export default function ConsultancyPage() {
                         <CardHeader>
                             <CardTitle className="text-2xl">Plano de Ação da Consultoria</CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="overflow-x-auto">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[30%]">Ação</TableHead>
+                                        <TableHead className="w-[30%] min-w-[200px]">Ação</TableHead>
                                         <TableHead>Responsável</TableHead>
                                         <TableHead>Período</TableHead>
                                         <TableHead>% Concluído</TableHead>

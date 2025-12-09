@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useTransition } from 'react';
@@ -188,7 +187,7 @@ export default function SurveyEditorPage() {
                                 </FormItem>
                             )} />
                             
-                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                 <FormField control={form.control} name="opensAt" render={({ field }) => (
                                     <FormItem className="flex flex-col">
                                         <FormLabel>Data de Início</FormLabel>
@@ -237,7 +236,7 @@ export default function SurveyEditorPage() {
                                             </div>
                                         </FormControl>
                                         <FormDescription>
-                                            Informe o número de colaboradores que devem receber esta pesquisa. Este valor será usado para calcular a taxa de adesão.
+                                            Número de colaboradores que devem receber a pesquisa.
                                         </FormDescription>
                                         <FormMessage />
                                     </FormItem>
