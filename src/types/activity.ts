@@ -116,4 +116,15 @@ export interface Response {
   startedAt?: Timestamp | Date;
 }
 
-    
+
+// --- System-wide Types ---
+
+export interface Suggestion {
+  id: string;
+  text: string;
+  userId: string;
+  userEmail: string;
+  clientId: string | null;
+  createdAt: Timestamp;
+  status: 'new' | 'in_review' | 'implemented' | 'declined';
+}

@@ -217,6 +217,41 @@
             "startedAt": { "type": ["string", "null"], "format": "date-time", "description": "Timestamp de quando o usuário iniciou a resposta." }
         },
         "required": ["surveyId", "clientId", "answers", "submittedAt"]
+    },
+    "Suggestion": {
+      "title": "Suggestion",
+      "description": "Armazena uma sugestão de melhoria ou feedback do sistema enviada por um usuário.",
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "O conteúdo da sugestão enviada pelo usuário."
+        },
+        "userId": {
+          "type": "string",
+          "description": "O UID do usuário que enviou a sugestão."
+        },
+        "userEmail": {
+          "type": "string",
+          "format": "email",
+          "description": "O email do usuário para referência."
+        },
+        "clientId": {
+          "type": ["string", "null"],
+          "description": "O ID do cliente ao qual o usuário pertence, se aplicável."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp de quando a sugestão foi enviada."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["new", "in_review", "implemented", "declined"],
+          "description": "O status atual da sugestão."
+        }
+      },
+      "required": ["text", "userId", "userEmail", "createdAt", "status"]
     }
   },
   "auth": {
@@ -250,8 +285,10 @@
     "/pulse_check_responses/{responseId}": {
         "schema": { "$ref": "#/entities/Response" },
         "description": "Coleção global para todas as respostas (anônimas ou identificadas). Separada para garantir que as regras de segurança permitam escrita anônima sem expor outras respostas."
+    },
+    "/system_suggestions/{suggestionId}": {
+      "schema": { "$ref": "#/entities/Suggestion" },
+      "description": "Coleção para armazenar sugestões e feedbacks sobre o sistema."
     }
   }
 }
-
-    

@@ -110,5 +110,13 @@ service cloud.firestore {
          hasProductAccess('pulse_check')
        );
     }
+    
+    // --- System-wide Collections ---
+    match /system_suggestions/{suggestionId} {
+      // Any authenticated user can create a suggestion.
+      allow create: if isSignedIn();
+      // Only consultants can read, update or delete suggestions.
+      allow read, update, delete: if isConsultant();
+    }
   }
 }

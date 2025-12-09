@@ -34,6 +34,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { onSnapshot, query, collection, where } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import { type Activity, type Survey, type Response as SurveyResponse } from "@/types/activity";
+import { SuggestionBox } from './SuggestionBox';
 
 
 const ProcessFlowNav = () => {
@@ -291,6 +292,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <main className="container mx-auto p-4 sm:p-6 lg:p-8 pt-2 flex-grow flex">
         {children}
       </main>
+      <SuggestionBox />
     </div>
   )
 }
