@@ -34,7 +34,7 @@ const CategoryButton = ({ category, selected, onClick, color, children }: any) =
   <Button
     variant={selected ? "default" : "outline"}
     className={cn(
-      "h-24 text-lg w-full transition-all duration-200",
+      "h-20 text-md w-full transition-all duration-200",
       selected && `border-4 shadow-lg transform scale-105 ${color}`,
       selected ? 'bg-primary' : ''
     )}
@@ -411,62 +411,53 @@ export default function ClassificationPage() {
                     <p className="text-lg font-semibold">{currentActivity.nome}</p>
                 </CardHeader>
                 <CardContent className="p-6 md:p-8 flex-1 flex flex-col">
-                  <div className="grid md:grid-cols-2 gap-x-8 gap-y-10 flex-1">
-                    {/* Coluna da Esquerda */}
-                    <div className="flex flex-col space-y-8">
+                    <div className="space-y-8 flex-1">
                         <div>
                             <h3 className="text-lg font-semibold mb-4">1. Categoria</h3>
-                            <div className="flex flex-col gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                               <CategoryButton category="DP" selected={currentCategory === 'DP'} onClick={() => setCurrentCategory('DP')} color="purple">DP</CategoryButton>
                               <CategoryButton category="RH" selected={currentCategory === 'RH'} onClick={() => setCurrentCategory('RH')} color="green">RH</CategoryButton>
                               <CategoryButton category="Compartilhado" selected={currentCategory === 'Compartilhado'} onClick={() => setCurrentCategory('Compartilhado')} color="blue">Compartilhado</CategoryButton>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Coluna da Direita */}
-                    <div className="flex flex-col space-y-8">
                         <div>
-                            <h3 className="text-lg font-semibold mb-4">2. Detalhes</h3>
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="text-sm font-medium mb-2 block" htmlFor="justification">Justificativa</label>
-                                    <Textarea 
-                                      id="justification"
-                                      value={currentJustification}
-                                      onChange={(e) => setCurrentJustification(e.target.value)}
-                                      placeholder="Ex: Atividade operacional relacionada a cálculos trabalhistas..." 
-                                      className="min-h-[100px] text-base"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                    <label className="text-sm font-medium mb-2 block" htmlFor="responsible">Responsável</label>
-                                    <Input 
-                                      id="responsible" 
-                                      value={currentResponsible}
-                                      onChange={(e) => setCurrentResponsible(e.target.value)}
-                                      placeholder="Nome" 
-                                      className="text-base h-11" />
-                                  </div>
-                                  <div>
-                                    <label className="text-sm font-medium mb-2 block" htmlFor="recurrence">Recorrência</label>
-                                    <Select value={currentRecurrence || ''} onValueChange={(value) => setCurrentRecurrence(value as any)}>
-                                      <SelectTrigger className="text-base h-11" id="recurrence">
-                                        <SelectValue placeholder="Frequência" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="Diária">Diária</SelectItem>
-                                        <SelectItem value="Semanal">Semanal</SelectItem>
-                                        <SelectItem value="Mensal">Mensal</SelectItem>
-                                        <SelectItem value="Trimestral">Trimestral</SelectItem>
-                                        <SelectItem value="Anual">Anual</SelectItem>
-                                        <SelectItem value="Sob demanda">Sob demanda</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                </div>
-                            </div>
+                            <h3 className="text-lg font-semibold mb-4">2. Detalhes da Atividade</h3>
+                            <Textarea 
+                              id="justification"
+                              value={currentJustification}
+                              onChange={(e) => setCurrentJustification(e.target.value)}
+                              placeholder="Justifique por que esta atividade pertence à categoria selecionada..." 
+                              className="min-h-[100px] text-base"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                             <div>
+                                <h3 className="text-lg font-semibold mb-4">3. Responsável</h3>
+                                <Input 
+                                  id="responsible" 
+                                  value={currentResponsible}
+                                  onChange={(e) => setCurrentResponsible(e.target.value)}
+                                  placeholder="Nome do responsável" 
+                                  className="text-base h-11" />
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-semibold mb-4">4. Recorrência</h3>
+                                <Select value={currentRecurrence || ''} onValueChange={(value) => setCurrentRecurrence(value as any)}>
+                                  <SelectTrigger className="text-base h-11" id="recurrence">
+                                    <SelectValue placeholder="Selecione a frequência" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Diária">Diária</SelectItem>
+                                    <SelectItem value="Semanal">Semanal</SelectItem>
+                                    <SelectItem value="Mensal">Mensal</SelectItem>
+                                    <SelectItem value="Trimestral">Trimestral</SelectItem>
+                                    <SelectItem value="Anual">Anual</SelectItem>
+                                    <SelectItem value="Sob demanda">Sob demanda</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
                         </div>
                          <div className="pt-2">
                               <CommentSheet 
@@ -478,7 +469,6 @@ export default function ClassificationPage() {
                               />
                           </div>
                     </div>
-                  </div>
 
 
                     <div className="mt-10 pt-6 border-t flex flex-col sm:flex-row justify-between items-center gap-4">
