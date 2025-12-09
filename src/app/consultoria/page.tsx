@@ -36,6 +36,7 @@ import { Progress } from '@/components/ui/progress';
 import dynamic from 'next/dynamic';
 import type { CategoryChartData } from '@/components/CategoryChart';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -506,13 +507,13 @@ export default function ConsultancyPage() {
     const router = useRouter();
     const { toast } = useToast();
 
-    const [allClients, setAllClients] = useState<Client[]>([]);
+    const [allClients, setAllClients = useState<Client[]>([]);
     
-    const [actions, setActions] = useState<ConsultancyAction[]>([]);
-    const [activities, setActivities] = useState<Activity[]>([]);
-    const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-    const [isLoadingData, setIsLoadingData] = useState(false);
-    const [isLoadingClients, setIsLoadingClients] = useState(true);
+    const [actions, setActions = useState<ConsultancyAction[]>([]);
+    const [activities, setActivities = useState<Activity[]>([]);
+    const [suggestions, setSuggestions = useState<Suggestion[]>([]);
+    const [isLoadingData, setIsLoadingData = useState(false);
+    const [isLoadingClients, setIsLoadingClients = useState(true);
     const [isDeleting, startDeleteTransition] = useTransition();
     
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -753,9 +754,11 @@ export default function ConsultancyPage() {
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <div className="flex items-center gap-4">
                     <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} unoptimized />
-                     <Button variant="outline" size="icon" onClick={() => router.push('/')}>
-                        <ArrowLeft className="h-4 w-4" />
-                     </Button>
+                     <Link href="/">
+                        <Button variant="outline" size="icon">
+                            <ArrowLeft className="h-4 w-4" />
+                        </Button>
+                     </Link>
                 </div>
                  <div>
                     <h1 className="text-2xl sm:text-4xl font-bold text-primary text-center sm:text-left">Painel da Consultoria</h1>
@@ -1030,6 +1033,5 @@ export default function ConsultancyPage() {
         </div>
     );
 }
-
 
     
