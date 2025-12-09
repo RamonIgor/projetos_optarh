@@ -181,8 +181,8 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, onUpdate, 
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
-            <ScrollArea className="flex-1 -mr-6 pr-6">
-                <div className="grid lg:grid-cols-3 gap-8 pb-6 pr-2">
+            <ScrollArea className="flex-1 -mr-6">
+                <div className="grid lg:grid-cols-3 gap-8 p-6 pl-1">
                     <fieldset disabled={isSubmitting} className="space-y-8 lg:col-span-2">
                         <FormField control={form.control} name="text" render={({ field }) => (
                             <FormItem>
