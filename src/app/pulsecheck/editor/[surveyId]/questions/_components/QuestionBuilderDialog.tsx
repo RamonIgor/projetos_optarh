@@ -181,8 +181,8 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, onUpdate, 
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
-            <ScrollArea className="flex-1 -mr-6">
-                <div className="grid lg:grid-cols-2 gap-8 pr-6 pb-6">
+            <ScrollArea className="flex-1 -mr-6 pr-6">
+                <div className="grid lg:grid-cols-2 gap-8 pb-6">
                     <fieldset disabled={isSubmitting} className="space-y-8">
                         <FormField control={form.control} name="text" render={({ field }) => (
                             <FormItem>
@@ -248,7 +248,7 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, onUpdate, 
                         <fieldset disabled={isLibraryFieldsDisabled} className="grid grid-cols-2 gap-4 items-end disabled:opacity-60">
                             <FormField control={form.control} name="category" render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Categoria {isLibraryFieldsDisabled && <span className="text-xs text-muted-foreground">(não pode ser alterada)</span>}</FormLabel>
+                                    <FormLabel>Categoria {isLibraryFieldsDisabled && <span className="text-xs text-muted-foreground">(não pode ser alterado)</span>}</FormLabel>
                                     <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                                         <FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
                                         <SelectContent>
