@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -19,6 +20,8 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 
 const getActivityName = (activity: Activity, allActivities: Activity[]) => {
     if (activity.parentId) {
@@ -28,51 +31,38 @@ const getActivityName = (activity: Activity, allActivities: Activity[]) => {
     return activity.nome;
 };
 
-function ActivityList({ activities, selectedActivityId, onSelectActivity, allActivities }: { activities: Activity[], selectedActivityId: string | null, onSelectActivity: (id: string) => void, allActivities: Activity[] }) {
+function ActivityList({ title, activities, selectedActivityId, onSelectActivity, allActivities, emptyMessage }: { title: string, activities: Activity[], selectedActivityId: string | null, onSelectActivity: (id: string) => void, allActivities: Activity[], emptyMessage: string }) {
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <ListChecks className="h-5 w-5" />
-                    Pendentes de Classificação
-                </CardTitle>
-                 <CardDescription>
-                    Selecione uma atividade para classificar.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <ScrollArea className="h-[60vh]">
-                     <div className="space-y-2 pr-4">
-                        {activities.length > 0 ? activities.map(activity => (
-                             <button
-                                key={activity.id}
-                                onClick={() => onSelectActivity(activity.id)}
-                                className={cn(
-                                    "w-full text-left p-3 rounded-lg border transition-colors",
-                                    selectedActivityId === activity.id
-                                        ? "bg-primary/10 border-primary"
-                                        : "bg-transparent hover:bg-muted"
-                                )}
-                            >
-                                <p className="font-semibold">{getActivityName(activity, allActivities)}</p>
-                                <Badge variant="secondary" className={cn(
-                                    "mt-1",
-                                    activity.status === 'aguardando_consenso' && 'bg-yellow-200 text-yellow-800'
-                                )}>
-                                    {activity.status === 'brainstorm' ? 'Não Classificada' : 'Aguardando Consenso'}
-                                </Badge>
-                            </button>
-                        )) : (
-                            <div className="text-center py-10">
-                                <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                                <h3 className="text-lg font-bold">Tudo em ordem!</h3>
-                                <p className="text-muted-foreground">Não há atividades para classificar.</p>
-                            </div>
+        <ScrollArea className="h-[60vh]">
+             <div className="space-y-2 pr-4">
+                {activities.length > 0 ? activities.map(activity => (
+                     <button
+                        key={activity.id}
+                        onClick={() => onSelectActivity(activity.id)}
+                        className={cn(
+                            "w-full text-left p-3 rounded-lg border transition-colors",
+                            selectedActivityId === activity.id
+                                ? "bg-primary/10 border-primary"
+                                : "bg-transparent hover:bg-muted"
                         )}
+                    >
+                        <p className="font-semibold">{getActivityName(activity, allActivities)}</p>
+                        <Badge variant="secondary" className={cn(
+                            "mt-1",
+                            activity.status === 'aguardando_consenso' && 'bg-yellow-200 text-yellow-800',
+                            activity.status === 'aprovada' && 'bg-green-200 text-green-800'
+                        )}>
+                            {activity.status === 'brainstorm' ? 'Não Classificada' : activity.status === 'aguardando_consenso' ? 'Aguardando Consenso' : 'Aprovada'}
+                        </Badge>
+                    </button>
+                )) : (
+                    <div className="text-center py-10">
+                        <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+                        <h3 className="text-lg font-bold">{emptyMessage}</h3>
                     </div>
-                </ScrollArea>
-            </CardContent>
-        </Card>
+                )}
+            </div>
+        </ScrollArea>
     );
 }
 
@@ -84,9 +74,10 @@ export default function ClassificationPage() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
-  const [activities, setActivities] = useState<Activity[]>([]);
+  const [allActivities, setAllActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('pendentes');
 
   // Form state
   const [justificativa, setJustificativa] = useState('');
@@ -105,27 +96,26 @@ export default function ClassificationPage() {
         return;
     }
     if (!clientId) {
-      setActivities([]);
+      setAllActivities([]);
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
     const q = query(
-      collection(db, 'clients', clientId, 'activities'), 
-      where('status', 'in', ['brainstorm', 'aguardando_consenso'])
+      collection(db, 'clients', clientId, 'activities')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
-      const sorted = activitiesData.sort((a,b) => ((a.createdAt as Timestamp)?.seconds || 0) - ((b.createdAt as Timestamp)?.seconds || 0));
-      setActivities(sorted);
+      const sorted = activitiesData.sort((a,b) => ((b.createdAt as Timestamp)?.seconds || 0) - ((a.createdAt as Timestamp)?.seconds || 0));
+      setAllActivities(sorted);
 
       const activityIdFromUrl = searchParams.get('activityId');
       if (activityIdFromUrl && sorted.some(a => a.id === activityIdFromUrl)) {
           setSelectedActivityId(activityIdFromUrl);
-      } else if (sorted.length > 0 && !selectedActivityId) {
-          setSelectedActivityId(sorted[0].id);
+      } else if (sorted.filter(a => a.status !== 'aprovada').length > 0 && !selectedActivityId) {
+          setSelectedActivityId(sorted.filter(a => a.status !== 'aprovada')[0].id);
       } else if (sorted.length === 0) {
           setSelectedActivityId(null);
       }
@@ -140,9 +130,12 @@ export default function ClassificationPage() {
     return () => unsubscribe();
   }, [db, clientId, user, isLoadingPage, router, toast]);
 
+  const pendingActivities = useMemo(() => allActivities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso'), [allActivities]);
+  const approvedActivities = useMemo(() => allActivities.filter(a => a.status === 'aprovada'), [allActivities]);
+  
   const activeActivity = useMemo(() => {
-    return activities.find(a => a.id === selectedActivityId);
-  }, [activities, selectedActivityId]);
+    return allActivities.find(a => a.id === selectedActivityId);
+  }, [allActivities, selectedActivityId]);
 
   useEffect(() => {
     if (activeActivity) {
@@ -191,11 +184,8 @@ export default function ClassificationPage() {
 
       toast({
         title: `Atividade ${newStatus === 'aprovada' ? 'Aprovada' : 'Salva'}!`,
-        description: `"${getActivityName(activeActivity, activities)}" foi atualizada com sucesso.`
+        description: `"${getActivityName(activeActivity, allActivities)}" foi atualizada com sucesso.`
       });
-
-      // The list will update automatically via onSnapshot
-      // The logic to select the next activity is already in the useEffect
 
     } catch (error) {
       console.error("Error updating activity:", error);
@@ -211,25 +201,48 @@ export default function ClassificationPage() {
       return <div className="flex justify-center items-center h-96 col-span-3"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
     }
 
-    if (activities.length === 0) {
-      return (
-         <div className="col-span-1 md:col-span-3">
-             <ActivityList activities={[]} selectedActivityId={null} onSelectActivity={() => {}} allActivities={[]} />
-        </div>
-      );
-    }
-
     return (
       <>
         <div className="md:col-span-1">
-             <ActivityList activities={activities} selectedActivityId={selectedActivityId} onSelectActivity={setSelectedActivityId} allActivities={activities} />
+            <Card>
+                <CardHeader className="p-3">
+                    <Tabs value={activeTab} onValueChange={setActiveTab}>
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="pendentes">Pendentes ({pendingActivities.length})</TabsTrigger>
+                            <TabsTrigger value="aprovadas">Aprovadas ({approvedActivities.length})</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                </CardHeader>
+                <CardContent className="p-3">
+                    <TabsContent value="pendentes">
+                        <ActivityList 
+                          title="Pendentes"
+                          activities={pendingActivities} 
+                          selectedActivityId={selectedActivityId} 
+                          onSelectActivity={setSelectedActivityId} 
+                          allActivities={allActivities}
+                          emptyMessage="Nenhuma atividade pendente!"
+                        />
+                    </TabsContent>
+                    <TabsContent value="aprovadas">
+                        <ActivityList 
+                          title="Aprovadas"
+                          activities={approvedActivities} 
+                          selectedActivityId={selectedActivityId} 
+                          onSelectActivity={setSelectedActivityId} 
+                          allActivities={allActivities}
+                          emptyMessage="Nenhuma atividade aprovada ainda."
+                        />
+                    </TabsContent>
+                </CardContent>
+            </Card>
         </div>
 
         <div className="md:col-span-2">
             {activeActivity ? (
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-2xl">{getActivityName(activeActivity, activities)}</CardTitle>
+                        <CardTitle className="text-2xl">{getActivityName(activeActivity, allActivities)}</CardTitle>
                         <CardDescription>
                             Use o formulário abaixo para classificar e detalhar esta atividade.
                         </CardDescription>
@@ -303,9 +316,16 @@ export default function ClassificationPage() {
                             <p className="text-sm text-yellow-700 mt-1">Esta atividade já foi classificada e aguarda a aprovação final. Você pode revisar ou aprovar diretamente.</p>
                         </div>
                     )}
+
+                    {activeActivity.status === 'aprovada' && (
+                        <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+                            <h4 className="font-semibold text-green-800 flex items-center gap-2"><CheckCircle className="h-5 w-5"/>Atividade Aprovada</h4>
+                            <p className="text-sm text-green-700 mt-1">Esta atividade já foi aprovada. As alterações aqui serão salvas, mas não mudarão o status.</p>
+                        </div>
+                    )}
                     
                     <div className="border-t pt-6 flex flex-col sm:flex-row justify-end items-center gap-4">
-                        <Button variant="outline" size="lg" onClick={() => handleUpdate('aguardando_consenso')} disabled={isSaving}>
+                        <Button variant="outline" size="lg" onClick={() => handleUpdate('aguardando_consenso')} disabled={isSaving || activeActivity.status === 'aprovada'}>
                         {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RotateCcw className="mr-2 h-4 w-4"/>}
                         Salvar e Mover para Consenso
                         </Button>
@@ -338,3 +358,5 @@ export default function ClassificationPage() {
     </div>
   );
 }
+
+    
