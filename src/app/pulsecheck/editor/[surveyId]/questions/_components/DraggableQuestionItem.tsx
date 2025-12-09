@@ -67,7 +67,7 @@ export const DraggableQuestionItem = memo(({ question, index, onUpdate, onRemove
                   <Label htmlFor={`mandatory-${question.id}`} className="text-sm">Obrigatória</Label>
                 </div>
                 <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(question)} disabled>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(question)}>
                         <Edit className="h-4 w-4" />
                     </Button>
                     <AlertDialog>

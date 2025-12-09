@@ -18,6 +18,7 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { type SelectedQuestion } from '@/types/activity';
 
 const questionBuilderSchema = z.object({
   text: z.string().min(5, "O texto da pergunta é muito curto.").max(500, "O texto da pergunta não pode exceder 500 caracteres."),
@@ -50,7 +51,9 @@ interface QuestionBuilderDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (questionData: QuestionBuilderFormValues) => void;
+  onUpdate: (questionId: string, updates: Partial<SelectedQuestion>) => void;
   allCategories: string[];
+  editingQuestion: SelectedQuestion | null;
 }
 
 const typeOptions = [
@@ -60,7 +63,9 @@ const typeOptions = [
     { value: 'open-text', label: 'Texto Aberto', icon: TextCursorInput },
 ] as const;
 
-export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, allCategories }: QuestionBuilderDialogProps) {
+export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, onUpdate, allCategories, editingQuestion }: QuestionBuilderDialogProps) {
+  const isEditing = !!editingQuestion;
+
   const form = useForm<QuestionBuilderFormValues>({
     resolver: zodResolver(questionBuilderSchema),
     defaultValues: {
@@ -86,22 +91,43 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, allCategor
 
   useEffect(() => {
     if (isOpen) {
-         form.reset({
-            text: '',
-            category: '',
-            newCategory: '',
-            type: 'likert',
-            options: [{ value: 'Opção 1' }, { value: 'Opção 2' }],
-            isMandatory: true,
-         });
+        if(isEditing && editingQuestion) {
+             form.reset({
+                text: editingQuestion.text,
+                category: editingQuestion.category,
+                type: editingQuestion.type,
+                options: editingQuestion.options?.map(o => ({value: o})) ?? [{ value: 'Opção 1' }, { value: 'Opção 2' }],
+                isMandatory: editingQuestion.isMandatory,
+                newCategory: '',
+            });
+        } else {
+            form.reset({
+                text: '',
+                category: '',
+                newCategory: '',
+                type: 'likert',
+                options: [{ value: 'Opção 1' }, { value: 'Opção 2' }],
+                isMandatory: true,
+            });
+        }
     }
-  }, [isOpen, form]);
+  }, [isOpen, isEditing, editingQuestion, form]);
 
   const onSubmit = (data: QuestionBuilderFormValues) => {
-    onSave(data);
+    if(isEditing && editingQuestion) {
+        onUpdate(editingQuestion.id, {
+            text: data.text,
+            options: data.type === 'multiple-choice' ? data.options?.map(o => o.value) : null,
+        });
+    } else {
+        onSave(data);
+    }
   };
   
   const isSubmitting = form.formState.isSubmitting;
+  
+  const isLibraryFieldsDisabled = isEditing;
+
 
   const renderPreview = () => {
     return (
@@ -145,16 +171,19 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, allCategor
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Criar Nova Pergunta para a Biblioteca</DialogTitle>
+          <DialogTitle>{isEditing ? 'Editar Pergunta da Pesquisa' : 'Criar Nova Pergunta para a Biblioteca'}</DialogTitle>
           <DialogDescription>
-            A pergunta criada será adicionada à biblioteca global e poderá ser usada em outras pesquisas.
+            {isEditing 
+                ? "Ajuste o texto e as opções para esta pesquisa. As alterações não afetarão a pergunta original na biblioteca."
+                : "A pergunta criada será adicionada à biblioteca global e poderá ser usada em outras pesquisas."
+            }
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
             <ScrollArea className="flex-1 -mr-6">
                 <div className="grid lg:grid-cols-2 gap-8 pr-6 pb-6">
-                    <div className="space-y-8">
+                    <fieldset disabled={isSubmitting} className="space-y-8">
                         <FormField control={form.control} name="text" render={({ field }) => (
                             <FormItem>
                                 <div className="flex justify-between items-baseline">
@@ -166,25 +195,27 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, allCategor
                             </FormItem>
                         )} />
 
-                        <FormField control={form.control} name="type" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Tipo de Resposta</FormLabel>
-                                <RadioGroup onValueChange={field.onChange} defaultValue={field.value} value={field.value} className="grid grid-cols-2 gap-2">
-                                    {typeOptions.map(opt => (
-                                        <FormItem key={opt.value}>
-                                            <FormControl>
-                                                <RadioGroupItem value={opt.value} id={opt.value} className="sr-only" />
-                                            </FormControl>
-                                            <Label htmlFor={opt.value} className={cn("flex flex-col items-center justify-center gap-2 rounded-md border-2 border-muted bg-popover p-6 hover:bg-accent hover:text-accent-foreground cursor-pointer", field.value === opt.value && "border-primary")}>
-                                                <opt.icon className="h-6 w-6" />
-                                                {opt.label}
-                                            </Label>
-                                        </FormItem>
-                                    ))}
-                                </RadioGroup>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
+                        <fieldset disabled={isLibraryFieldsDisabled} className="space-y-8 disabled:opacity-60">
+                            <FormField control={form.control} name="type" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Tipo de Resposta {isLibraryFieldsDisabled && <span className="text-xs text-muted-foreground">(não pode ser alterado)</span>}</FormLabel>
+                                    <RadioGroup onValueChange={field.onChange} defaultValue={field.value} value={field.value} className="grid grid-cols-2 gap-2">
+                                        {typeOptions.map(opt => (
+                                            <FormItem key={opt.value}>
+                                                <FormControl>
+                                                    <RadioGroupItem value={opt.value} id={opt.value} className="sr-only" />
+                                                </FormControl>
+                                                <Label htmlFor={opt.value} className={cn("flex flex-col items-center justify-center gap-2 rounded-md border-2 border-muted bg-popover p-6 hover:bg-accent hover:text-accent-foreground cursor-pointer", field.value === opt.value && "border-primary")}>
+                                                    <opt.icon className="h-6 w-6" />
+                                                    {opt.label}
+                                                </Label>
+                                            </FormItem>
+                                        ))}
+                                    </RadioGroup>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                        </fieldset>
 
                         {watchedType === 'multiple-choice' && (
                             <div className="space-y-4 rounded-md border p-4">
@@ -214,10 +245,10 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, allCategor
                                 </Button>
                             </div>
                         )}
-                        <div className="grid grid-cols-2 gap-4 items-end">
+                        <fieldset disabled={isLibraryFieldsDisabled} className="grid grid-cols-2 gap-4 items-end disabled:opacity-60">
                             <FormField control={form.control} name="category" render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Categoria</FormLabel>
+                                    <FormLabel>Categoria {isLibraryFieldsDisabled && <span className="text-xs text-muted-foreground">(não pode ser alterada)</span>}</FormLabel>
                                     <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                                         <FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
                                         <SelectContent>
@@ -239,7 +270,7 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, allCategor
                                     </FormItem>
                                 )} />
                             )}
-                        </div>
+                        </fieldset>
 
                         <FormField control={form.control} name="isMandatory" render={({ field }) => (
                             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
@@ -254,7 +285,7 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, allCategor
                                 </FormControl>
                             </FormItem>
                         )} />
-                    </div>
+                    </fieldset>
                     <div className="flex flex-col gap-6 sticky top-0">
                         <h3 className="text-lg font-semibold border-b pb-2">Preview da Pergunta</h3>
                         <Card className="bg-muted/50 flex-grow flex items-center">
@@ -268,7 +299,7 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, allCategor
             <DialogFooter className="mt-auto pt-6 border-t">
                 <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
                 <Button type="submit" disabled={isSubmitting}>
-                   {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : 'Criar Pergunta'}
+                   {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : (isEditing ? 'Salvar Alterações' : 'Criar Pergunta')}
                 </Button>
             </DialogFooter>
           </form>

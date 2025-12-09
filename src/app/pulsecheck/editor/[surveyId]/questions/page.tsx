@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -33,7 +32,7 @@ export default function ConfigureQuestionsPage() {
 
     const [isBuilderOpen, setIsBuilderOpen] = useState(false);
     const [isImporterOpen, setIsImporterOpen] = useState(false);
-    const [questionToEdit, setQuestionToEdit] = useState<SelectedQuestion | null>(null);
+    const [editingQuestion, setEditingQuestion] = useState<SelectedQuestion | null>(null);
 
     // Fetch Survey, Client, and Library Questions
     useEffect(() => {
@@ -161,21 +160,18 @@ export default function ConfigureQuestionsPage() {
         setSelectedQuestions(newQuestions);
         await updateSurveyQuestions(newQuestions);
     }, [selectedQuestions, updateSurveyQuestions]);
-
+    
     const handleOpenBuilderForEdit = (question: SelectedQuestion) => {
-        if (question.questionId !== 'custom') {
-            const originalQuestion = libraryQuestions.find(libQ => libQ.id === question.questionId);
-             if (originalQuestion) {
-                setQuestionToEdit(originalQuestion as any);
-             } else {
-                 toast({ title: "Não é possível editar esta pergunta", description: "A pergunta original não foi encontrada na biblioteca.", variant: "destructive"});
-                 return;
-             }
-        } else {
-             setQuestionToEdit(question);
-        }
+        setEditingQuestion(question);
         setIsBuilderOpen(true);
     };
+
+    const handleUpdateFromBuilder = useCallback(async (questionId: string, updates: Partial<SelectedQuestion>) => {
+        await handleUpdateQuestion(questionId, updates);
+        toast({ title: "Pergunta atualizada na pesquisa." });
+        setIsBuilderOpen(false);
+    }, [handleUpdateQuestion, toast]);
+
 
     const handleSaveFromBuilder = useCallback(async (formData: QuestionBuilderFormValues) => {
         if (!user || !db || !clientId) return;
@@ -310,7 +306,7 @@ export default function ConfigureQuestionsPage() {
                         libraryQuestions={libraryQuestions}
                         selectedQuestions={selectedQuestions}
                         onAdd={handleAddQuestion}
-                        onAddNew={() => { setQuestionToEdit(null); setIsBuilderOpen(true); }}
+                        onAddNew={() => { setEditingQuestion(null); setIsBuilderOpen(true); }}
                         onImport={() => setIsImporterOpen(true)}
                         onDeleteFromLibrary={handleDeleteFromLibrary}
                     />
@@ -330,7 +326,9 @@ export default function ConfigureQuestionsPage() {
                 isOpen={isBuilderOpen}
                 onOpenChange={setIsBuilderOpen}
                 onSave={handleSaveFromBuilder}
+                onUpdate={handleUpdateFromBuilder}
                 allCategories={allCategories}
+                editingQuestion={editingQuestion}
             />
 
             <ImportQuestionsDialog
