@@ -410,72 +410,76 @@ export default function ClassificationPage() {
             {currentActivity ? (
               <Card className="shadow-lg overflow-hidden flex-1 flex flex-col">
                 <CardContent className="p-6 md:p-8 flex-1 flex flex-col">
-                  <div className="grid md:grid-cols-2 gap-8 flex-1">
-                    {/* Coluna da Esquerda */}
-                    <div className="flex flex-col space-y-6">
-                        <h2 className="text-lg font-bold">{currentActivity.nome}</h2>
-                        <div>
-                            <label className="text-lg font-semibold mb-4 block">1. Categoria</label>
-                            <div className="flex flex-col gap-4">
-                              <CategoryButton category="DP" selected={currentCategory === 'DP'} onClick={() => setCurrentCategory('DP')} color="purple">DP</CategoryButton>
-                              <CategoryButton category="RH" selected={currentCategory === 'RH'} onClick={() => setCurrentCategory('RH')} color="green">RH</CategoryButton>
-                              <CategoryButton category="Compartilhado" selected={currentCategory === 'Compartilhado'} onClick={() => setCurrentCategory('Compartilhado')} color="blue">Compartilhado</CategoryButton>
+                    <div className="grid md:grid-cols-2 gap-8 flex-1">
+                        {/* Coluna da Esquerda */}
+                        <div className="flex flex-col space-y-6">
+                            <div>
+                                <label className="text-lg font-semibold mb-2 block">Atividade</label>
+                                <div className="p-3 rounded-md bg-muted min-h-[100px]">
+                                    <p className="text-lg font-semibold">{currentActivity.nome}</p>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-lg font-semibold mb-4 block">1. Categoria</label>
+                                <div className="flex flex-col gap-4">
+                                <CategoryButton category="DP" selected={currentCategory === 'DP'} onClick={() => setCurrentCategory('DP')} color="purple">DP</CategoryButton>
+                                <CategoryButton category="RH" selected={currentCategory === 'RH'} onClick={() => setCurrentCategory('RH')} color="green">RH</CategoryButton>
+                                <CategoryButton category="Compartilhado" selected={currentCategory === 'Compartilhado'} onClick={() => setCurrentCategory('Compartilhado')} color="blue">Compartilhado</CategoryButton>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Coluna da Direita */}
+                        <div className="flex flex-col space-y-4">
+                            <div>
+                                <label className="text-lg font-semibold mb-2 block" htmlFor="justification">2. Justificativa</label>
+                                <Textarea 
+                                id="justification"
+                                value={currentJustification}
+                                onChange={(e) => setCurrentJustification(e.target.value)}
+                                placeholder="Ex: Atividade operacional relacionada a cálculos trabalhistas..." 
+                                className="min-h-[100px] text-base"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                <label className="text-lg font-semibold mb-2 block" htmlFor="responsible">3. Responsável</label>
+                                <Input 
+                                    id="responsible" 
+                                    value={currentResponsible}
+                                    onChange={(e) => setCurrentResponsible(e.target.value)}
+                                    placeholder="Nome" 
+                                    className="text-base h-11" />
+                                </div>
+                                <div>
+                                <label className="text-lg font-semibold mb-2 block" htmlFor="recurrence">4. Recorrência</label>
+                                <Select value={currentRecurrence || ''} onValueChange={(value) => setCurrentRecurrence(value as any)}>
+                                    <SelectTrigger className="text-base h-11" id="recurrence">
+                                    <SelectValue placeholder="Frequência" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                    <SelectItem value="Diária">Diária</SelectItem>
+                                    <SelectItem value="Semanal">Semanal</SelectItem>
+                                    <SelectItem value="Mensal">Mensal</SelectItem>
+                                    <SelectItem value="Trimestral">Trimestral</SelectItem>
+                                    <SelectItem value="Anual">Anual</SelectItem>
+                                    <SelectItem value="Sob demanda">Sob demanda</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                </div>
+                            </div>
+
+                            <div className="pt-2">
+                                <CommentSheet 
+                                    activity={currentActivity}
+                                    newComment={newComment}
+                                    setNewComment={setNewComment}
+                                    onAddComment={handleAddComment}
+                                    isSaving={isSaving}
+                                />
                             </div>
                         </div>
                     </div>
-
-                    {/* Coluna da Direita */}
-                    <div className="flex flex-col space-y-4">
-                          <div className="h-[28px]"></div> {/* Placeholder for alignment */}
-                        <div>
-                            <label className="text-lg font-semibold mb-2 block" htmlFor="justification">2. Justificativa</label>
-                            <Textarea 
-                              id="justification"
-                              value={currentJustification}
-                              onChange={(e) => setCurrentJustification(e.target.value)}
-                              placeholder="Ex: Atividade operacional relacionada a cálculos trabalhistas..." 
-                              className="min-h-[100px] text-base"
-                            />
-                        </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="text-lg font-semibold mb-2 block" htmlFor="responsible">3. Responsável</label>
-                              <Input 
-                                id="responsible" 
-                                value={currentResponsible}
-                                onChange={(e) => setCurrentResponsible(e.target.value)}
-                                placeholder="Nome" 
-                                className="text-base h-11" />
-                            </div>
-                            <div>
-                              <label className="text-lg font-semibold mb-2 block" htmlFor="recurrence">4. Recorrência</label>
-                              <Select value={currentRecurrence || ''} onValueChange={(value) => setCurrentRecurrence(value as any)}>
-                                <SelectTrigger className="text-base h-11" id="recurrence">
-                                  <SelectValue placeholder="Frequência" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Diária">Diária</SelectItem>
-                                  <SelectItem value="Semanal">Semanal</SelectItem>
-                                  <SelectItem value="Mensal">Mensal</SelectItem>
-                                  <SelectItem value="Trimestral">Trimestral</SelectItem>
-                                  <SelectItem value="Anual">Anual</SelectItem>
-                                  <SelectItem value="Sob demanda">Sob demanda</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-
-                          <div className="pt-2">
-                              <CommentSheet 
-                                  activity={currentActivity}
-                                  newComment={newComment}
-                                  setNewComment={setNewComment}
-                                  onAddComment={handleAddComment}
-                                  isSaving={isSaving}
-                              />
-                          </div>
-                    </div>
-                  </div>
 
 
                     <div className="mt-10 pt-6 border-t flex flex-col sm:flex-row justify-between items-center gap-4">
