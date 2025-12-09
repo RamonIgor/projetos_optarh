@@ -8,7 +8,15 @@ import { Button } from '@/components/ui/button';
 export function ThankYouScreen() {
 
     const handleClose = () => {
+        // First try to close the window/tab. This works if the tab was opened by a script.
         window.close();
+        
+        // If window.close() fails (which it often does for security reasons),
+        // we redirect to a blank page as a fallback.
+        // This gives the user a clear signal that the process is over.
+        setTimeout(() => {
+            window.location.href = 'about:blank';
+        }, 100);
     }
 
     return (
