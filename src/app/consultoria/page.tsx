@@ -734,7 +734,7 @@ export default function ConsultancyPage() {
 
     const renderClientSelector = () => {
         if (isLoadingClients) {
-            return <div className="flex items-center justify-center w-[280px] h-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
+            return <div className="flex items-center justify-center w-full sm:w-[280px] h-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
         }
         return <ClientSelector clients={allClients} onClientAdded={handleClientAdded} />;
     };
@@ -753,17 +753,14 @@ export default function ConsultancyPage() {
         <div className="container mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <div className="flex items-center gap-4">
-                    <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} unoptimized />
-                     <Link href="/">
-                        <Button variant="outline" size="icon">
-                            <ArrowLeft className="h-4 w-4" />
-                        </Button>
-                     </Link>
+                    <Link href="/">
+                      <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} unoptimized />
+                    </Link>
                 </div>
                  <div>
                     <h1 className="text-2xl sm:text-4xl font-bold text-primary text-center sm:text-left">Painel da Consultoria</h1>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 self-end sm:self-center">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon">
@@ -796,11 +793,11 @@ export default function ConsultancyPage() {
             </div>
 
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div className="w-full sm:w-auto flex items-center gap-2">
+                <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                     {isConsultant && renderClientSelector()}
-                    <div className="border-l pl-2 space-x-2">
-                        <Button variant="outline" onClick={() => router.push('/processflow')} disabled={!selectedClientId}><Workflow className="mr-2 h-4 w-4" />ProcessFlow</Button>
-                        <Button variant="outline" onClick={() => router.push('/pulsecheck')} disabled={!selectedClientId}><BarChart2 className="mr-2 h-4 w-4" />PulseCheck</Button>
+                    <div className="border-t sm:border-t-0 sm:border-l pt-2 sm:pt-0 sm:pl-2 flex flex-col sm:flex-row gap-2">
+                        <Button variant="outline" onClick={() => router.push('/processflow')} disabled={!selectedClientId} className="w-full"><Workflow className="mr-2 h-4 w-4" />ProcessFlow</Button>
+                        <Button variant="outline" onClick={() => router.push('/pulsecheck')} disabled={!selectedClientId} className="w-full"><BarChart2 className="mr-2 h-4 w-4" />PulseCheck</Button>
                     </div>
                 </div>
                  <div className="w-full sm:w-auto">

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useTransition, FormEvent, useMemo } from 'react';
@@ -350,11 +351,11 @@ export default function BrainstormPage() {
 
       <Card className="mt-8 shadow-lg dark:shadow-black/20">
         <CardHeader>
-          <div className="flex justify-between items-start">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
             <div>
               <CardTitle className="text-xl">Adicionar Nova Atividade Principal</CardTitle>
             </div>
-            <div className="text-sm font-medium text-muted-foreground pt-1">{activities.length} atividades levantadas</div>
+            <div className="text-sm font-medium text-muted-foreground pt-1 shrink-0">{activities.length} atividades levantadas</div>
           </div>
           <form onSubmit={handleAddSubmit} className="flex flex-col sm:flex-row gap-2 pt-4">
             <Input

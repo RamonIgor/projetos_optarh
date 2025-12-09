@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -259,7 +260,7 @@ export default function ClassificationPage() {
                             <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground font-bold text-sm">1</span>
                             Categoria
                         </Label>
-                         <RadioGroup value={categoria} onValueChange={(value) => setCategoria(value as any)} className="grid grid-cols-3 gap-4">
+                         <RadioGroup value={categoria} onValueChange={(value) => setCategoria(value as any)} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
                                 <RadioGroupItem value="DP" id="cat-dp" className="sr-only" />
                                 <Label htmlFor="cat-dp" className={cn("flex flex-col items-center justify-center rounded-md border-2 p-4 hover:bg-accent cursor-pointer", categoria === 'DP' && 'border-primary bg-primary/10')}>
