@@ -169,7 +169,7 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, onUpdate, 
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col">
+      <DialogContent className="max-w-5xl w-full h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Editar Pergunta da Pesquisa' : 'Criar Nova Pergunta para a Biblioteca'}</DialogTitle>
           <DialogDescription>
@@ -182,8 +182,8 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, onUpdate, 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
             <ScrollArea className="flex-1 -mr-6 pr-6">
-                <div className="grid lg:grid-cols-2 gap-8 pb-6 pr-1">
-                    <fieldset disabled={isSubmitting} className="space-y-8">
+                <div className="grid lg:grid-cols-3 gap-8 pb-6 pr-2">
+                    <fieldset disabled={isSubmitting} className="space-y-8 lg:col-span-2">
                         <FormField control={form.control} name="text" render={({ field }) => (
                             <FormItem>
                                 <div className="flex justify-between items-baseline">
@@ -286,7 +286,7 @@ export function QuestionBuilderDialog({ isOpen, onOpenChange, onSave, onUpdate, 
                             </FormItem>
                         )} />
                     </fieldset>
-                    <div className="flex flex-col gap-6 sticky top-0">
+                    <div className="flex flex-col gap-6 sticky top-0 lg:col-span-1">
                         <h3 className="text-lg font-semibold border-b pb-2">Preview da Pergunta</h3>
                         <Card className="bg-muted/50 flex-grow flex items-center">
                             <CardContent className="p-6 w-full">
