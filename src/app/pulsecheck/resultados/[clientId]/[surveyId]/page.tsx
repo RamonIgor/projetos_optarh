@@ -313,9 +313,9 @@ export default function SurveyResultsPage() {
             return acc;
         }, {} as Record<string, Answer[]>);
     
-        const findNpsQuestion = (category: string) => {
-            const normalizedCategory = category.toLowerCase();
-            const q = survey.questions.find(q => q.category.toLowerCase() === normalizedCategory);
+        const findNpsQuestion = (categoryIdentifier: string) => {
+            const normalizedIdentifier = categoryIdentifier.toLowerCase();
+            const q = survey.questions.find(q => q.category.toLowerCase() === normalizedIdentifier);
             return q && q.type === 'nps' ? q : null;
         };
     
@@ -329,7 +329,7 @@ export default function SurveyResultsPage() {
         const lNpsResult = calculateNPS(lNpsAnswers);
     
         const categories = survey.questions.reduce((acc, q) => {
-            if (q.category === 'eNPS' || q.category === 'Liderança NPS' || q.category === 'DEMOGRAFIA' || q.category === 'FEEDBACK ABERTO') return acc;
+            if (q.category.toLowerCase() === 'enps' || q.category.toLowerCase() === 'liderança nps' || q.category === 'DEMOGRAFIA' || q.category === 'FEEDBACK ABERTO') return acc;
             if (!acc[q.category]) acc[q.category] = { questions: [], score: 0, status: 'bom' };
             acc[q.category].questions.push(q);
             return acc;
