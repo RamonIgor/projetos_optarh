@@ -212,11 +212,13 @@ export default function ProductPortalPage() {
                             transition={{ duration: 0.5, delay: 1 + index * 0.1 }}
                         >
                             <div className="bg-white/50 border border-gray-200 rounded-2xl p-4 text-center h-full flex flex-col justify-center items-center opacity-70">
-                                <div className="h-10 w-10 rounded-full flex items-center justify-center bg-gray-200 mb-3 text-gray-500">
-                                    {createElement(product.icon)}
+                                <div className="h-10 w-10 rounded-full flex items-center justify-center bg-gray-200 mb-3 text-purple-500">
+                                    {createElement(product.icon, { className: "h-5 w-5" })}
                                 </div>
-                                <h4 className="text-sm font-bold text-slate-600">{product.name}</h4>
-                                <p className="text-xs text-slate-500">{product.description}</p>
+                                <div className="flex-grow">
+                                  <h4 className="text-sm font-bold text-slate-600">{product.name}</h4>
+                                  <p className="text-xs text-slate-500">{product.description}</p>
+                                </div>
                                 <div className="mt-2 text-xs font-bold text-purple-500">EM BREVE</div>
                             </div>
                         </motion.div>
