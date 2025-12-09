@@ -408,7 +408,7 @@ export default function ClassificationPage() {
             {currentActivity ? (
               <Card className="shadow-lg overflow-hidden flex-1 flex flex-col">
                  <CardHeader className="bg-muted/30 border-b p-4 md:p-6">
-                    <h2 className="text-xl font-bold">{currentActivity.nome}</h2>
+                    <p className="text-lg font-semibold">{currentActivity.nome}</p>
                 </CardHeader>
                 <CardContent className="p-6 md:p-8 flex-1 flex flex-col">
                   <div className="grid md:grid-cols-2 gap-x-8 gap-y-10 flex-1">
