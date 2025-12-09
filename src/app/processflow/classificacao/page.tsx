@@ -243,19 +243,19 @@ export default function ClassificationPage() {
                          <RadioGroup value={categoria} onValueChange={(value) => setCategoria(value as any)} className="grid grid-cols-3 gap-4">
                             <div>
                                 <RadioGroupItem value="DP" id="cat-dp" className="sr-only" />
-                                <Label htmlFor="cat-dp" className={cn("flex flex-col items-center justify-center rounded-md border-2 p-4 hover:bg-accent cursor-pointer", categoria === 'DP' && 'border-primary')}>
+                                <Label htmlFor="cat-dp" className={cn("flex flex-col items-center justify-center rounded-md border-2 p-4 hover:bg-accent cursor-pointer", categoria === 'DP' && 'border-primary bg-primary/10')}>
                                     <Building className="mb-3 h-6 w-6" /> DP
                                 </Label>
                             </div>
                             <div>
                                 <RadioGroupItem value="RH" id="cat-rh" className="sr-only" />
-                                <Label htmlFor="cat-rh" className={cn("flex flex-col items-center justify-center rounded-md border-2 p-4 hover:bg-accent cursor-pointer", categoria === 'RH' && 'border-primary')}>
+                                <Label htmlFor="cat-rh" className={cn("flex flex-col items-center justify-center rounded-md border-2 p-4 hover:bg-accent cursor-pointer", categoria === 'RH' && 'border-primary bg-primary/10')}>
                                     <User className="mb-3 h-6 w-6" /> RH
                                 </Label>
                             </div>
                             <div>
                                 <RadioGroupItem value="Compartilhado" id="cat-comp" className="sr-only" />
-                                <Label htmlFor="cat-comp" className={cn("flex flex-col items-center justify-center rounded-md border-2 p-4 hover:bg-accent cursor-pointer", categoria === 'Compartilhado' && 'border-primary')}>
+                                <Label htmlFor="cat-comp" className={cn("flex flex-col items-center justify-center rounded-md border-2 p-4 hover:bg-accent cursor-pointer", categoria === 'Compartilhado' && 'border-primary bg-primary/10')}>
                                     <Users className="mb-3 h-6 w-6" /> Compartilhado
                                 </Label>
                             </div>
