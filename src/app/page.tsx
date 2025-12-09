@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase/auth/use-user';
 import { useClient } from '@/firebase/auth/use-client';
-import { Loader2, LogOut, ArrowRight, Workflow, BarChart2, Wrench } from 'lucide-react';
+import { Loader2, LogOut, ArrowRight, Workflow, BarChart2, Wrench, Star, DollarSign, Target, Briefcase, BookText, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -31,6 +31,15 @@ const allProducts = {
     glowClass: 'glow-icon-orange'
   },
 };
+
+const futureProducts = [
+    { name: 'PerformanceFlow', description: 'Avaliação de Desempenho', icon: <Star /> },
+    { name: 'CareerPath', description: 'Plano de Cargos, Carreiras e Salários', icon: <Briefcase /> },
+    { name: 'BonusCalc', description: 'Cálculo de PPR/PLR', icon: <DollarSign /> },
+    { name: 'GrowthPlan', description: 'Planejamento de Desenvolvimento Individual', icon: <Target /> },
+    { name: 'MarketPay', description: 'Serviço de Pesquisa Salarial', icon: <Bot /> },
+    { name: 'JobDesign', description: 'Serviço de Descrição de Cargos', icon: <BookText /> },
+]
 
 type ProductKey = keyof typeof allProducts;
 
@@ -184,6 +193,35 @@ export default function ProductPortalPage() {
                       </motion.div>
                   );
               })}
+            </div>
+             <div className="w-full max-w-6xl mt-16">
+                 <motion.h3 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.8 }}
+                    className="text-center text-2xl font-bold text-slate-700 mb-8"
+                >
+                    Próximas Soluções no Roadmap
+                </motion.h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    {futureProducts.map((product, index) => (
+                        <motion.div
+                            key={product.name}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 1 + index * 0.1 }}
+                        >
+                            <div className="bg-white/50 border border-gray-200 rounded-2xl p-4 text-center h-full flex flex-col justify-center items-center opacity-70">
+                                <div className="h-10 w-10 rounded-full flex items-center justify-center bg-gray-200 mb-3 text-gray-500">
+                                    {product.icon}
+                                </div>
+                                <h4 className="text-sm font-bold text-slate-600">{product.name}</h4>
+                                <p className="text-xs text-slate-500">{product.description}</p>
+                                <div className="mt-2 text-xs font-bold text-purple-500">EM BREVE</div>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
             </div>
         </main>
       </div>
