@@ -2,7 +2,7 @@
 
 import { useUser } from "@/firebase/auth/use-user";
 import { useClient } from "@/firebase/auth/use-client";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { Loader2, ListTodo, LayoutGrid, BarChart3, Shuffle, PlayCircle } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
@@ -12,11 +12,11 @@ import { type Activity } from "@/types/activity";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { usePathname } from "next/navigation";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
+  TooltipProvider,
 } from "@/components/ui/tooltip"
 
 
@@ -44,10 +44,9 @@ const ProcessFlowNav = () => {
 
   const navItems = [
     { href: '/processflow/brainstorm', label: 'Brainstorm', icon: ListTodo },
-    { href: '/processflow/classificacao', label: 'Classificação', icon: LayoutGrid, count: unclassifiedCount, disabled: !hasActivities },
-    { href: '/processflow/dashboard', label: 'Dashboard', icon: BarChart3, disabled: !hasActivities },
     { href: '/processflow/transicao', label: 'Transição', icon: Shuffle, disabled: !hasActivities },
     { href: '/processflow/operacional', label: 'Operacional', icon: PlayCircle, disabled: !hasActivities },
+    { href: '/processflow/dashboard', label: 'Dashboard', icon: BarChart3, disabled: !hasActivities },
   ];
 
   const renderNavItem = (item: typeof navItems[0]) => {
@@ -131,8 +130,10 @@ export default function ProcessFlowLayout({
   const canRender = user && (isConsultant || userProfile?.products?.includes("process_flow"));
   
   return canRender ? (
-     <AppLayout hasActivities={false} unclassifiedCount={0} navContent={<ProcessFlowNav />}>
-        {children}
-    </AppLayout>
+     <TooltipProvider>
+        <AppLayout>
+            {children}
+        </AppLayout>
+     </TooltipProvider>
   ) : null;
 }
