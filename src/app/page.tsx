@@ -12,6 +12,7 @@ import { signOut } from 'firebase/auth';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import Link from 'next/link';
 
 const allProducts = {
   process_flow: {
@@ -33,7 +34,7 @@ const allProducts = {
 };
 
 const futureProducts = [
-    { name: 'PerformanceFlow', description: 'Avaliação de Desempenho', icon: Star, color: 'sky' },
+    { name: 'PerformanceTrack', description: 'Avaliação de Desempenho', icon: Star, color: 'sky' },
     { name: 'CareerPath', description: 'Plano de Cargos, Carreiras e Salários', icon: Briefcase, color: 'emerald' },
     { name: 'BonusCalc', description: 'Cálculo de PPR/PLR', icon: DollarSign, color: 'rose' },
     { name: 'GrowthPlan', description: 'Planejamento de Desenvolvimento Individual', icon: Target, color: 'amber' },
@@ -116,7 +117,9 @@ export default function ProductPortalPage() {
 
       <div className="relative z-10 flex min-h-screen flex-col">
         <header className="container mx-auto px-6 py-6 flex justify-between items-center">
-            <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} unoptimized />
+            <Link href="/">
+              <Image src="/optarh-logo.png" alt="OptaRH Logo" width={120} height={40} unoptimized />
+            </Link>
             <div className="flex items-center gap-4">
               {isConsultant && (
                 <Button variant="outline" onClick={() => router.push('/consultoria')}>
