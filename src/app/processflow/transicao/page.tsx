@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useTransition } from 'react';
@@ -7,11 +8,11 @@ import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
 import { type Activity } from '@/types/activity';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, AlertCircle, CheckCircle2, PlayCircle, Clock, Calendar, Shuffle, BarChart3, Edit } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2, PlayCircle, Clock, Calendar, Shuffle, BarChart3, Edit, User, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
@@ -204,8 +205,11 @@ export default function TransitionPage() {
             setAllActivities([]);
             return;
         }
-
-        const q = query(collection(db, 'clients', clientId, 'activities'), where('status', '==', 'aprovada'));
+        
+        const q = query(
+            collection(db, 'clients', clientId, 'activities'), 
+            where('status', '==', 'aprovada')
+        );
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
             const sortedActivities = activitiesData.sort((a, b) => ((a.createdAt as any)?.seconds || 0) - ((b.createdAt as any)?.seconds || 0));
@@ -216,34 +220,28 @@ export default function TransitionPage() {
         return () => unsubscribe();
     }, [db, user, router, clientId, isLoadingPage]);
     
-    const getActivityName = (activity: Activity, all: Activity[]) => {
-        if (activity.parentId) {
-            const parent = all.find(a => a.id === activity.parentId);
-            return parent ? `${parent.nome} » ${activity.nome}` : activity.nome;
-        }
-        return activity.nome;
-    };
-    
-    const allResponsibles = useMemo(() => Array.from(new Set(allActivities.map(a => a.responsavel).filter(Boolean))), [allActivities]);
+    const mainActivities = useMemo(() => allActivities.filter(a => !a.parentId), [allActivities]);
+
+    const allResponsibles = useMemo(() => Array.from(new Set(mainActivities.map(a => a.responsavel).filter(Boolean))), [mainActivities]);
 
     const filteredActivities = useMemo(() => {
-        return allActivities.filter(activity => {
+        return mainActivities.filter(activity => {
             const categoryMatch = categoryFilter === 'all' || activity.categoria === categoryFilter;
             const statusMatch = statusFilter === 'all' || activity.statusTransicao === statusFilter;
             const responsibleMatch = responsibleFilter === 'all' || activity.responsavel === responsibleFilter;
             return categoryMatch && statusMatch && responsibleMatch;
         });
-    }, [allActivities, categoryFilter, statusFilter, responsibleFilter]);
+    }, [mainActivities, categoryFilter, statusFilter, responsibleFilter]);
     
     const stats = useMemo(() => {
-        const total = allActivities.length;
-        const toTransfer = allActivities.filter(a => a.statusTransicao === 'a_transferir').length;
-        const inTransition = allActivities.filter(a => a.statusTransicao === 'em_transicao').length;
-        const concluded = allActivities.filter(a => a.statusTransicao === 'concluida').length;
-        const overdue = allActivities.filter(a => a.prazoTransicao && a.statusTransicao !== 'concluida' && isPast((a.prazoTransicao as any).toDate())).length;
+        const total = mainActivities.length;
+        const toTransfer = mainActivities.filter(a => a.statusTransicao === 'a_transferir').length;
+        const inTransition = mainActivities.filter(a => a.statusTransicao === 'em_transicao').length;
+        const concluded = mainActivities.filter(a => a.statusTransicao === 'concluida').length;
+        const overdue = mainActivities.filter(a => a.prazoTransicao && a.statusTransicao !== 'concluida' && isPast((a.prazoTransicao as any).toDate())).length;
         const progress = total > 0 ? (concluded / total) * 100 : 0;
         return { total, toTransfer, inTransition, concluded, overdue, progress };
-    }, [allActivities]);
+    }, [mainActivities]);
     
     if (isLoadingPage || isLoading) {
         return (
@@ -253,7 +251,7 @@ export default function TransitionPage() {
         );
     }
     
-    if (allActivities.length === 0 && !isClientLoading) {
+    if (mainActivities.length === 0 && !isClientLoading) {
         return (
            <div className="text-center py-20 flex-1">
             <h1 className="mt-4 text-3xl font-bold">Nenhuma atividade aprovada</h1>
@@ -264,6 +262,12 @@ export default function TransitionPage() {
           </div>
         )
     }
+
+    const categoryStyles: Record<string, string> = {
+        DP: 'bg-purple-100 text-purple-800 border-purple-200',
+        RH: 'bg-green-100 text-green-800 border-green-200',
+        Compartilhado: 'bg-blue-100 text-blue-800 border-blue-200',
+    };
 
     return (
         <div className="max-w-7xl mx-auto w-full">
@@ -287,101 +291,160 @@ export default function TransitionPage() {
 
           <Card>
               <CardHeader>
-                  <div className="flex flex-col sm:flex-row gap-4">
-                      <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                          <SelectTrigger className="w-full sm:w-[200px]">
-                              <SelectValue placeholder="Filtrar por categoria" />
-                          </SelectTrigger>
-                          <SelectContent>
-                              <SelectItem value="all">Todas as Categorias</SelectItem>
-                              <SelectItem value="DP">DP</SelectItem>
-                              <SelectItem value="RH">RH</SelectItem>
-                              <SelectItem value="Compartilhado">Compartilhado</SelectItem>
-                          </SelectContent>
-                      </Select>
-                      <Select value={statusFilter} onValueChange={setStatusFilter}>
-                          <SelectTrigger className="w-full sm:w-[200px]">
-                              <SelectValue placeholder="Filtrar por status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                              <SelectItem value="all">Todos os Status</SelectItem>
-                              {Object.entries(transitionStatusConfig).map(([key, config]) => (
-                                  (key !== 'undefined') && <SelectItem key={key} value={key}>{config.label}</SelectItem>
-                              ))}
-                          </SelectContent>
-                      </Select>
-                      <Select value={responsibleFilter} onValueChange={setResponsibleFilter}>
-                          <SelectTrigger className="w-full sm:w-[200px]">
-                              <SelectValue placeholder="Filtrar por responsável" />
-                          </SelectTrigger>
-                          <SelectContent>
-                              <SelectItem value="all">Todos os Responsáveis</SelectItem>
-                              {allResponsibles.map(r => <SelectItem key={r} value={r!}>{r}</SelectItem>)}
-                          </SelectContent>
-                      </Select>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <h2 className="text-xl font-bold">Lista de Atividades</h2>
+                      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                            <SelectTrigger className="w-full sm:w-[180px]">
+                                <SelectValue placeholder="Filtrar por categoria" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todas as Categorias</SelectItem>
+                                <SelectItem value="DP">DP</SelectItem>
+                                <SelectItem value="RH">RH</SelectItem>
+                                <SelectItem value="Compartilhado">Compartilhado</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger className="w-full sm:w-[180px]">
+                                <SelectValue placeholder="Filtrar por status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos os Status</SelectItem>
+                                {Object.entries(transitionStatusConfig).map(([key, config]) => (
+                                    (key !== 'undefined') && <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Select value={responsibleFilter} onValueChange={setResponsibleFilter}>
+                            <SelectTrigger className="w-full sm:w-[180px]">
+                                <SelectValue placeholder="Filtrar por responsável" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos os Responsáveis</SelectItem>
+                                {allResponsibles.map(r => <SelectItem key={r} value={r!}>{r}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
                   </div>
               </CardHeader>
               <CardContent>
-                  <Table>
-                      <TableHeader>
-                          <TableRow>
-                              <TableHead className="w-[30%]">Atividade</TableHead>
-                              <TableHead>Categoria</TableHead>
-                              <TableHead>Responsáveis</TableHead>
-                              <TableHead>Prazo</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead className="text-right">Ações</TableHead>
-                          </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                          {filteredActivities.length > 0 ? filteredActivities.map(activity => {
-                              const statusConfig = transitionStatusConfig[activity.statusTransicao] || transitionStatusConfig.undefined;
-                              const categoryStyles = {
-                                  DP: 'bg-purple-100 text-purple-800 border-purple-200',
-                                  RH: 'bg-green-100 text-green-800 border-green-200',
-                                  Compartilhado: 'bg-blue-100 text-blue-800 border-blue-200',
-                              };
-                              return (
-                              <TableRow key={activity.id}>
-                                  <TableCell className="font-medium">{getActivityName(activity, allActivities)}</TableCell>
-                                  <TableCell>
-                                        <Badge variant="outline" className={cn(activity.categoria ? categoryStyles[activity.categoria as keyof typeof categoryStyles] : '')}>
-                                          {activity.categoria}
-                                      </Badge>
-                                  </TableCell>
-                                  <TableCell>
-                                      <div className="flex flex-col">
-                                          <span className="font-semibold">{activity.responsavel}</span>
-                                          {activity.responsavelAnterior && <span className="text-xs text-muted-foreground">de: {activity.responsavelAnterior}</span>}
-                                      </div>
-                                  </TableCell>
-                                  <TableCell>
-                                      {activity.prazoTransicao ? format((activity.prazoTransicao as any).toDate(), 'dd/MM/yyyy') : <span className="text-muted-foreground">-</span>}
-                                      {activity.prazoTransicao && isPast((activity.prazoTransicao as any).toDate()) && activity.statusTransicao !== 'concluida' && (
-                                          <p className="text-xs text-red-500">Atrasado</p>
-                                      )}
-                                  </TableCell>
-                                  <TableCell>
-                                      <Badge variant="outline" className={cn(statusConfig.color, "whitespace-nowrap")}>
-                                          {statusConfig.label}
-                                      </Badge>
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                      <EditTransitionModal activity={activity}>
-                                          <Button size="sm" variant="ghost">
-                                              <Edit className="h-4 w-4 mr-2" />
-                                              Editar
-                                          </Button>
-                                      </EditTransitionModal>
-                                  </TableCell>
-                              </TableRow>
-                          )}) : (
-                              <TableRow>
-                                  <TableCell colSpan={6} className="h-24 text-center">Nenhuma atividade encontrada com os filtros selecionados.</TableCell>
-                              </TableRow>
-                          )}
-                      </TableBody>
-                  </Table>
+                  {/* Desktop Table */}
+                  <div className="hidden md:block">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[30%] min-w-[250px]">Atividade</TableHead>
+                                <TableHead>Categoria</TableHead>
+                                <TableHead>Responsáveis</TableHead>
+                                <TableHead>Prazo</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="text-right">Ações</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredActivities.length > 0 ? filteredActivities.map(activity => {
+                                const statusConfig = transitionStatusConfig[activity.statusTransicao] || transitionStatusConfig.undefined;
+                                return (
+                                <TableRow key={activity.id}>
+                                    <TableCell className="font-medium">{activity.nome}</TableCell>
+                                    <TableCell>
+                                        <Badge variant="outline" className={cn(activity.categoria ? categoryStyles[activity.categoria] : '')}>
+                                            {activity.categoria}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-col">
+                                            <span className="font-semibold">{activity.responsavel}</span>
+                                            {activity.responsavelAnterior && <span className="text-xs text-muted-foreground">de: {activity.responsavelAnterior}</span>}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        {activity.prazoTransicao ? format((activity.prazoTransicao as any).toDate(), 'dd/MM/yyyy') : <span className="text-muted-foreground">-</span>}
+                                        {activity.prazoTransicao && isPast((activity.prazoTransicao as any).toDate()) && activity.statusTransicao !== 'concluida' && (
+                                            <p className="text-xs text-red-500">Atrasado</p>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant="outline" className={cn(statusConfig.color, "whitespace-nowrap")}>
+                                            {statusConfig.label}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <EditTransitionModal activity={activity}>
+                                            <Button size="sm" variant="ghost">
+                                                <Edit className="h-4 w-4 mr-2" />
+                                                Editar
+                                            </Button>
+                                        </EditTransitionModal>
+                                    </TableCell>
+                                </TableRow>
+                            )}) : (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="h-24 text-center">Nenhuma atividade encontrada com os filtros selecionados.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                  </div>
+                  
+                  {/* Mobile Card List */}
+                  <div className="md:hidden space-y-4">
+                        {filteredActivities.length > 0 ? filteredActivities.map(activity => {
+                             const statusConfig = transitionStatusConfig[activity.statusTransicao] || transitionStatusConfig.undefined;
+                             return (
+                                <Card key={activity.id} className="bg-muted/50">
+                                    <CardHeader>
+                                        <CardTitle>{activity.nome}</CardTitle>
+                                        <div className="flex items-center gap-2 pt-2">
+                                            <Badge variant="outline" className={cn(activity.categoria ? categoryStyles[activity.categoria] : '')}>
+                                                {activity.categoria}
+                                            </Badge>
+                                            <Badge variant="outline" className={cn(statusConfig.color, "whitespace-nowrap")}>
+                                                {statusConfig.label}
+                                            </Badge>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="space-y-3 text-sm">
+                                        <div>
+                                            <Label className="text-xs font-semibold">Responsáveis</Label>
+                                            <div className="flex items-center gap-2">
+                                                <Users className="h-4 w-4 text-muted-foreground"/>
+                                                <div>
+                                                    <p className="font-medium">{activity.responsavel}</p>
+                                                    {activity.responsavelAnterior && <p className="text-xs text-muted-foreground">Anterior: {activity.responsavelAnterior}</p>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                         <div>
+                                            <Label className="text-xs font-semibold">Prazo</Label>
+                                            <div className="flex items-center gap-2">
+                                                <Calendar className="h-4 w-4 text-muted-foreground"/>
+                                                <div>
+                                                    <p>{activity.prazoTransicao ? format((activity.prazoTransicao as any).toDate(), 'dd/MM/yyyy') : <span className="text-muted-foreground">-</span>}</p>
+                                                     {activity.prazoTransicao && isPast((activity.prazoTransicao as any).toDate()) && activity.statusTransicao !== 'concluida' && (
+                                                        <p className="text-xs text-red-500">Atrasado</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                    <CardFooter>
+                                        <EditTransitionModal activity={activity}>
+                                            <Button size="sm" variant="outline" className="w-full">
+                                                <Edit className="h-4 w-4 mr-2" />
+                                                Editar Transição
+                                            </Button>
+                                        </EditTransitionModal>
+                                    </CardFooter>
+                                </Card>
+                             )
+                        }) : (
+                            <div className="text-center py-16">
+                                <p className="text-muted-foreground">Nenhuma atividade encontrada.</p>
+                            </div>
+                        )}
+                  </div>
               </CardContent>
           </Card>
         </div>

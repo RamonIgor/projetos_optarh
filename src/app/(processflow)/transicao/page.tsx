@@ -205,11 +205,10 @@ export default function TransitionPage() {
             setAllActivities([]);
             return;
         }
-        // Query for only approved main activities
+        
         const q = query(
             collection(db, 'clients', clientId, 'activities'), 
-            where('status', '==', 'aprovada'),
-            where('parentId', '==', null)
+            where('status', '==', 'aprovada')
         );
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
@@ -221,30 +220,28 @@ export default function TransitionPage() {
         return () => unsubscribe();
     }, [db, user, router, clientId, isLoadingPage]);
     
-    const getActivityName = (activity: Activity) => {
-        return activity.nome;
-    };
-    
-    const allResponsibles = useMemo(() => Array.from(new Set(allActivities.map(a => a.responsavel).filter(Boolean))), [allActivities]);
+    const mainActivities = useMemo(() => allActivities.filter(a => !a.parentId), [allActivities]);
+
+    const allResponsibles = useMemo(() => Array.from(new Set(mainActivities.map(a => a.responsavel).filter(Boolean))), [mainActivities]);
 
     const filteredActivities = useMemo(() => {
-        return allActivities.filter(activity => {
+        return mainActivities.filter(activity => {
             const categoryMatch = categoryFilter === 'all' || activity.categoria === categoryFilter;
             const statusMatch = statusFilter === 'all' || activity.statusTransicao === statusFilter;
             const responsibleMatch = responsibleFilter === 'all' || activity.responsavel === responsibleFilter;
             return categoryMatch && statusMatch && responsibleMatch;
         });
-    }, [allActivities, categoryFilter, statusFilter, responsibleFilter]);
+    }, [mainActivities, categoryFilter, statusFilter, responsibleFilter]);
     
     const stats = useMemo(() => {
-        const total = allActivities.length;
-        const toTransfer = allActivities.filter(a => a.statusTransicao === 'a_transferir').length;
-        const inTransition = allActivities.filter(a => a.statusTransicao === 'em_transicao').length;
-        const concluded = allActivities.filter(a => a.statusTransicao === 'concluida').length;
-        const overdue = allActivities.filter(a => a.prazoTransicao && a.statusTransicao !== 'concluida' && isPast((a.prazoTransicao as any).toDate())).length;
+        const total = mainActivities.length;
+        const toTransfer = mainActivities.filter(a => a.statusTransicao === 'a_transferir').length;
+        const inTransition = mainActivities.filter(a => a.statusTransicao === 'em_transicao').length;
+        const concluded = mainActivities.filter(a => a.statusTransicao === 'concluida').length;
+        const overdue = mainActivities.filter(a => a.prazoTransicao && a.statusTransicao !== 'concluida' && isPast((a.prazoTransicao as any).toDate())).length;
         const progress = total > 0 ? (concluded / total) * 100 : 0;
         return { total, toTransfer, inTransition, concluded, overdue, progress };
-    }, [allActivities]);
+    }, [mainActivities]);
     
     if (isLoadingPage || isLoading) {
         return (
@@ -254,7 +251,7 @@ export default function TransitionPage() {
         );
     }
     
-    if (allActivities.length === 0 && !isClientLoading) {
+    if (mainActivities.length === 0 && !isClientLoading) {
         return (
            <div className="text-center py-20 flex-1">
             <h1 className="mt-4 text-3xl font-bold">Nenhuma atividade aprovada</h1>
@@ -350,7 +347,7 @@ export default function TransitionPage() {
                                 const statusConfig = transitionStatusConfig[activity.statusTransicao] || transitionStatusConfig.undefined;
                                 return (
                                 <TableRow key={activity.id}>
-                                    <TableCell className="font-medium">{getActivityName(activity)}</TableCell>
+                                    <TableCell className="font-medium">{activity.nome}</TableCell>
                                     <TableCell>
                                         <Badge variant="outline" className={cn(activity.categoria ? categoryStyles[activity.categoria] : '')}>
                                             {activity.categoria}
@@ -398,7 +395,7 @@ export default function TransitionPage() {
                              return (
                                 <Card key={activity.id} className="bg-muted/50">
                                     <CardHeader>
-                                        <CardTitle>{getActivityName(activity)}</CardTitle>
+                                        <CardTitle>{activity.nome}</CardTitle>
                                         <div className="flex items-center gap-2 pt-2">
                                             <Badge variant="outline" className={cn(activity.categoria ? categoryStyles[activity.categoria] : '')}>
                                                 {activity.categoria}
