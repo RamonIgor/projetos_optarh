@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ThumbsUp, ActivitySquare, Square, Users, PieChart, CheckSquare, Clock, List, FileText } from 'lucide-react';
+import { Loader2, ThumbsUp, ActivitySquare, Square, Users, PieChart, CheckSquare, Clock, List, FileText, Edit, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ResponsiveContainer, Tooltip, Pie, Cell, Legend } from 'recharts';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +19,7 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import dynamic from 'next/dynamic';
 import type { CategoryChartData } from '@/components/CategoryChart';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const CategoryChart = dynamic(() => import('@/components/CategoryChart'), {
     ssr: false,
@@ -42,6 +43,19 @@ const StatCard = ({ title, value, icon, color, children, className }: { title: s
         </CardContent>
     </Card>
 );
+
+const statusConfig: Record<Activity['status'], { label: string, color: string }> = {
+    brainstorm: { label: 'Não Classificada', color: 'bg-gray-200 text-gray-800' },
+    aguardando_consenso: { label: 'Aguardando Consenso', color: 'bg-yellow-200 text-yellow-800' },
+    aprovada: { label: 'Aprovada', color: 'bg-green-200 text-green-800' },
+};
+
+const categoryStyles: Record<string, string> = {
+    DP: 'border-purple-200 bg-purple-50 text-purple-800',
+    RH: 'border-green-200 bg-green-50 text-green-800',
+    Compartilhado: 'border-blue-200 bg-blue-50 text-blue-800',
+};
+
 
 export default function DashboardPage() {
     const db = useFirestore();
@@ -71,7 +85,7 @@ export default function DashboardPage() {
             setIsLoading(false);
             return;
         }
-        // Query only for main activities (where parentId is null)
+        
         const q = query(
             collection(db, 'clients', clientId, 'activities'), 
             where('parentId', '==', null)
@@ -128,11 +142,6 @@ export default function DashboardPage() {
         return { total, classified, approved, byCategory, byStatus, byResponsible, byRecurrence, pendingDecision, latestApproved };
     }, [filteredActivities, mainActivities]);
     
-    const getActivityName = (activity: Activity) => {
-        return activity.nome;
-    };
-
-
     const categoryChartData: CategoryChartData[] = useMemo(() => [
         { name: 'DP', value: stats.byCategory['DP'] || 0, fill: '#6d28d9' },
         { name: 'RH', value: stats.byCategory['RH'] || 0, fill: '#16a34a' },
@@ -215,82 +224,61 @@ export default function DashboardPage() {
                       <span className="text-gray-500">{stats.byStatus['brainstorm'] || 0} não classificadas</span>
                   </p>
               </StatCard>
-
-              <Card className="shadow-lg">
-                    <CardHeader>
-                      <CardTitle className="text-md font-medium text-muted-foreground flex items-center gap-2"><Users className="h-5 w-5" />Atividades por Responsável</CardTitle>
-                  </CardHeader>
-                  <CardContent className="max-h-48 overflow-y-auto">
-                      <ul className="space-y-2 text-sm">
-                          {Object.entries(stats.byResponsible).sort(([, a], [, b]) => b - a).map(([name, count]) => (
-                              <li key={name} className="flex justify-between items-center">
-                                  <span>{name}</span>
-                                  <Badge variant="secondary">{count}</Badge>
-                              </li>
-                          ))}
-                      </ul>
-                  </CardContent>
-              </Card>
-              
-                <Card className="shadow-lg">
-                    <CardHeader>
-                      <CardTitle className="text-md font-medium text-muted-foreground flex items-center gap-2"><Clock className="h-5 w-5" />Recorrência</CardTitle>
-                  </CardHeader>
-                  <CardContent className="max-h-48 overflow-y-auto">
-                      <ul className="space-y-2 text-sm">
-                          {Object.entries(stats.byRecurrence).map(([name, count]) => (
-                              <li key={name} className="flex justify-between items-center">
-                                  <span>{name}</span>
-                                  <Badge variant="secondary">{count}</Badge>
-                              </li>
-                          ))}
-                      </ul>
-                  </CardContent>
-              </Card>
           </div>
           
-          <div className="grid gap-8 md:grid-cols-2 mt-8">
-              <Card className="shadow-lg">
-                  <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-lg"><ActivitySquare className="text-yellow-500"/> Atividades Pendentes de Decisão</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                        {stats.pendingDecision.length > 0 ? (
-                          <ul className="space-y-2">
-                              {stats.pendingDecision.map(activity => (
-                                  <li key={activity.id}>
-                                      <Link href={`/classificacao?activityId=${activity.id}`} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
-                                          <span className="font-medium">{getActivityName(activity)}</span>
-                                          <Badge variant="outline" className="text-yellow-600 border-yellow-500">{activity.categoria}</Badge>
-                                      </Link>
-                                  </li>
-                              ))}
-                          </ul>
-                        ) : <p className="text-center text-sm text-muted-foreground py-6">Nenhuma atividade pendente!</p>}
-                  </CardContent>
-              </Card>
-              <Card className="shadow-lg">
-                  <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-lg"><ThumbsUp className="text-green-500" /> Últimas Aprovações</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                        {stats.latestApproved.length > 0 ? (
-                          <ul className="space-y-2">
-                              {stats.latestApproved.map(activity => (
-                                  <li key={activity.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
-                                      <span className="font-medium">{getActivityName(activity)}</span>
-                                      <span className="text-sm text-muted-foreground">
-                                          {activity.dataAprovacao && format((activity.dataAprovacao as any).toDate(), "dd/MM/yyyy 'às' HH:mm")}
-                                      </span>
-                                  </li>
-                              ))}
-                          </ul>
-                        ) : <p className="text-center text-sm text-muted-foreground py-6">Nenhuma atividade aprovada ainda.</p>}
-                  </CardContent>
-              </Card>
-          </div>
+            <Card className="mt-8 shadow-lg">
+                <CardHeader>
+                    <CardTitle>Lista de Atividades</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[50%]">Atividade</TableHead>
+                                <TableHead>Categoria</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="text-right">Ações</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredActivities.length > 0 ? (
+                                filteredActivities.map(activity => (
+                                    <TableRow key={activity.id}>
+                                        <TableCell className="font-medium">{activity.nome}</TableCell>
+                                        <TableCell>
+                                            {activity.categoria ? (
+                                                <Badge variant="outline" className={cn(categoryStyles[activity.categoria])}>{activity.categoria}</Badge>
+                                            ) : (
+                                                <span className="text-muted-foreground">-</span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant="outline" className={cn(statusConfig[activity.status].color)}>{statusConfig[activity.status].label}</Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Button asChild variant="ghost" size="sm">
+                                                <Link href={`/classificacao?activityId=${activity.id}`}>
+                                                    <Edit className="h-4 w-4 mr-2" />
+                                                    Classificar
+                                                </Link>
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                                        <div className="flex flex-col items-center gap-2">
+                                            <AlertCircle className="h-8 w-8" />
+                                            <span>Nenhuma atividade encontrada com os filtros selecionados.</span>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
         </div>
     );
-
-    
-    
+}
