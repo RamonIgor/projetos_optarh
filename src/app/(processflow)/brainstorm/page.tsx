@@ -285,7 +285,7 @@ export default function BrainstormPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAdding, startMainAddTransition] = useTransition();
 
-  const [dialogState, setDialogState] = useState<{ open: boolean; onConfirm: () => void; similarTo?: string; nameToAdd?: string; }>({ open: false, onConfirm: () => {} });
+  const [dialogState, setDialogState] = useState<{ open: boolean; onConfirm: () => void; onCancel: () => void; similarTo?: string; nameToAdd?: string; }>({ open: false, onConfirm: () => {}, onCancel: () => {} });
   
   const { toast } = useToast();
 
@@ -350,7 +350,7 @@ export default function BrainstormPage() {
     });
     
     mainActivities.forEach(activity => {
-        const children = (childrenOf[activity.id] || []).sort((a,b) => ((a.createdAt as any)?.seconds || 0) - ((b.createdAt as any)?.seconds || 0));
+        const children = (childrenOf[activity.id] || []).sort((a,b) => ((a.createdAt as any)?.seconds || 0) - ((a.createdAt as any)?.seconds || 0));
         tree.push({ ...activity, children });
     });
     
@@ -458,7 +458,13 @@ export default function BrainstormPage() {
               nameToAdd: trimmedName,
               onConfirm: () => {
                 action();
-                setDialogState({ open: false, onConfirm: () => {} });
+                setDialogState({ open: false, onConfirm: () => {}, onCancel: () => {} });
+              },
+              onCancel: () => {
+                setNewActivityName("");
+                setFile(null);
+                if(fileInputRef.current) fileInputRef.current.value = "";
+                setDialogState({ open: false, onConfirm: () => {}, onCancel: () => {} });
               }
           });
         } else {
@@ -467,36 +473,6 @@ export default function BrainstormPage() {
     });
   };
 
-  const handleDialogCancel = () => {
-    // Clear the form state when the user cancels the dialog to avoid stale data
-    setNewActivityName("");
-    setFile(null);
-    if(fileInputRef.current) fileInputRef.current.value = "";
-    setDialogState({ open: false, onConfirm: () => {} });
-  };
-
-
-  const handleDeleteActivity = (id: string) => {
-    if (!db || !clientId) return;
-    
-    const activityToDelete = activities.find(a => a.id === id);
-    if (!activityToDelete) return;
-
-    // Note: This does not delete the file from storage. A more robust implementation
-    // would require a Cloud Function to handle deletions.
-    const docRef = doc(db, 'clients', clientId, 'activities', id);
-    deleteDoc(docRef)
-    .catch(async (error) => {
-        const permissionError = new FirestorePermissionError({ path: docRef.path, operation: 'delete' });
-        errorEmitter.emit('permission-error', permissionError);
-        toast({
-        title: "Erro ao excluir atividade",
-        description: "Não foi possível excluir a atividade. Verifique as permissões.",
-        variant: "destructive",
-        });
-    });
-  };
-    
   const isLoadingPage = userLoading || (isClientLoading && !isConsultant);
 
   if (isLoadingPage) {
@@ -618,7 +594,7 @@ export default function BrainstormPage() {
         </CardContent>
       </Card>
 
-      <AlertDialog open={dialogState.open} onOpenChange={(open) => { if(!open) handleDialogCancel() }}>
+      <AlertDialog open={dialogState.open} onOpenChange={(open) => { if(!open) dialogState.onCancel() }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Atividade Similar Encontrada</AlertDialogTitle>
@@ -627,7 +603,7 @@ export default function BrainstormPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleDialogCancel}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel onClick={dialogState.onCancel}>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={dialogState.onConfirm}>Sim, adicionar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -635,5 +611,7 @@ export default function BrainstormPage() {
     </div>
   );
 }
+
+    
 
     
