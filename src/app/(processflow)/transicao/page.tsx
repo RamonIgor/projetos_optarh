@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo, useTransition } from 'react';
+import { useState, useEffect, useMemo, useTransition, Fragment } from 'react';
 import { collection, onSnapshot, query, where, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useFirestore, useClient } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
@@ -12,10 +12,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, AlertCircle, CheckCircle2, PlayCircle, Clock, Calendar, Shuffle, BarChart3, Edit, User, Users, CornerDownRight } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2, PlayCircle, Clock, Calendar, Shuffle, Edit, User, Users, CornerDownRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
 import { format, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -263,7 +262,7 @@ export default function TransitionPage() {
            <div className="text-center py-20 flex-1">
             <h1 className="mt-4 text-3xl font-bold">Nenhuma atividade aprovada</h1>
             <p className="mt-2 text-lg text-muted-foreground">Classifique e aprove atividades para iniciar o plano de transição.</p>
-            <Button onClick={() => router.push('/processflow/classificacao')} className="mt-6">
+            <Button onClick={() => router.push('/classificacao')} className="mt-6">
               Ir para Classificação
             </Button>
           </div>
@@ -353,7 +352,7 @@ export default function TransitionPage() {
                             {activitiesWithChildren.length > 0 ? activitiesWithChildren.map(activity => {
                                 const statusConfig = transitionStatusConfig[activity.statusTransicao] || transitionStatusConfig.undefined;
                                 return (
-                                <React.Fragment key={activity.id}>
+                                <Fragment key={activity.id}>
                                     <TableRow>
                                         <TableCell className="font-medium">{activity.nome}</TableCell>
                                         <TableCell>
@@ -414,7 +413,7 @@ export default function TransitionPage() {
                                             <TableCell></TableCell>
                                         </TableRow>
                                     ))}
-                                </React.Fragment>
+                                </Fragment>
                             )}) : (
                                 <TableRow>
                                     <TableCell colSpan={6} className="h-24 text-center">Nenhuma atividade encontrada com os filtros selecionados.</TableCell>
@@ -496,4 +495,3 @@ export default function TransitionPage() {
         </div>
     );
 }
-
