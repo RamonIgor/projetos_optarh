@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { useFirestore, useClient } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ThumbsUp, ActivitySquare, Square, Users, PieChart, CheckSquare, Clock, List, FileText, Edit, AlertCircle } from 'lucide-react';
+import { Loader2, ThumbsUp, ActivitySquare, Square, Users, PieChart, CheckSquare, Clock, List, FileText, Edit, AlertCircle, CornerDownRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ResponsiveContainer, Tooltip, Pie, Cell, Legend } from 'recharts';
 import { Badge } from '@/components/ui/badge';
@@ -100,13 +100,20 @@ export default function DashboardPage() {
     
     const mainActivities = useMemo(() => allActivities.filter(a => !a.parentId), [allActivities]);
 
-    const filteredActivities = useMemo(() => {
+    const filteredMainActivities = useMemo(() => {
         return mainActivities.filter(activity => {
             const categoryMatch = categoryFilter === 'all' || activity.categoria === categoryFilter;
             const statusMatch = statusFilter === 'all' || activity.status === statusFilter;
             return categoryMatch && statusMatch;
         });
     }, [mainActivities, categoryFilter, statusFilter]);
+
+    const activitiesWithChildren = useMemo(() => {
+        return filteredMainActivities.map(main => ({
+            ...main,
+            children: allActivities.filter(child => child.parentId === main.id)
+        }));
+    }, [filteredMainActivities, allActivities]);
 
     const stats = useMemo(() => {
         const total = mainActivities.length;
@@ -242,9 +249,10 @@ export default function DashboardPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredActivities.length > 0 ? (
-                                filteredActivities.map(activity => (
-                                    <TableRow key={activity.id}>
+                            {activitiesWithChildren.length > 0 ? (
+                                activitiesWithChildren.map(activity => (
+                                    <Fragment key={activity.id}>
+                                    <TableRow>
                                         <TableCell className="font-medium">{activity.nome}</TableCell>
                                         <TableCell>
                                             {activity.categoria ? (
@@ -265,6 +273,18 @@ export default function DashboardPage() {
                                             </Button>
                                         </TableCell>
                                     </TableRow>
+                                     {activity.children.map(child => (
+                                        <TableRow key={child.id} className="bg-muted/50">
+                                            <TableCell className="pl-10">
+                                                <div className="flex items-center gap-2">
+                                                    <CornerDownRight className="h-4 w-4 text-muted-foreground" />
+                                                    <span className="text-muted-foreground">{child.nome}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell colSpan={3}></TableCell>
+                                        </TableRow>
+                                    ))}
+                                    </Fragment>
                                 ))
                             ) : (
                                 <TableRow>
