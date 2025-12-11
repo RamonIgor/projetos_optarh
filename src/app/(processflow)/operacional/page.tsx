@@ -102,9 +102,9 @@ function ActivityItem({ activity, name, onToggle, onUpdatePrazo, isSubItem = fal
                     }
                     <div className="flex items-center gap-1.5"><User className="h-3 w-3" /> {activity.responsavel}</div>
                     {activity.recorrencia && <div className="flex items-center gap-1.5"><Repeat className="h-3 w-3" /> {activity.recorrencia}</div>}
-                    {activity.recorrencia === 'Sob demanda' && activity.prazo && 
+                    {activity.prazo && (
                         <div className="flex items-center gap-1.5"><CalendarIcon className="h-3 w-3" /> Prazo: {format((activity.prazo as Timestamp).toDate(), 'dd/MM/yyyy')}</div>
-                    }
+                    )}
                 </div>
                 <div className="text-xs text-muted-foreground mt-2 space-y-1">
                    {activity.ultimaExecucao && (
@@ -528,9 +528,5 @@ export default function OperationalPage() {
         </div>
     );
 }
-
-    
-
-    
 
     
