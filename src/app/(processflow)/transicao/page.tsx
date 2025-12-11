@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, AlertCircle, CheckCircle2, PlayCircle, Clock, Calendar, Shuffle, BarChart3, Edit, User, Users } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2, PlayCircle, Clock, Calendar, Shuffle, BarChart3, Edit, User, Users, CornerDownRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
@@ -224,7 +224,7 @@ export default function TransitionPage() {
 
     const allResponsibles = useMemo(() => Array.from(new Set(mainActivities.map(a => a.responsavel).filter(Boolean))), [mainActivities]);
 
-    const filteredActivities = useMemo(() => {
+    const filteredMainActivities = useMemo(() => {
         return mainActivities.filter(activity => {
             const categoryMatch = categoryFilter === 'all' || activity.categoria === categoryFilter;
             const statusMatch = statusFilter === 'all' || activity.statusTransicao === statusFilter;
@@ -232,6 +232,13 @@ export default function TransitionPage() {
             return categoryMatch && statusMatch && responsibleMatch;
         });
     }, [mainActivities, categoryFilter, statusFilter, responsibleFilter]);
+
+    const activitiesWithChildren = useMemo(() => {
+        return filteredMainActivities.map(main => ({
+            ...main,
+            children: allActivities.filter(child => child.parentId === main.id)
+        }));
+    }, [filteredMainActivities, allActivities]);
     
     const stats = useMemo(() => {
         const total = mainActivities.length;
@@ -343,42 +350,71 @@ export default function TransitionPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredActivities.length > 0 ? filteredActivities.map(activity => {
+                            {activitiesWithChildren.length > 0 ? activitiesWithChildren.map(activity => {
                                 const statusConfig = transitionStatusConfig[activity.statusTransicao] || transitionStatusConfig.undefined;
                                 return (
-                                <TableRow key={activity.id}>
-                                    <TableCell className="font-medium">{activity.nome}</TableCell>
-                                    <TableCell>
-                                        <Badge variant="outline" className={cn(activity.categoria ? categoryStyles[activity.categoria] : '')}>
-                                            {activity.categoria}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex flex-col">
-                                            <span className="font-semibold">{activity.responsavel}</span>
-                                            {activity.responsavelAnterior && <span className="text-xs text-muted-foreground">de: {activity.responsavelAnterior}</span>}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        {activity.prazoTransicao ? format((activity.prazoTransicao as any).toDate(), 'dd/MM/yyyy') : <span className="text-muted-foreground">-</span>}
-                                        {activity.prazoTransicao && isPast((activity.prazoTransicao as any).toDate()) && activity.statusTransicao !== 'concluida' && (
-                                            <p className="text-xs text-red-500">Atrasado</p>
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant="outline" className={cn(statusConfig.color, "whitespace-nowrap")}>
-                                            {statusConfig.label}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <EditTransitionModal activity={activity}>
-                                            <Button size="sm" variant="ghost">
-                                                <Edit className="h-4 w-4 mr-2" />
-                                                Editar
-                                            </Button>
-                                        </EditTransitionModal>
-                                    </TableCell>
-                                </TableRow>
+                                <React.Fragment key={activity.id}>
+                                    <TableRow>
+                                        <TableCell className="font-medium">{activity.nome}</TableCell>
+                                        <TableCell>
+                                            <Badge variant="outline" className={cn(activity.categoria ? categoryStyles[activity.categoria] : '')}>
+                                                {activity.categoria}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex flex-col">
+                                                <span className="font-semibold">{activity.responsavel}</span>
+                                                {activity.responsavelAnterior && <span className="text-xs text-muted-foreground">de: {activity.responsavelAnterior}</span>}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            {activity.prazoTransicao ? format((activity.prazoTransicao as any).toDate(), 'dd/MM/yyyy') : <span className="text-muted-foreground">-</span>}
+                                            {activity.prazoTransicao && isPast((activity.prazoTransicao as any).toDate()) && activity.statusTransicao !== 'concluida' && (
+                                                <p className="text-xs text-red-500">Atrasado</p>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant="outline" className={cn(statusConfig.color, "whitespace-nowrap")}>
+                                                {statusConfig.label}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <EditTransitionModal activity={activity}>
+                                                <Button size="sm" variant="ghost">
+                                                    <Edit className="h-4 w-4 mr-2" />
+                                                    Editar
+                                                </Button>
+                                            </EditTransitionModal>
+                                        </TableCell>
+                                    </TableRow>
+                                    {activity.children.map(child => (
+                                        <TableRow key={child.id} className="bg-muted/50">
+                                            <TableCell className="pl-10">
+                                                <div className="flex items-center gap-2">
+                                                    <CornerDownRight className="h-4 w-4 text-muted-foreground" />
+                                                    <span className="text-muted-foreground">{child.nome}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell></TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                    <User className="h-4 w-4" />
+                                                    {child.responsavel}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                {child.prazo && (
+                                                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                        <Calendar className="h-4 w-4" />
+                                                        {format((child.prazo as any).toDate(), 'dd/MM/yyyy')}
+                                                   </div>
+                                                )}
+                                            </TableCell>
+                                            <TableCell></TableCell>
+                                            <TableCell></TableCell>
+                                        </TableRow>
+                                    ))}
+                                </React.Fragment>
                             )}) : (
                                 <TableRow>
                                     <TableCell colSpan={6} className="h-24 text-center">Nenhuma atividade encontrada com os filtros selecionados.</TableCell>
@@ -390,10 +426,10 @@ export default function TransitionPage() {
                   
                   {/* Mobile Card List */}
                   <div className="md:hidden space-y-4">
-                        {filteredActivities.length > 0 ? filteredActivities.map(activity => {
+                        {activitiesWithChildren.length > 0 ? activitiesWithChildren.map(activity => {
                              const statusConfig = transitionStatusConfig[activity.statusTransicao] || transitionStatusConfig.undefined;
                              return (
-                                <Card key={activity.id} className="bg-muted/50">
+                                <Card key={activity.id} className="bg-card">
                                     <CardHeader>
                                         <CardTitle>{activity.nome}</CardTitle>
                                         <div className="flex items-center gap-2 pt-2">
@@ -428,6 +464,16 @@ export default function TransitionPage() {
                                                 </div>
                                             </div>
                                         </div>
+                                        {activity.children.length > 0 && (
+                                            <div className="pt-2">
+                                                <Label className="text-xs font-semibold">Micro-processos</Label>
+                                                <ul className="list-disc list-inside space-y-1 pl-2 text-muted-foreground">
+                                                    {activity.children.map(child => (
+                                                        <li key={child.id}>{child.nome} ({child.responsavel})</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
                                     </CardContent>
                                     <CardFooter>
                                         <EditTransitionModal activity={activity}>
@@ -450,3 +496,4 @@ export default function TransitionPage() {
         </div>
     );
 }
+
