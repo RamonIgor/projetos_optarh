@@ -258,8 +258,9 @@ export default function BrainstormPage() {
     const childrenOf: Record<string, Activity[]> = {};
     const activityMap = new Map(activities.map(a => [a.id, a]));
 
+    // First, group all children by their parentId
     activities.forEach(activity => {
-        if (activity.parentId && activityMap.has(activity.parentId)) {
+        if (activity.parentId) {
             if (!childrenOf[activity.parentId]) {
                 childrenOf[activity.parentId] = [];
             }
@@ -267,6 +268,7 @@ export default function BrainstormPage() {
         }
     });
     
+    // Then, build the tree starting from main activities
     mainActivities.forEach(activity => {
         const children = (childrenOf[activity.id] || []).sort((a,b) => ((a.createdAt as any)?.seconds || 0) - ((b.createdAt as any)?.seconds || 0));
         tree.push({ ...activity, children });
@@ -287,13 +289,13 @@ export default function BrainstormPage() {
     const activityData: Omit<Activity, 'id' | 'createdAt'> & { createdAt: any } = {
         nome: trimmedName,
         parentId: parentId,
-        categoria: parentId ? 'Compartilhado' : null,
+        categoria: parentId ? null : null, // Microprocessos não tem categoria inicial
         justificativa: parentId ? 'Micro-processo de uma atividade principal.' : null,
         responsavel: responsavel,
         recorrencia: null,
-        status: parentId ? 'aprovada' : 'brainstorm',
+        status: 'brainstorm', // Microprocessos são criados direto, mas mantemos brainstorm para consistencia da deleção
         comentarios: [],
-        dataAprovacao: parentId ? serverTimestamp() : null,
+        dataAprovacao: null,
         ultimaExecucao: null,
         createdAt: serverTimestamp(),
         statusTransicao: parentId ? 'concluida' : 'a_transferir',

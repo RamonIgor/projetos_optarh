@@ -49,7 +49,7 @@ const categoryStyles: Record<string, string> = {
     Compartilhado: 'bg-blue-100 text-blue-800 border-blue-200',
 };
 
-function ActivityItem({ activity, name, onToggle }: { activity: Activity, name: string, onToggle: (id: string, isPending: boolean) => void }) {
+function ActivityItem({ activity, name, onToggle, isSubItem = false }: { activity: Activity, name: string, onToggle: (id: string, isPending: boolean) => void, isSubItem?: boolean }) {
     const isPending = isActivityPending(activity);
     const isOverdue = isPending && isActivityOverdue(activity);
     const nextExecution = getNextExecution(activity);
@@ -70,7 +70,7 @@ function ActivityItem({ activity, name, onToggle }: { activity: Activity, name: 
             className={cn(
                 "flex items-start gap-4 rounded-lg p-4 transition-colors",
                 !isPending ? 'bg-green-500/10' : isOverdue ? 'bg-red-500/10' : 'bg-card',
-                activity.parentId && 'ml-6 border-l-2 border-primary/20' // Indent sub-items
+                isSubItem && 'ml-6 border-l-2 border-primary/20' // Indent sub-items
             )}
         >
             <Checkbox 
@@ -81,15 +81,15 @@ function ActivityItem({ activity, name, onToggle }: { activity: Activity, name: 
                 disabled={isUpdating}
             />
             <div className="flex-1">
-                <label htmlFor={`activity-${activity.id}`} className="font-semibold text-lg cursor-pointer">{name}</label>
+                <label htmlFor={`activity-${activity.id}`} className={cn("font-semibold text-lg cursor-pointer", isSubItem && "font-normal")}>{name}</label>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-2">
-                    {activity.categoria && 
+                    {activity.categoria && !isSubItem &&
                       <Badge variant="outline" className={cn(categoryStyles[activity.categoria] || '')}>
                           {activity.categoria}
                       </Badge>
                     }
                     <div className="flex items-center gap-1.5"><User className="h-3 w-3" /> {activity.responsavel}</div>
-                    {activity.recorrencia && <div className="flex items-center gap-1.5"><Repeat className="h-3 w-3" /> {activity.recorrencia}</div>}
+                    {activity.recorrencia && !isSubItem && <div className="flex items-center gap-1.5"><Repeat className="h-3 w-3" /> {activity.recorrencia}</div>}
                 </div>
                 <div className="text-xs text-muted-foreground mt-2 space-y-1">
                    {activity.ultimaExecucao && (
@@ -166,11 +166,11 @@ function HistoryModal({ activity, name }: { activity: Activity, name: string }) 
 }
 
 
-function RecurrenceGroup({ title, activities, onToggle, getActivityName }: { title: Recurrence, activities: Activity[], onToggle: (id: string, isPending: boolean) => void, getActivityName: (act: Activity) => string }) {
+function RecurrenceGroup({ title, activities, onToggle, getActivityName }: { title: Recurrence, activities: (Activity & { children: Activity[] })[], onToggle: (id: string, isPending: boolean) => void, getActivityName: (act: Activity) => string }) {
     const [isOpen, setIsOpen] = useState(true);
     
     // Only consider main activities for completion progress
-    const mainActivities = activities.filter(a => !a.parentId);
+    const mainActivities = activities;
     const completed = mainActivities.filter(a => !isActivityPending(a)).length;
     const total = mainActivities.length;
     const progress = total > 0 ? (completed / total) * 100 : 0;
@@ -199,7 +199,12 @@ function RecurrenceGroup({ title, activities, onToggle, getActivityName }: { tit
                     <CardContent className="p-4 space-y-3">
                          <AnimatePresence>
                             {activities.map(activity => (
-                                <ActivityItem key={activity.id} activity={activity} name={getActivityName(activity)} onToggle={onToggle} />
+                                <div key={activity.id}>
+                                    <ActivityItem activity={activity} name={getActivityName(activity)} onToggle={onToggle} />
+                                    {activity.children.map(child => (
+                                        <ActivityItem key={child.id} activity={child} name={getActivityName(child)} onToggle={onToggle} isSubItem />
+                                    ))}
+                                </div>
                             ))}
                         </AnimatePresence>
                     </CardContent>
@@ -287,8 +292,8 @@ export default function OperationalPage() {
     const allResponsibles = useMemo(() => Array.from(new Set(allActivities.map(a => a.responsavel).filter(Boolean))), [allActivities]);
     
     const allRecurrences = useMemo(() => {
-        const recurrences = new Set(allActivities.map(a => a.recorrencia).filter(Boolean));
-        return recurrenceOrder.filter(r => recurrences.has(r as Recurrence));
+        const recurrences = new Set(allActivities.map(a => a.recorrencia).filter(Boolean) as Recurrence[]);
+        return recurrenceOrder.filter(r => recurrences.has(r));
     }, [allActivities]);
 
     const getActivityName = (activity: Activity) => {
@@ -302,11 +307,25 @@ export default function OperationalPage() {
 
     const filteredActivities = useMemo(() => {
         return allActivities.filter(activity => {
-            const categoryMatch = categoryFilter === 'Todas' || activity.categoria === categoryFilter;
-            const recurrenceMatch = recurrenceFilter === 'all' || activity.recorrencia === recurrenceFilter;
-            const responsibleMatch = responsibleFilter === 'all' || activity.responsavel === responsibleFilter;
-            const statusMatch = statusFilter === 'all' || (statusFilter === 'pending' && isActivityPending(activity)) || (statusFilter === 'executed' && !isActivityPending(activity));
-            return categoryMatch && recurrenceMatch && responsibleMatch && statusMatch;
+            // Include main activities that match filters
+            if (!activity.parentId) {
+                const categoryMatch = categoryFilter === 'Todas' || activity.categoria === categoryFilter;
+                const recurrenceMatch = recurrenceFilter === 'all' || activity.recorrencia === recurrenceFilter;
+                const responsibleMatch = responsibleFilter === 'all' || activity.responsavel === responsibleFilter;
+                const statusMatch = statusFilter === 'all' || (statusFilter === 'pending' && isActivityPending(activity)) || (statusFilter === 'executed' && !isActivityPending(activity));
+                return categoryMatch && recurrenceMatch && responsibleMatch && statusMatch;
+            }
+            // Always include children of filtered main activities
+            const parent = allActivities.find(a => a.id === activity.parentId);
+            if (parent) {
+                 const categoryMatch = categoryFilter === 'Todas' || parent.categoria === categoryFilter;
+                const recurrenceMatch = recurrenceFilter === 'all' || parent.recorrencia === recurrenceFilter;
+                const responsibleMatch = responsibleFilter === 'all' || parent.responsavel === responsibleFilter;
+                const statusMatch = statusFilter === 'all' || (statusFilter === 'pending' && isActivityPending(parent)) || (statusFilter === 'executed' && !isActivityPending(parent));
+                if(categoryMatch && recurrenceMatch && responsibleMatch && statusMatch) return true;
+            }
+
+            return false;
         });
     }, [allActivities, categoryFilter, recurrenceFilter, responsibleFilter, statusFilter]);
     
@@ -314,44 +333,28 @@ export default function OperationalPage() {
 
     const groupedActivities = useMemo(() => {
         const activityMap = new Map(allActivities.map(a => [a.id, a]));
-        const groups: Record<Recurrence, Activity[]> = recurrenceOrder.reduce((acc, r) => ({...acc, [r]: []}), {} as Record<Recurrence, Activity[]>);
+        const groups = recurrenceOrder.reduce((acc, r) => ({...acc, [r]: []}), {} as Record<Recurrence, (Activity & {children: Activity[]})[]>);
 
         for (const activity of filteredActivities) {
-            // If it's a main activity, add it and its children
-            if (!activity.parentId) {
-                if (activity.recorrencia && groups[activity.recorrencia]) {
-                    groups[activity.recorrencia].push(activity);
-                    const children = allActivities.filter(c => c.parentId === activity.id);
-                    groups[activity.recorrencia].push(...children);
-                }
-            } else {
-                 // If it's a sub-activity, check if its parent is in the filtered list
-                const parent = activityMap.get(activity.parentId);
-                if (parent && filteredActivities.some(fa => fa.id === parent.id)) {
-                    // It's already added with its parent
-                } else if (!parent) {
-                    // It's an orphan sub-activity (edge case), add it based on its own recurrence
-                    if (activity.recorrencia && groups[activity.recorrencia]) {
-                         groups[activity.recorrencia].push(activity);
-                    }
-                }
+            if (!activity.parentId && activity.recorrencia && groups[activity.recorrencia]) {
+                 const children = allActivities
+                    .filter(c => c.parentId === activity.id)
+                    .sort((a,b) => ((a.createdAt as any)?.seconds || 0) - ((b.createdAt as any)?.seconds || 0));
+
+                groups[activity.recorrencia].push({ ...activity, children });
             }
         }
-
-        // Sort within groups: main activities first, then sub-activities
+        
+        // Sort main activities within each group
         for (const recurrence in groups) {
-            groups[recurrence as Recurrence].sort((a,b) => {
-                if (!a.parentId && b.parentId) return -1;
-                if (a.parentId && !b.parentId) return 1;
-                if (a.parentId === b.parentId) return ((a.createdAt as any)?.seconds || 0) - ((b.createdAt as any)?.seconds || 0);
-                 const aIsPending = isActivityPending(a);
+            groups[recurrence as Recurrence].sort((a, b) => {
+                const aIsPending = isActivityPending(a);
                 const bIsPending = isActivityPending(b);
                 if (aIsPending && !bIsPending) return -1;
                 if (!aIsPending && bIsPending) return 1;
-                return 0;
+                return ((a.createdAt as any)?.seconds || 0) - ((b.createdAt as any)?.seconds || 0);
             });
         }
-
         return groups;
     }, [filteredActivities, allActivities]);
 
@@ -413,7 +416,7 @@ export default function OperationalPage() {
                           </SelectTrigger>
                           <SelectContent>
                               <SelectItem value="all">Todas Recorrências</SelectItem>
-                              {allRecurrences.map(r => <SelectItem key={r} value={r!}>{r}</SelectItem>)}
+                              {allRecurrences.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                           </SelectContent>
                       </Select>
                       <Select value={responsibleFilter} onValueChange={setResponsibleFilter}>
@@ -422,7 +425,7 @@ export default function OperationalPage() {
                           </SelectTrigger>
                           <SelectContent>
                               <SelectItem value="all">Todos Responsáveis</SelectItem>
-                              {allResponsibles.map(r => <SelectItem key={r} value={r!}>{r}</SelectItem>)}
+                              {allResponsibles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                           </SelectContent>
                       </Select>
                       <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -458,5 +461,3 @@ export default function OperationalPage() {
         </div>
     );
 }
-
-    
