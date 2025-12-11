@@ -86,6 +86,7 @@ export interface SelectedQuestion {
   category: string;
   options?: string[] | null;
   isMandatory: boolean;
+  isNpsQuestion?: boolean;
 }
 
 export interface Survey {
@@ -130,5 +131,3 @@ export interface Suggestion {
   createdAt: Timestamp;
   status: 'new' | 'in_review' | 'implemented' | 'declined';
 }
-
-    

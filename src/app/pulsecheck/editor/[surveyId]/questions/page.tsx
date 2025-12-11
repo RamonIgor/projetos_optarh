@@ -131,7 +131,8 @@ export default function ConfigureQuestionsPage() {
             type: question.type,
             category: question.category,
             options: question.type === 'multiple-choice' ? (question.options || []) : null,
-            isMandatory: question.isMandatory
+            isMandatory: question.isMandatory,
+            isNpsQuestion: question.isNpsQuestion,
         };
         const newQuestions = [...selectedQuestions, newQuestion];
         setSelectedQuestions(newQuestions);
