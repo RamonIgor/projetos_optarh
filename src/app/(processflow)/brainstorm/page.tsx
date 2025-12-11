@@ -326,7 +326,7 @@ export default function BrainstormPage() {
     
     if(!parentId) setNewActivityName("");
     
-    const activityData: Omit<Activity, 'id' | 'createdAt'> & { createdAt: any } = {
+    const activityData: any = {
         nome: trimmedName,
         parentId: parentId,
         categoria: parentId && parentActivity ? parentActivity.categoria : null,
