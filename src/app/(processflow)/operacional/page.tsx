@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Calendar, User, Repeat, CheckSquare, Clock, ChevronsDown, History, ListChecks } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon, User, Repeat, CheckSquare, Clock, ChevronsDown, History, ListChecks, CalendarPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -23,6 +23,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 
 
 function cn(...classes: (string | boolean | undefined)[]) {
@@ -49,17 +52,26 @@ const categoryStyles: Record<string, string> = {
     Compartilhado: 'bg-blue-100 text-blue-800 border-blue-200',
 };
 
-function ActivityItem({ activity, name, onToggle, isSubItem = false }: { activity: Activity, name: string, onToggle: (id: string, isPending: boolean) => void, isSubItem?: boolean }) {
+function ActivityItem({ activity, name, onToggle, onUpdatePrazo, isSubItem = false }: { activity: Activity, name: string, onToggle: (id: string, isPending: boolean) => void, onUpdatePrazo: (id: string, prazo: Date) => void, isSubItem?: boolean }) {
     const isPending = isActivityPending(activity);
     const isOverdue = isPending && isActivityOverdue(activity);
     const nextExecution = getNextExecution(activity);
     const [isUpdating, setIsUpdating] = useState(false);
+    const [calendarOpen, setCalendarOpen] = useState(false);
 
     const handleToggle = () => {
         setIsUpdating(true);
         onToggle(activity.id, isPending);
         setTimeout(() => setIsUpdating(false), 1000);
     }
+    
+    const handleDateSelect = (date: Date | undefined) => {
+        if (date) {
+            onUpdatePrazo(activity.id, date);
+        }
+        setCalendarOpen(false);
+    }
+
 
     return (
         <motion.div
@@ -91,7 +103,7 @@ function ActivityItem({ activity, name, onToggle, isSubItem = false }: { activit
                     <div className="flex items-center gap-1.5"><User className="h-3 w-3" /> {activity.responsavel}</div>
                     {activity.recorrencia && <div className="flex items-center gap-1.5"><Repeat className="h-3 w-3" /> {activity.recorrencia}</div>}
                     {activity.recorrencia === 'Sob demanda' && activity.prazo && 
-                        <div className="flex items-center gap-1.5"><Calendar className="h-3 w-3" /> Prazo: {format((activity.prazo as Timestamp).toDate(), 'dd/MM/yyyy')}</div>
+                        <div className="flex items-center gap-1.5"><CalendarIcon className="h-3 w-3" /> Prazo: {format((activity.prazo as Timestamp).toDate(), 'dd/MM/yyyy')}</div>
                     }
                 </div>
                 <div className="text-xs text-muted-foreground mt-2 space-y-1">
@@ -109,7 +121,35 @@ function ActivityItem({ activity, name, onToggle, isSubItem = false }: { activit
             </div>
              <div className="flex flex-col items-end gap-2">
                  {isOverdue && <Badge variant="destructive">Atrasada</Badge>}
-                 <HistoryModal activity={activity} name={name} />
+                 <div className="flex items-center gap-1">
+                     <HistoryModal activity={activity} name={name} />
+                     {activity.recorrencia === 'Sob demanda' && (
+                        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                            <TooltipProvider>
+                               <Tooltip>
+                                 <TooltipTrigger asChild>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-9 w-9">
+                                            <CalendarPlus className="h-4 w-4" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Definir Prazo</p>
+                                </TooltipContent>
+                               </Tooltip>
+                            </TooltipProvider>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                    mode="single"
+                                    selected={activity.prazo ? (activity.prazo as Timestamp).toDate() : undefined}
+                                    onSelect={handleDateSelect}
+                                    initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
+                    )}
+                 </div>
             </div>
         </motion.div>
     );
@@ -130,7 +170,7 @@ function HistoryModal({ activity, name }: { activity: Activity, name: string }) 
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="mt-auto">
+                <Button variant="ghost" size="sm">
                     <History className="h-4 w-4 mr-2" />
                     Histórico
                 </Button>
@@ -169,7 +209,7 @@ function HistoryModal({ activity, name }: { activity: Activity, name: string }) 
 }
 
 
-function RecurrenceGroup({ title, activities, onToggle, getActivityName }: { title: Recurrence, activities: (Activity & { children: Activity[] })[], onToggle: (id: string, isPending: boolean) => void, getActivityName: (act: Activity) => string }) {
+function RecurrenceGroup({ title, activities, onToggle, onUpdatePrazo, getActivityName }: { title: Recurrence, activities: (Activity & { children: Activity[] })[], onToggle: (id: string, isPending: boolean) => void, onUpdatePrazo: (id: string, prazo: Date) => void, getActivityName: (act: Activity) => string }) {
     const [isOpen, setIsOpen] = useState(true);
     
     // Only consider main activities for completion progress
@@ -203,9 +243,9 @@ function RecurrenceGroup({ title, activities, onToggle, getActivityName }: { tit
                          <AnimatePresence>
                             {activities.map(activity => (
                                 <div key={activity.id}>
-                                    <ActivityItem activity={activity} name={getActivityName(activity)} onToggle={onToggle} />
+                                    <ActivityItem activity={activity} name={getActivityName(activity)} onToggle={onToggle} onUpdatePrazo={onUpdatePrazo} />
                                     {activity.children.map(child => (
-                                        <ActivityItem key={child.id} activity={child} name={getActivityName(child)} onToggle={onToggle} isSubItem />
+                                        <ActivityItem key={child.id} activity={child} name={getActivityName(child)} onToggle={onToggle} onUpdatePrazo={onUpdatePrazo} isSubItem />
                                     ))}
                                 </div>
                             ))}
@@ -290,6 +330,21 @@ export default function OperationalPage() {
                 });
             }
         });
+    };
+    
+    const handleUpdatePrazo = async (activityId: string, prazo: Date) => {
+        if (!db || !clientId) return;
+        try {
+            const docRef = doc(db, 'clients', clientId, 'activities', activityId);
+            await updateDoc(docRef, { prazo: prazo });
+            toast({
+                title: "Prazo atualizado!",
+                description: `O novo prazo foi definido para ${format(prazo, "dd/MM/yyyy")}.`,
+            });
+        } catch (error) {
+            console.error("Error updating deadline:", error);
+            toast({ title: 'Erro ao atualizar prazo', variant: 'destructive' });
+        }
     };
     
     const allResponsibles = useMemo(() => Array.from(new Set(allActivities.map(a => a.responsavel).filter(Boolean))), [allActivities]);
@@ -405,7 +460,7 @@ export default function OperationalPage() {
           </motion.div>
           
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 my-8">
-              <StatCard title="Total de Atividades Principais" value={stats.total} icon={<Calendar className="h-6 w-6 text-muted-foreground" />} />
+              <StatCard title="Total de Atividades Principais" value={stats.total} icon={<CalendarIcon className="h-6 w-6 text-muted-foreground" />} />
               <StatCard title="Executadas no Período" value={stats.executed} icon={<CheckSquare className="h-6 w-6 text-green-500" />} />
               <StatCard title="Pendentes" value={stats.pending} icon={<Clock className="h-6 w-6 text-yellow-500" />} />
               <StatCard title="Taxa de Conclusão" value={`${Math.round(stats.completionRate)}%`} icon={<Progress value={stats.completionRate} className="w-12 h-3" /> } />
@@ -458,6 +513,7 @@ export default function OperationalPage() {
                             title={recurrence}
                             activities={groupedActivities[recurrence] || []}
                             onToggle={handleToggleActivity}
+                            onUpdatePrazo={handleUpdatePrazo}
                             getActivityName={(act) => getActivityName(act)}
                         />
                     ))}
@@ -472,6 +528,8 @@ export default function OperationalPage() {
         </div>
     );
 }
+
+    
 
     
 
