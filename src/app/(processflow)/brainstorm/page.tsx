@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useTransition, FormEvent, useMemo, useRef } from 'react';
 import { collection, addDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, doc } from 'firebase/firestore';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { type Activity } from '@/types/activity';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -264,7 +264,7 @@ function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddS
                 </div>
             </div>
             <AnimatePresence>
-                {showAddSub && <AddSubActivityForm parentId={activity.id} onAddSubActivity={onAddSubActivity} onFinished={() => setShowAddSub(false)} />}
+                {showAddSub && <AddSubActivityForm parentId={activity.id} onAddSubActivity={addActivity} onFinished={() => setShowAddSub(false)} />}
             </AnimatePresence>
         </motion.div>
     )
@@ -338,7 +338,6 @@ export default function BrainstormPage() {
   const activityTree = useMemo(() => {
     const tree: (Activity & { children: Activity[] })[] = [];
     const childrenOf: Record<string, Activity[]> = {};
-    const activityMap = new Map(activities.map(a => [a.id, a]));
 
     activities.forEach(activity => {
         if (activity.parentId) {
@@ -350,7 +349,7 @@ export default function BrainstormPage() {
     });
     
     mainActivities.forEach(activity => {
-        const children = (childrenOf[activity.id] || []).sort((a,b) => ((a.createdAt as any)?.seconds || 0) - ((a.createdAt as any)?.seconds || 0));
+        const children = (childrenOf[activity.id] || []).sort((a,b) => ((a.createdAt as any)?.seconds || 0) - ((b.createdAt as any)?.seconds || 0));
         tree.push({ ...activity, children });
     });
     
@@ -381,8 +380,7 @@ export default function BrainstormPage() {
                 description: "Não foi possível anexar o arquivo.",
                 variant: "destructive",
             });
-            // Stop if upload fails
-            return; 
+            return;
         }
     }
 
@@ -438,6 +436,64 @@ export default function BrainstormPage() {
           });
         });
   };
+  
+    const deleteActivity = async (activityId: string) => {
+        if (!db || !clientId) return;
+
+        const activityToDelete = activities.find(a => a.id === activityId);
+        if (!activityToDelete) return;
+
+        // Delete attachment from Storage if it exists
+        if (activityToDelete.attachmentUrl && storage) {
+            try {
+                const fileRef = storageRef(storage, activityToDelete.attachmentUrl);
+                await deleteObject(fileRef);
+            } catch (error: any) {
+                // If file not found, we can ignore, but log other errors
+                if (error.code !== 'storage/object-not-found') {
+                    console.error("Error deleting attachment:", error);
+                    toast({
+                        title: "Erro ao excluir anexo",
+                        description: "O arquivo no storage não pôde ser removido, mas a atividade será excluída.",
+                        variant: "destructive",
+                    });
+                }
+            }
+        }
+        
+        // Delete activity from Firestore
+        await deleteDoc(doc(db, 'clients', clientId, 'activities', activityId));
+    };
+
+
+    const handleDeleteActivity = (activityId: string) => {
+        const activity = activities.find(a => a.id === activityId);
+        if (!activity) return;
+
+        const hasChildren = activityTree.some(a => a.id === activityId && a.children.length > 0);
+        if (hasChildren) {
+            toast({
+                title: "Ação não permitida",
+                description: "Exclua os micro-processos primeiro para poder apagar a atividade principal.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        deleteActivity(activityId).catch(async (error) => {
+            const permissionError = new FirestorePermissionError({
+                path: `clients/${clientId}/activities/${activityId}`,
+                operation: 'delete',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            toast({
+                title: "Erro ao excluir atividade",
+                description: "Não foi possível excluir a atividade. Verifique as permissões.",
+                variant: "destructive",
+            });
+        });
+    };
+
 
   const handleAddSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -461,9 +517,7 @@ export default function BrainstormPage() {
                 setDialogState({ open: false, onConfirm: () => {}, onCancel: () => {} });
               },
               onCancel: () => {
-                setNewActivityName("");
-                setFile(null);
-                if(fileInputRef.current) fileInputRef.current.value = "";
+                setNewActivityName(newActivityName); // Keep the name for editing
                 setDialogState({ open: false, onConfirm: () => {}, onCancel: () => {} });
               }
           });
@@ -611,7 +665,5 @@ export default function BrainstormPage() {
     </div>
   );
 }
-
-    
 
     
