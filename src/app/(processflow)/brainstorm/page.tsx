@@ -42,31 +42,32 @@ const statusInfo: { [key: string]: { label: string; icon: React.ReactNode; varia
   aprovada: { label: 'Aprovada', icon: <ThumbsUp className="h-3 w-3" />, variant: 'secondary', className: 'bg-green-100 text-green-800' },
 };
 
-function AddSubActivityForm({ parentId, onAddSubActivity, onFinished }: { parentId: string; onAddSubActivity: (name: string, parentId: string, responsavel: string, recorrencia: string, prazo: Date | undefined, file: File | null) => void; onFinished: () => void; }) {
+function AddSubActivityForm({ parentId, onAddSubActivity, onFinished }: { parentId: string; onAddSubActivity: (name: string, parentId: string, responsavel: string, recorrencia: string, prazo: Date | undefined, file: File | null) => Promise<void>; onFinished: () => void; }) {
     const [subActivityName, setSubActivityName] = useState("");
     const [responsavel, setResponsavel] = useState("");
     const [recorrencia, setRecorrencia] = useState("");
     const [prazo, setPrazo] = useState<Date | undefined>();
     const [file, setFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [isAdding, startAdding] = useTransition();
+    const [isAdding, setIsAdding] = useState(false);
 
-    const handleAddSubmit = (e: FormEvent) => {
+    const handleAddSubmit = async (e: FormEvent) => {
         e.preventDefault();
         e.stopPropagation();
         if (!subActivityName.trim() || !responsavel.trim() || !recorrencia) return;
         if(recorrencia === 'Sob demanda' && !prazo) return;
 
-        startAdding(() => {
-            onAddSubActivity(subActivityName, parentId, responsavel, recorrencia, prazo, file);
-            setSubActivityName("");
-            setResponsavel("");
-            setRecorrencia("");
-            setPrazo(undefined);
-            setFile(null);
-            if (fileInputRef.current) fileInputRef.current.value = "";
-            onFinished(); // Call the callback to close the form
-        });
+        setIsAdding(true);
+        await onAddSubActivity(subActivityName, parentId, responsavel, recorrencia, prazo, file);
+        
+        setSubActivityName("");
+        setResponsavel("");
+        setRecorrencia("");
+        setPrazo(undefined);
+        setFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        onFinished(); // Call the callback to close the form
+        setIsAdding(false);
     }
 
     return (
@@ -156,7 +157,7 @@ function AddSubActivityForm({ parentId, onAddSubActivity, onFinished }: { parent
 }
 
 
-function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddSubActivity, onDeleteActivity }: { activity: Activity, isSubItem?: boolean, hasChildren?: boolean, onAddSubActivity: (name: string, parentId: string, responsavel: string, recorrencia: string, prazo: Date | undefined, file: File | null) => void, onDeleteActivity: (id: string) => void }) {
+function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddSubActivity, onDeleteActivity }: { activity: Activity, isSubItem?: boolean, hasChildren?: boolean, onAddSubActivity: (name: string, parentId: string, responsavel: string, recorrencia: string, prazo: Date | undefined, file: File | null) => Promise<void>, onDeleteActivity: (id: string) => void }) {
     const [showAddSub, setShowAddSub] = useState(false);
     const [isDeleting, startDeleting] = useTransition();
 
@@ -264,7 +265,7 @@ function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddS
                 </div>
             </div>
             <AnimatePresence>
-                {showAddSub && <AddSubActivityForm parentId={activity.id} onAddSubActivity={addActivity} onFinished={() => setShowAddSub(false)} />}
+                {showAddSub && <AddSubActivityForm parentId={activity.id} onAddSubActivity={onAddSubActivity} onFinished={() => setShowAddSub(false)} />}
             </AnimatePresence>
         </motion.div>
     )
@@ -283,7 +284,7 @@ export default function BrainstormPage() {
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAdding, startMainAddTransition] = useTransition();
+  const [isAdding, setIsAdding] = useState(false);
 
   const [dialogState, setDialogState] = useState<{ open: boolean; onConfirm: () => void; onCancel: () => void; similarTo?: string; nameToAdd?: string; }>({ open: false, onConfirm: () => {}, onCancel: () => {} });
   
@@ -362,82 +363,79 @@ export default function BrainstormPage() {
   const addActivity = async (name: string, parentId: string | null = null, responsavel: string | null = null, recorrencia: string | null = null, prazo: Date | undefined = undefined, fileToAdd: File | null = null) => {
     const trimmedName = name.trim();
     if (!trimmedName || !db || !clientId || !storage) return;
-    
-    let attachmentUrl: string | null = null;
-    let attachmentFilename: string | null = null;
 
-    if (fileToAdd) {
-        const uniqueFilename = `${Date.now()}-${fileToAdd.name}`;
-        const fileRef = storageRef(storage, `attachments/${clientId}/${uniqueFilename}`);
-        try {
+    setIsAdding(true);
+    
+    try {
+        let attachmentUrl: string | null = null;
+        let attachmentFilename: string | null = null;
+
+        if (fileToAdd) {
+            const uniqueFilename = `${Date.now()}-${fileToAdd.name}`;
+            const fileRef = storageRef(storage, `attachments/${clientId}/${uniqueFilename}`);
             const snapshot = await uploadBytes(fileRef, fileToAdd);
             attachmentUrl = await getDownloadURL(snapshot.ref);
             attachmentFilename = fileToAdd.name;
-        } catch (uploadError) {
-            console.error("File upload error:", uploadError);
-            toast({
-                title: "Erro no Upload",
-                description: "Não foi possível anexar o arquivo.",
-                variant: "destructive",
-            });
-            return;
         }
-    }
 
+        let parentActivity: Activity | undefined;
+        if (parentId) {
+            parentActivity = activities.find(a => a.id === parentId);
+        }
+        
+        const activityData: any = {
+            nome: trimmedName,
+            parentId: parentId,
+            categoria: parentId && parentActivity ? parentActivity.categoria : null,
+            justificativa: parentId ? 'Micro-processo de uma atividade principal.' : null,
+            responsavel: responsavel,
+            recorrencia: recorrencia as Activity['recorrencia'],
+            status: parentId ? 'aprovada' : 'brainstorm',
+            comentarios: [],
+            dataAprovacao: parentId ? serverTimestamp() : null,
+            ultimaExecucao: null,
+            createdAt: serverTimestamp(),
+            statusTransicao: parentId ? 'concluida' : 'a_transferir',
+            responsavelAnterior: null,
+            dataInicioTransicao: null,
+            dataConclusaoTransicao: parentId ? serverTimestamp() : null,
+            prazoTransicao: null,
+            prazo: prazo || null,
+            historicoExecucoes: [],
+            attachmentUrl,
+            attachmentFilename,
+          };
 
-    let parentActivity: Activity | undefined;
-    if (parentId) {
-        parentActivity = activities.find(a => a.id === parentId);
-    }
-    
-    if(!parentId) {
-        setNewActivityName("");
-        setFile(null);
-        if(fileInputRef.current) fileInputRef.current.value = "";
-    }
-    
-    const activityData: any = {
-        nome: trimmedName,
-        parentId: parentId,
-        categoria: parentId && parentActivity ? parentActivity.categoria : null,
-        justificativa: parentId ? 'Micro-processo de uma atividade principal.' : null,
-        responsavel: responsavel,
-        recorrencia: recorrencia as Activity['recorrencia'],
-        status: parentId ? 'aprovada' : 'brainstorm',
-        comentarios: [],
-        dataAprovacao: parentId ? serverTimestamp() : null,
-        ultimaExecucao: null,
-        createdAt: serverTimestamp(),
-        statusTransicao: parentId ? 'concluida' : 'a_transferir',
-        responsavelAnterior: null,
-        dataInicioTransicao: null,
-        dataConclusaoTransicao: parentId ? serverTimestamp() : null,
-        prazoTransicao: null,
-        prazo: prazo || null,
-        historicoExecucoes: [],
-        attachmentUrl,
-        attachmentFilename,
-      };
+          const activitiesCollection = collection(db, 'clients', clientId, 'activities');
+          await addDoc(activitiesCollection, activityData);
 
-      const activitiesCollection = collection(db, 'clients', clientId, 'activities');
-      addDoc(activitiesCollection, activityData)
-        .catch(async (error) => {
-          if (!parentId) setNewActivityName(name); // Restore input on error for main activity
-          const permissionError = new FirestorePermissionError({
-            path: activitiesCollection.path,
+          if(!parentId) { // Only clear main form
+            setNewActivityName("");
+            setFile(null);
+            if(fileInputRef.current) fileInputRef.current.value = "";
+          }
+
+    } catch (error) {
+        console.error("Error adding activity:", error);
+        if (!parentId) setNewActivityName(name); // Restore input on error for main activity
+
+        const permissionError = new FirestorePermissionError({
+            path: `clients/${clientId}/activities`,
             operation: 'create',
-            requestResourceData: activityData,
-          });
-          errorEmitter.emit('permission-error', permissionError);
-          toast({
+            requestResourceData: { name: trimmedName },
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        toast({
             title: "Erro ao adicionar atividade",
             description: "Não foi possível salvar a nova atividade. Verifique as permissões.",
             variant: "destructive",
-          });
         });
+    } finally {
+        setIsAdding(false);
+    }
   };
   
-    const deleteActivity = async (activityId: string) => {
+  const deleteActivity = async (activityId: string) => {
         if (!db || !clientId) return;
 
         const activityToDelete = activities.find(a => a.id === activityId);
@@ -446,6 +444,7 @@ export default function BrainstormPage() {
         // Delete attachment from Storage if it exists
         if (activityToDelete.attachmentUrl && storage) {
             try {
+                // Important: get the ref from the URL, not a constructed path
                 const fileRef = storageRef(storage, activityToDelete.attachmentUrl);
                 await deleteObject(fileRef);
             } catch (error: any) {
@@ -462,7 +461,21 @@ export default function BrainstormPage() {
         }
         
         // Delete activity from Firestore
-        await deleteDoc(doc(db, 'clients', clientId, 'activities', activityId));
+        const docRef = doc(db, 'clients', clientId, 'activities', activityId);
+        try {
+            await deleteDoc(docRef);
+        } catch (error) {
+            const permissionError = new FirestorePermissionError({
+                path: docRef.path,
+                operation: 'delete',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            toast({
+                title: "Erro ao excluir atividade",
+                description: "Não foi possível excluir a atividade. Verifique as permissões.",
+                variant: "destructive",
+            });
+        }
     };
 
 
@@ -480,18 +493,7 @@ export default function BrainstormPage() {
             return;
         }
 
-        deleteActivity(activityId).catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
-                path: `clients/${clientId}/activities/${activityId}`,
-                operation: 'delete',
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            toast({
-                title: "Erro ao excluir atividade",
-                description: "Não foi possível excluir a atividade. Verifique as permissões.",
-                variant: "destructive",
-            });
-        });
+        deleteActivity(activityId);
     };
 
 
@@ -500,31 +502,27 @@ export default function BrainstormPage() {
     const trimmedName = newActivityName.trim();
     if (!trimmedName || isAdding) return;
     
-    // Capture file at submission time
     const fileToSubmit = file;
-    
     const action = () => addActivity(trimmedName, null, null, null, undefined, fileToSubmit);
     
-    startMainAddTransition(() => {
-        const similar = mainActivities.find(act => isSimilar(act.nome, trimmedName));
-        if (similar) {
-          setDialogState({ 
-              open: true, 
-              similarTo: similar.nome, 
-              nameToAdd: trimmedName,
-              onConfirm: () => {
-                action();
-                setDialogState({ open: false, onConfirm: () => {}, onCancel: () => {} });
-              },
-              onCancel: () => {
-                setNewActivityName(newActivityName); // Keep the name for editing
-                setDialogState({ open: false, onConfirm: () => {}, onCancel: () => {} });
-              }
-          });
-        } else {
-          action();
-        }
-    });
+    const similar = mainActivities.find(act => isSimilar(act.nome, trimmedName));
+    if (similar) {
+      setDialogState({ 
+          open: true, 
+          similarTo: similar.nome, 
+          nameToAdd: trimmedName,
+          onConfirm: () => {
+            action();
+            setDialogState({ open: false, onConfirm: () => {}, onCancel: () => {} });
+          },
+          onCancel: () => {
+            // Do not clear the form on cancel, allow user to edit
+            setDialogState({ open: false, onConfirm: () => {}, onCancel: () => {} });
+          }
+      });
+    } else {
+      action();
+    }
   };
 
   const isLoadingPage = userLoading || (isClientLoading && !isConsultant);
