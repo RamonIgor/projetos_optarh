@@ -50,39 +50,49 @@ const getDisplayName = (activity: Activity, allActivities: Activity[], isChild: 
 function ActivityList({ activities, selectedActivityId, onSelectActivity, allActivities, emptyMessage }: { activities: (Activity & { children: Activity[] })[], selectedActivityId: string | null, onSelectActivity: (id: string) => void, allActivities: Activity[], emptyMessage: string }) {
     return (
         <ScrollArea className="h-[60vh]">
-             <div className="space-y-1 pr-4">
-                {activities.length > 0 ? activities.map(mainActivity => (
-                     <Fragment key={mainActivity.id}>
+             <div className="space-y-2 pr-4">
+                {activities.length > 0 ? activities.map(mainActivity => {
+                    const isParentSelected = selectedActivityId === mainActivity.id;
+                    const isChildSelected = mainActivity.children.some(c => c.id === selectedActivityId);
+
+                    return (
+                     <div 
+                        key={mainActivity.id}
+                        className={cn(
+                            "w-full text-left rounded-lg border transition-colors",
+                            (isParentSelected || isChildSelected) ? "bg-primary/10 border-primary" : "bg-card hover:bg-muted"
+                        )}
+                    >
                         <button
                             onClick={() => onSelectActivity(mainActivity.id)}
-                            className={cn(
-                                "w-full text-left p-3 rounded-lg border transition-colors",
-                                selectedActivityId === mainActivity.id
-                                    ? "bg-primary/10 border-primary"
-                                    : "bg-transparent hover:bg-muted"
-                            )}
+                            className="w-full text-left p-3"
                         >
                             {getDisplayName(mainActivity, allActivities, false)}
                              <Badge variant="secondary" className="mt-1">
                                 {mainActivity.status === 'brainstorm' ? 'Não Classificada' : mainActivity.status === 'aguardando_consenso' ? 'Aguardando Consenso' : 'Aprovada'}
                             </Badge>
                         </button>
-                        {mainActivity.children.map(child => (
-                           <button
-                                key={child.id}
-                                onClick={() => onSelectActivity(child.id)}
-                                className={cn(
-                                    "w-full text-left p-3 rounded-lg border transition-colors ml-4",
-                                    selectedActivityId === child.id
-                                        ? "bg-primary/10 border-primary"
-                                        : "bg-muted/50 hover:bg-muted"
-                                )}
-                            >
-                               {getDisplayName(child, allActivities, true)}
-                           </button>
-                        ))}
-                     </Fragment>
-                )) : (
+                        {mainActivity.children.length > 0 && (
+                            <div className="border-t border-dashed border-primary/20 space-y-1 p-2">
+                            {mainActivity.children.map(child => (
+                               <button
+                                    key={child.id}
+                                    onClick={() => onSelectActivity(child.id)}
+                                    className={cn(
+                                        "w-full text-left p-2 rounded-md transition-colors",
+                                        selectedActivityId === child.id
+                                            ? "bg-primary/20"
+                                            : "hover:bg-primary/5"
+                                    )}
+                                >
+                                   {getDisplayName(child, allActivities, true)}
+                               </button>
+                            ))}
+                            </div>
+                        )}
+                     </div>
+                    )
+                }) : (
                     <div className="text-center py-10">
                         <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
                         <h3 className="text-lg font-bold">{emptyMessage}</h3>
@@ -466,3 +476,5 @@ export default function ClassificationPage() {
     </div>
   );
 }
+
+    
