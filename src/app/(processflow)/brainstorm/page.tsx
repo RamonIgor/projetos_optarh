@@ -274,7 +274,7 @@ function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddS
 export default function BrainstormPage() {
   const db = useFirestore();
   const { app } = useFirebase();
-  const storage = app ? getStorage(app) : null;
+  const storage = useMemo(() => app ? getStorage(app) : null, [app]);
   const { user, loading: userLoading } = useUser();
   const { clientId, isClientLoading, isConsultant } = useClient();
   const router = useRouter();
@@ -362,7 +362,16 @@ export default function BrainstormPage() {
 
   const addActivity = async (name: string, parentId: string | null = null, responsavel: string | null = null, recorrencia: string | null = null, prazo: Date | undefined = undefined, fileToAdd: File | null = null) => {
     const trimmedName = name.trim();
-    if (!trimmedName || !db || !clientId || !storage) return;
+    if (!trimmedName || !db || !clientId) return;
+
+    if (fileToAdd && !storage) {
+        toast({
+            title: "Erro de Configuração",
+            description: "O serviço de armazenamento de arquivos não está disponível.",
+            variant: "destructive"
+        });
+        return;
+    }
 
     setIsAdding(true);
     
@@ -370,7 +379,7 @@ export default function BrainstormPage() {
         let attachmentUrl: string | null = null;
         let attachmentFilename: string | null = null;
 
-        if (fileToAdd) {
+        if (fileToAdd && storage) {
             const uniqueFilename = `${Date.now()}-${fileToAdd.name}`;
             const fileRef = storageRef(storage, `attachments/${clientId}/${uniqueFilename}`);
             const snapshot = await uploadBytes(fileRef, fileToAdd);
@@ -436,13 +445,13 @@ export default function BrainstormPage() {
   };
   
   const deleteActivity = async (activityId: string) => {
-        if (!db || !clientId) return;
+        if (!db || !clientId || !storage) return;
 
         const activityToDelete = activities.find(a => a.id === activityId);
         if (!activityToDelete) return;
 
         // Delete attachment from Storage if it exists
-        if (activityToDelete.attachmentUrl && storage) {
+        if (activityToDelete.attachmentUrl) {
             try {
                 // Important: get the ref from the URL, not a constructed path
                 const fileRef = storageRef(storage, activityToDelete.attachmentUrl);
@@ -516,6 +525,8 @@ export default function BrainstormPage() {
             setDialogState({ open: false, onConfirm: () => {}, onCancel: () => {} });
           },
           onCancel: () => {
+            setNewActivityName(trimmedName); // Keep the user's input
+            setFile(fileToSubmit);
             setDialogState({ open: false, onConfirm: () => {}, onCancel: () => {} });
           }
       });
@@ -662,7 +673,3 @@ export default function BrainstormPage() {
     </div>
   );
 }
-
-    
-
-    
