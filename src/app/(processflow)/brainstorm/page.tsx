@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useTransition, FormEvent, useMemo } from 'react';
 import { collection, addDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, doc } from 'firebase/firestore';
-import { type Activity, type Notification } from '@/types/activity';
+import { type Activity } from '@/types/activity';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
