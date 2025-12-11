@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useTransition, FormEvent, useMemo, useRef } from 'react';
@@ -525,8 +524,6 @@ export default function BrainstormPage() {
             setDialogState({ open: false, onConfirm: () => {}, onCancel: () => {} });
           },
           onCancel: () => {
-            setNewActivityName(trimmedName); // Keep the user's input
-            setFile(fileToSubmit);
             setDialogState({ open: false, onConfirm: () => {}, onCancel: () => {} });
           }
       });
