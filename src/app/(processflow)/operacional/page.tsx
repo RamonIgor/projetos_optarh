@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useTransition } from 'react';
@@ -126,7 +125,7 @@ function SubActivityItem({ activity, onToggle, onUpdatePrazo }: { activity: Acti
     )
 }
 
-function ActivityCard({ activity, children, onToggle }: { activity: Activity, children: Activity[], onToggle: (id: string, isPending: boolean) => void }) {
+function ActivityCard({ activity, children, onToggle, onUpdatePrazo }: { activity: Activity, children: Activity[], onToggle: (id: string, isPending: boolean) => void, onUpdatePrazo: (id: string, prazo: Date) => void }) {
     const isPending = isActivityPending(activity);
     const isOverdue = isPending && isActivityOverdue(activity);
     const nextExecution = getNextExecution(activity);
@@ -180,7 +179,13 @@ function ActivityCard({ activity, children, onToggle }: { activity: Activity, ch
                     <HistoryModal activity={activity} />
                 </div>
             </div>
-            {children}
+            {children.length > 0 && (
+                <div>
+                    {children.map(child => (
+                        <SubActivityItem key={child.id} activity={child} onToggle={onToggle} onUpdatePrazo={onUpdatePrazo} />
+                    ))}
+                </div>
+            )}
         </motion.div>
     )
 }
@@ -268,14 +273,8 @@ function RecurrenceGroup({ title, activities, onToggle, onUpdatePrazo }: { title
                 <div className="space-y-4">
                      <AnimatePresence>
                         {activities.map(activity => (
-                             <ActivityCard key={activity.id} activity={activity} onToggle={onToggle}>
-                                {activity.children.length > 0 && (
-                                     <div>
-                                        {activity.children.map(child => (
-                                            <SubActivityItem key={child.id} activity={child} onToggle={onToggle} onUpdatePrazo={onUpdatePrazo} />
-                                        ))}
-                                    </div>
-                                )}
+                             <ActivityCard key={activity.id} activity={activity} onToggle={onToggle} onUpdatePrazo={onUpdatePrazo}>
+                                {activity.children}
                              </ActivityCard>
                         ))}
                     </AnimatePresence>
