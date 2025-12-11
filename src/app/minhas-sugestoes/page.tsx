@@ -37,12 +37,14 @@ export default function MySuggestionsPage() {
     setIsLoading(true);
     const q = query(
       collection(db, 'system_suggestions'),
-      where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      where('userId', '==', user.uid)
+      // orderBy('createdAt', 'desc') -> Removido para evitar erro de índice
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const userSuggestions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Suggestion));
+      // Ordena as sugestões no lado do cliente
+      userSuggestions.sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime());
       setSuggestions(userSuggestions);
       setIsLoading(false);
     }, (error) => {
