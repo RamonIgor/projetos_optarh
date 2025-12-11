@@ -15,6 +15,7 @@ import {
   startOfMonth,
   startOfQuarter,
   startOfYear,
+  isPast,
 } from 'date-fns';
 import type { Activity } from '@/types/activity';
 import type { Timestamp } from 'firebase/firestore';
@@ -30,7 +31,8 @@ export type Recurrence = 'Diária' | 'Semanal' | 'Mensal' | 'Trimestral' | 'Seme
  */
 export function isActivityPending(activity: Activity): boolean {
   if (activity.recorrencia === 'Sob demanda') {
-    return activity.ultimaExecucao === null; // On-demand tasks are pending until executed once. They can be re-executed anytime.
+    // On-demand tasks are always pending until they are manually marked as completed for the current instance.
+    return activity.ultimaExecucao === null;
   }
   
   if (!activity.ultimaExecucao) {
@@ -67,6 +69,7 @@ export function isActivityPending(activity: Activity): boolean {
 /**
  * Checks if a pending activity is overdue.
  * An activity is overdue if its expected execution date (based on creation) is in the past.
+ * For "Sob demanda", it's overdue if it has a `prazo` and that date is in the past.
  * @param activity The activity to check.
  * @returns True if the activity is overdue, false otherwise.
  */
@@ -74,8 +77,15 @@ export function isActivityOverdue(activity: Activity): boolean {
   if (!isActivityPending(activity)) {
     return false;
   }
+  
   if (activity.recorrencia === 'Sob demanda') {
-    return false;
+    if (activity.prazo) {
+      const prazoDate = (activity.prazo as Timestamp).toDate();
+      // It's overdue if the deadline is in the past AND it hasn't been completed yet.
+      // isActivityPending already checks for `ultimaExecucao === null`.
+      return isPast(prazoDate);
+    }
+    return false; // No deadline, so it can't be overdue.
   }
   
   const referenceDate = activity.ultimaExecucao 
@@ -93,8 +103,9 @@ export function isActivityOverdue(activity: Activity): boolean {
  * @returns The next execution Date, or null for on-demand tasks.
  */
 export function getNextExecution(activity: Activity): Date | null {
+  // For 'Sob demanda', the deadline is the `prazo` field itself.
   if (activity.recorrencia === 'Sob demanda') {
-    return null;
+    return activity.prazo ? (activity.prazo as Timestamp).toDate() : null;
   }
 
   const referenceDate = activity.ultimaExecucao 
@@ -125,7 +136,3 @@ function getNextExecutionDate(referenceDate: Date, recurrence: Recurrence | null
             return referenceDate;
     }
 }
-
-    
-
-    
