@@ -257,7 +257,7 @@ export default function ClassificationPage() {
     try {
       const docRef = doc(db, 'clients', clientId, 'activities', activeActivity.id);
       
-      const updateData: Partial<Activity> & { [key: string]: any } = {
+      const updateData: any = {
         categoria: categoria as Activity['categoria'],
         justificativa,
         responsavel,
