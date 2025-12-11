@@ -179,7 +179,7 @@ export default function ConfigureQuestionsPage() {
         const finalCategory = formData.category === 'new' ? formData.newCategory! : formData.category;
 
         try {
-            const newQuestionData = {
+            const newQuestionData: any = {
                 text: formData.text,
                 type: formData.type,
                 category: finalCategory,
@@ -231,7 +231,7 @@ export default function ConfigureQuestionsPage() {
         let addedCount = 0;
         
         const promises = importedQuestions.map(q => {
-            const questionData = {
+            const questionData: any = {
                 text: q.text,
                 type: q.type,
                 category: q.category,
