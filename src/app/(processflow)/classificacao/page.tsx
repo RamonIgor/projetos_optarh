@@ -110,8 +110,7 @@ export default function ClassificationPage() {
     setIsLoading(true);
     // Query only for main activities (where parentId is null)
     const q = query(
-      collection(db, 'clients', clientId, 'activities'),
-      where('parentId', '==', null)
+      collection(db, 'clients', clientId, 'activities')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -419,5 +418,3 @@ export default function ClassificationPage() {
     </div>
   );
 }
-
-    
