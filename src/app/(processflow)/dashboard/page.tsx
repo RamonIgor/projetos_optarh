@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ThumbsUp, ActivitySquare, Square, Users, PieChart, CheckSquare, Clock, List, FileText, Edit, AlertCircle, CornerDownRight, Paperclip } from 'lucide-react';
+import { Loader2, ThumbsUp, ActivitySquare, Square, Users, PieChart, CheckSquare, Clock, List, FileText, Edit, AlertCircle, CornerDownRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ResponsiveContainer, Tooltip, Pie, Cell, Legend } from 'recharts';
 import { Badge } from '@/components/ui/badge';
@@ -258,20 +258,6 @@ export default function DashboardPage() {
                                         <TableCell className="font-medium">
                                           <div className="flex items-center gap-2">
                                             {activity.nome}
-                                            {activity.attachmentUrl && (
-                                                <TooltipProvider>
-                                                    <TooltipComponent>
-                                                        <TooltipTrigger asChild>
-                                                            <Link href={activity.attachmentUrl} target="_blank" rel="noopener noreferrer">
-                                                                <Paperclip className="h-4 w-4 text-muted-foreground" />
-                                                            </Link>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>
-                                                            <p>Ver anexo: {activity.attachmentFilename}</p>
-                                                        </TooltipContent>
-                                                    </TooltipComponent>
-                                                </TooltipProvider>
-                                            )}
                                           </div>
                                         </TableCell>
                                         <TableCell>
@@ -299,20 +285,6 @@ export default function DashboardPage() {
                                                 <div className="flex items-center gap-2">
                                                     <CornerDownRight className="h-4 w-4 text-muted-foreground" />
                                                     <span className="text-muted-foreground">{child.nome}</span>
-                                                     {child.attachmentUrl && (
-                                                        <TooltipProvider>
-                                                            <TooltipComponent>
-                                                                <TooltipTrigger asChild>
-                                                                    <Link href={child.attachmentUrl} target="_blank" rel="noopener noreferrer">
-                                                                        <Paperclip className="h-4 w-4 text-muted-foreground" />
-                                                                    </Link>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>
-                                                                    <p>Ver anexo: {child.attachmentFilename}</p>
-                                                                </TooltipContent>
-                                                            </TooltipComponent>
-                                                        </TooltipProvider>
-                                                     )}
                                                 </div>
                                             </TableCell>
                                             <TableCell colSpan={3}></TableCell>
