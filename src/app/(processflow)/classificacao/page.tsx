@@ -8,6 +8,8 @@ import { collection, onSnapshot, query, where, doc, updateDoc, serverTimestamp, 
 import { type Activity } from '@/types/activity';
 import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,19 +17,25 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, CheckCircle, RotateCcw, AlertTriangle, Info, ListChecks, Building, User, Users, Undo2 } from 'lucide-react';
+import { Loader2, CheckCircle, RotateCcw, AlertTriangle, Info, ListChecks, Building, User, Users, Undo2, Calendar as CalendarIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 
 
-const getActivityName = (activity: Activity) => {
+const getActivityName = (activity: Activity, allActivities: Activity[]) => {
+    if (activity.parentId) {
+        const parent = allActivities.find(a => a.id === activity.parentId);
+        return parent ? `${parent.nome} » ${activity.nome}` : activity.nome;
+    }
     return activity.nome;
 };
 
-function ActivityList({ title, activities, selectedActivityId, onSelectActivity, emptyMessage }: { title: string, activities: Activity[], selectedActivityId: string | null, onSelectActivity: (id: string) => void, emptyMessage: string }) {
+function ActivityList({ title, activities, selectedActivityId, onSelectActivity, allActivities, emptyMessage }: { title: string, activities: Activity[], selectedActivityId: string | null, onSelectActivity: (id: string) => void, allActivities: Activity[], emptyMessage: string }) {
     return (
         <ScrollArea className="h-[60vh]">
              <div className="space-y-2 pr-4">
@@ -42,7 +50,7 @@ function ActivityList({ title, activities, selectedActivityId, onSelectActivity,
                                 : "bg-transparent hover:bg-muted"
                         )}
                     >
-                        <p className="font-semibold">{getActivityName(activity)}</p>
+                        <p className="font-semibold">{getActivityName(activity, allActivities)}</p>
                         <Badge variant="secondary" className={cn(
                             "mt-1",
                             activity.status === 'aguardando_consenso' && 'bg-yellow-200 text-yellow-800',
@@ -80,6 +88,8 @@ export default function ClassificationPage() {
   const [categoria, setCategoria] = useState('');
   const [responsavel, setResponsavel] = useState('');
   const [recorrencia, setRecorrencia] = useState('');
+  const [prazo, setPrazo] = useState<Date | undefined>();
+
 
   const [isSaving, setIsSaving] = useState(false);
   
@@ -141,12 +151,14 @@ export default function ClassificationPage() {
       setJustificativa(activeActivity.justificativa || '');
       setResponsavel(activeActivity.responsavel || '');
       setRecorrencia(activeActivity.recorrencia || '');
+      setPrazo(activeActivity.prazo ? (activeActivity.prazo as Timestamp).toDate() : undefined);
     } else {
       // Clear form if no activity is selected
       setCategoria('');
       setJustificativa('');
       setResponsavel('');
       setRecorrencia('');
+      setPrazo(undefined);
     }
   }, [activeActivity]);
 
@@ -161,18 +173,28 @@ export default function ClassificationPage() {
       });
       return;
     }
+    
+    if (newStatus !== 'brainstorm' && recorrencia === 'Sob demanda' && !prazo) {
+        toast({
+            title: "Prazo obrigatório",
+            description: "Para atividades 'Sob demanda', é necessário definir um prazo de conclusão.",
+            variant: "destructive"
+        });
+        return;
+    }
 
     setIsSaving(true);
     try {
       const docRef = doc(db, 'clients', clientId, 'activities', activeActivity.id);
       
-      const updateData: Partial<Activity> = {
+      const updateData: Partial<Activity> & { [key: string]: any } = {
         categoria: categoria as Activity['categoria'],
         justificativa,
         responsavel,
         recorrencia: recorrencia as Activity['recorrencia'],
         status: newStatus,
         dataAprovacao: newStatus === 'aprovada' ? serverTimestamp() : null,
+        prazo: recorrencia === 'Sob demanda' ? prazo : null,
       };
 
       await updateDoc(docRef, updateData);
@@ -184,7 +206,7 @@ export default function ClassificationPage() {
 
       toast({
         title: toastTitle,
-        description: `"${getActivityName(activeActivity)}" foi atualizada com sucesso.`
+        description: `"${getActivityName(activeActivity, allActivities)}" foi atualizada com sucesso.`
       });
       
       if(newStatus === 'brainstorm'){
@@ -223,6 +245,7 @@ export default function ClassificationPage() {
                     activities={pendingActivities}
                     selectedActivityId={selectedActivityId}
                     onSelectActivity={setSelectedActivityId}
+                    allActivities={allActivities}
                     emptyMessage="Nenhuma atividade pendente!"
                   />
                 </TabsContent>
@@ -232,6 +255,7 @@ export default function ClassificationPage() {
                     activities={approvedActivities}
                     selectedActivityId={selectedActivityId}
                     onSelectActivity={setSelectedActivityId}
+                    allActivities={allActivities}
                     emptyMessage="Nenhuma atividade aprovada ainda."
                   />
                 </TabsContent>
@@ -244,7 +268,7 @@ export default function ClassificationPage() {
             {activeActivity ? (
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-2xl">{getActivityName(activeActivity)}</CardTitle>
+                        <CardTitle className="text-2xl">{getActivityName(activeActivity, allActivities)}</CardTitle>
                         <CardDescription>
                             Use o formulário abaixo para classificar e detalhar esta atividade.
                         </CardDescription>
@@ -285,7 +309,7 @@ export default function ClassificationPage() {
                         <Textarea id="justificativa" placeholder="Por que esta atividade é importante e qual o impacto dela?" value={justificativa} onChange={(e) => setJustificativa(e.target.value)} rows={5} />
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-8">
+                    <div className="grid md:grid-cols-2 gap-8 items-end">
                         <div>
                             <Label htmlFor="responsavel" className="text-lg font-semibold flex items-center gap-2 mb-2">
                                 <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground font-bold text-sm">3</span>
@@ -294,12 +318,12 @@ export default function ClassificationPage() {
                             <Input id="responsavel" placeholder="Quem executará a tarefa?" value={responsavel} onChange={(e) => setResponsavel(e.target.value)} />
                         </div>
                         <div>
-                            <Label htmlFor="recorrencia" className="text-lg font-semibold flex items-center gap-2 mb-2">
+                            <Label className="text-lg font-semibold flex items-center gap-2 mb-2">
                                 <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground font-bold text-sm">4</span>
                                 Recorrência
                             </Label>
                             <Select value={recorrencia} onValueChange={setRecorrencia}>
-                                <SelectTrigger id="recorrencia"><SelectValue placeholder="Com que frequência ocorre?" /></SelectTrigger>
+                                <SelectTrigger><SelectValue placeholder="Com que frequência ocorre?" /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="Diária">Diária</SelectItem>
                                     <SelectItem value="Semanal">Semanal</SelectItem>
@@ -310,6 +334,31 @@ export default function ClassificationPage() {
                                 </SelectContent>
                             </Select>
                         </div>
+                         {recorrencia === 'Sob demanda' && (
+                            <motion.div 
+                                initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+                                className="md:col-span-2"
+                            >
+                                <Label className="text-lg font-semibold flex items-center gap-2 mb-2">
+                                     <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground font-bold text-sm">5</span>
+                                    Prazo de Conclusão (Obrigatório)
+                                </Label>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn("w-full justify-start text-left font-normal", !prazo && "text-muted-foreground")}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {prazo ? format(prazo, "PPP", { locale: ptBR }) : <span>Escolha uma data</span>}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0">
+                                        <Calendar mode="single" selected={prazo} onSelect={setPrazo} initialFocus />
+                                    </PopoverContent>
+                                </Popover>
+                            </motion.div>
+                        )}
                     </div>
                     
                     {activeActivity.status === 'aguardando_consenso' && (
