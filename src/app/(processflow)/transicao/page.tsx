@@ -73,7 +73,7 @@ function EditTransitionModal({ activity, children }: { activity: Activity, child
         try {
             const docRef = doc(db, 'clients', clientId, 'activities', activity.id);
 
-            const data: Partial<Activity> = {
+            const data: any = {
                 prazoTransicao: prazo,
                 responsavelAnterior: responsavelAnterior,
                 statusTransicao: status,
