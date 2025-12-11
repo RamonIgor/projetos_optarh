@@ -516,7 +516,6 @@ export default function BrainstormPage() {
             setDialogState({ open: false, onConfirm: () => {}, onCancel: () => {} });
           },
           onCancel: () => {
-            // Do not clear the form on cancel, allow user to edit
             setDialogState({ open: false, onConfirm: () => {}, onCancel: () => {} });
           }
       });
@@ -663,5 +662,7 @@ export default function BrainstormPage() {
     </div>
   );
 }
+
+    
 
     
