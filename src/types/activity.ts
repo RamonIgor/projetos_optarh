@@ -6,7 +6,6 @@ export interface Client {
   id: string;
   name: string;
   logoUrl?: string | null;
-  userIds: string[];
   products?: ('process_flow' | 'pulse_check')[];
 }
 

@@ -329,17 +329,23 @@ export default function SurveyResultsPage() {
         const lNpsResult = calculateNPS(lNpsAnswers);
     
         const categories = survey.questions.reduce((acc, q) => {
-            if (q.category.toLowerCase() === 'enps' || q.category.toLowerCase() === 'leadership nps' || q.category === 'DEMOGRAFIA' || q.category === 'FEEDBACK ABERTO') return acc;
-            if (!acc[q.category]) acc[q.category] = { questions: [], score: 0, status: 'bom' };
-            acc[q.category].questions.push(q);
+            const categoryName = q.category;
+             if (categoryName.toLowerCase() === 'enps' || categoryName.toLowerCase() === 'leadership nps' || categoryName === 'DEMOGRAFIA' || categoryName === 'FEEDBACK ABERTO') {
+                return acc;
+            }
+            if (!acc[categoryName]) {
+                acc[categoryName] = { questions: [], score: 0, status: 'bom', questionScores: {} };
+            }
+            acc[categoryName].questions.push(q);
             return acc;
-        }, {} as Record<string, { questions: SelectedQuestion[], score: number, status: ReturnType<typeof getCategoryStatus> }>);
+        }, {} as Record<string, { questions: SelectedQuestion[], score: number, status: ReturnType<typeof getCategoryStatus>, questionScores: any }>);
     
         Object.keys(categories).forEach(catName => {
             const category = categories[catName];
             const categoryResult = calculateCategoryScore(category.questions, answersByQuestionId);
             category.score = categoryResult.score;
             category.status = categoryResult.status;
+            category.questionScores = categoryResult.questionScores;
         });
     
         const openFeedback = survey.questions
