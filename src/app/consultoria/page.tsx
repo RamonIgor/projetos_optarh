@@ -487,7 +487,7 @@ function ClientSelector({ clients, onClientAdded }: { clients: Client[], onClien
                     ))}
                 </SelectContent>
             </Select>
-             <ClientSettingsDialog client={selectedClient} onFinished={() => {}} />
+             <ClientSettingsDialog client={selectedClient || null} onFinished={() => {}} />
             <AddClientDialog onClientAdded={onClientAdded}>
                  <Button variant="outline" size="icon">
                     <PlusCircle className="h-4 w-4" />
