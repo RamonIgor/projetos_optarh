@@ -15,7 +15,7 @@ import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Bar, Cell, PieCha
 import { Progress } from '@/components/ui/progress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
-import { calculateNPS, calculateCategoryScore, getCategoryStatus, getTopIssues } from '@/lib/pulsecheck-analytics';
+import { calculateNPS, calculateCategoryScore, getCategoryStatus, getTopIssues, type CategoryScore } from '@/lib/pulsecheck-analytics';
 import { differenceInMinutes } from 'date-fns';
 import { Tooltip as TooltipComponent, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import jsPDF from 'jspdf';
@@ -304,7 +304,7 @@ export default function SurveyResultsPage() {
 
     const analytics = useMemo(() => {
         if (!survey || !client || responses.length === 0) return null;
-    
+
         const answersByQuestionId = responses.reduce((acc, res) => {
             Object.entries(res.answers).forEach(([qId, answer]) => {
                 if (!acc[qId]) acc[qId] = [];
@@ -312,25 +312,25 @@ export default function SurveyResultsPage() {
             });
             return acc;
         }, {} as Record<string, Answer[]>);
-    
+
         const findNpsQuestion = (categoryIdentifier: string) => {
             const normalizedIdentifier = categoryIdentifier.toLowerCase();
             const q = survey.questions.find(q => q.category.toLowerCase() === normalizedIdentifier);
             return q && q.type === 'nps' ? q : null;
         };
-    
+
         const eNpsQuestion = findNpsQuestion('enps');
         const lNpsQuestion = findNpsQuestion('leadership nps');
-    
+
         const eNpsAnswers = eNpsQuestion ? (answersByQuestionId[eNpsQuestion.id] || []).map(a => a.answer as number) : [];
         const lNpsAnswers = lNpsQuestion ? (answersByQuestionId[lNpsQuestion.id] || []).map(a => a.answer as number) : [];
-    
+
         const eNpsResult = calculateNPS(eNpsAnswers);
         const lNpsResult = calculateNPS(lNpsAnswers);
-    
+
         const categories = survey.questions.reduce((acc, q) => {
             const categoryName = q.category;
-             if (categoryName.toLowerCase() === 'enps' || categoryName.toLowerCase() === 'leadership nps' || categoryName === 'DEMOGRAFIA' || categoryName === 'FEEDBACK ABERTO') {
+            if (['enps', 'leadership nps', 'demografia', 'feedback aberto'].includes(categoryName.toLowerCase())) {
                 return acc;
             }
             if (!acc[categoryName]) {
@@ -338,8 +338,8 @@ export default function SurveyResultsPage() {
             }
             acc[categoryName].questions.push(q);
             return acc;
-        }, {} as Record<string, { questions: SelectedQuestion[], score: number, status: ReturnType<typeof getCategoryStatus>, questionScores: any }>);
-    
+        }, {} as Record<string, CategoryScore>);
+
         Object.keys(categories).forEach(catName => {
             const category = categories[catName];
             const categoryResult = calculateCategoryScore(category.questions, answersByQuestionId);
@@ -347,11 +347,11 @@ export default function SurveyResultsPage() {
             category.status = categoryResult.status;
             category.questionScores = categoryResult.questionScores;
         });
-    
+
         const openFeedback = survey.questions
             .filter(q => q.type === 'open-text')
             .flatMap(q => (answersByQuestionId[q.id] || []).map(a => a.answer as string).filter(Boolean));
-    
+
         const durations = responses
             .map(r => {
                 if (r.startedAt && r.submittedAt) {
@@ -364,12 +364,12 @@ export default function SurveyResultsPage() {
                 return null;
             })
             .filter((d): d is number => d !== null && d >= 0);
-    
+
         const averageTime = durations.length > 0 ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
-    
+
         const topIssues = getTopIssues(categories);
         const topStrengths = [...topIssues].reverse();
-    
+
         return { eNpsResult, lNpsResult, categories, openFeedback, answersByQuestionId, averageTime, topIssues, topStrengths };
     }, [survey, responses, client]);
 
@@ -446,8 +446,8 @@ export default function SurveyResultsPage() {
                     <h2 className="text-2xl font-bold flex items-center gap-2"><ListTree className="h-6 w-6 text-primary" /> Resultados por Categoria</h2>
                     {analytics ? (
                          <Accordion type="multiple" defaultValue={Object.keys(analytics.categories)} className="w-full">
-                             {Object.entries(analytics.categories).sort(([keyA], [keyB]) => keyA.localeCompare(keyB)).map(([name, data]:[string, any]) => {
-                                 const status = STATUS_CONFIG[data.status];
+                             {Object.entries(analytics.categories).sort(([keyA], [keyB]) => keyA.localeCompare(keyB)).map(([name, data]: [string, any]) => {
+                                 const status = STATUS_CONFIG[data.status as keyof typeof STATUS_CONFIG];
                                  const hasScore = data.score !== -1;
                                  
                                  return (
