@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, Fragment } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useFirestore, useClient, useUser } from '@/firebase';
 import { collection, onSnapshot, query, where, doc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, CheckCircle, RotateCcw, AlertTriangle, Info, ListChecks, Building, User, Users, Undo2, Calendar as CalendarIcon } from 'lucide-react';
+import { Loader2, CheckCircle, RotateCcw, AlertTriangle, Info, ListChecks, Building, User, Users, Undo2, Calendar as CalendarIcon, CornerDownRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -35,30 +35,53 @@ const getActivityName = (activity: Activity, allActivities: Activity[]) => {
     return activity.nome;
 };
 
-function ActivityList({ title, activities, selectedActivityId, onSelectActivity, allActivities, emptyMessage }: { title: string, activities: Activity[], selectedActivityId: string | null, onSelectActivity: (id: string) => void, allActivities: Activity[], emptyMessage: string }) {
+const getDisplayName = (activity: Activity, allActivities: Activity[], isChild: boolean) => {
+    if (isChild) {
+        return (
+             <div className="flex items-center gap-2">
+                <CornerDownRight className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">{activity.nome}</span>
+            </div>
+        )
+    }
+    return <p className="font-semibold">{activity.nome}</p>;
+}
+
+function ActivityList({ activities, selectedActivityId, onSelectActivity, allActivities, emptyMessage }: { activities: (Activity & { children: Activity[] })[], selectedActivityId: string | null, onSelectActivity: (id: string) => void, allActivities: Activity[], emptyMessage: string }) {
     return (
         <ScrollArea className="h-[60vh]">
-             <div className="space-y-2 pr-4">
-                {activities.length > 0 ? activities.map(activity => (
-                     <button
-                        key={activity.id}
-                        onClick={() => onSelectActivity(activity.id)}
-                        className={cn(
-                            "w-full text-left p-3 rounded-lg border transition-colors",
-                            selectedActivityId === activity.id
-                                ? "bg-primary/10 border-primary"
-                                : "bg-transparent hover:bg-muted"
-                        )}
-                    >
-                        <p className="font-semibold">{getActivityName(activity, allActivities)}</p>
-                        <Badge variant="secondary" className={cn(
-                            "mt-1",
-                            activity.status === 'aguardando_consenso' && 'bg-yellow-200 text-yellow-800',
-                            activity.status === 'aprovada' && 'bg-green-200 text-green-800'
-                        )}>
-                            {activity.status === 'brainstorm' ? 'Não Classificada' : activity.status === 'aguardando_consenso' ? 'Aguardando Consenso' : 'Aprovada'}
-                        </Badge>
-                    </button>
+             <div className="space-y-1 pr-4">
+                {activities.length > 0 ? activities.map(mainActivity => (
+                     <Fragment key={mainActivity.id}>
+                        <button
+                            onClick={() => onSelectActivity(mainActivity.id)}
+                            className={cn(
+                                "w-full text-left p-3 rounded-lg border transition-colors",
+                                selectedActivityId === mainActivity.id
+                                    ? "bg-primary/10 border-primary"
+                                    : "bg-transparent hover:bg-muted"
+                            )}
+                        >
+                            {getDisplayName(mainActivity, allActivities, false)}
+                             <Badge variant="secondary" className="mt-1">
+                                {mainActivity.status === 'brainstorm' ? 'Não Classificada' : mainActivity.status === 'aguardando_consenso' ? 'Aguardando Consenso' : 'Aprovada'}
+                            </Badge>
+                        </button>
+                        {mainActivity.children.map(child => (
+                           <button
+                                key={child.id}
+                                onClick={() => onSelectActivity(child.id)}
+                                className={cn(
+                                    "w-full text-left p-3 rounded-lg border transition-colors ml-4",
+                                    selectedActivityId === child.id
+                                        ? "bg-primary/10 border-primary"
+                                        : "bg-muted/50 hover:bg-muted"
+                                )}
+                            >
+                               {getDisplayName(child, allActivities, true)}
+                           </button>
+                        ))}
+                     </Fragment>
                 )) : (
                     <div className="text-center py-10">
                         <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
@@ -108,7 +131,6 @@ export default function ClassificationPage() {
     }
 
     setIsLoading(true);
-    // Query only for main activities (where parentId is null)
     const q = query(
       collection(db, 'clients', clientId, 'activities')
     );
@@ -122,7 +144,8 @@ export default function ClassificationPage() {
       if (activityIdFromUrl && sorted.some(a => a.id === activityIdFromUrl)) {
           setSelectedActivityId(activityIdFromUrl);
       } else if (sorted.filter(a => a.status !== 'aprovada').length > 0 && !selectedActivityId) {
-          setSelectedActivityId(sorted.filter(a => a.status !== 'aprovada')[0].id);
+          const firstPending = sorted.find(a => !a.parentId && (a.status === 'brainstorm' || a.status === 'aguardando_consenso'));
+          if (firstPending) setSelectedActivityId(firstPending.id);
       } else if (sorted.length === 0) {
           setSelectedActivityId(null);
       }
@@ -137,8 +160,34 @@ export default function ClassificationPage() {
     return () => unsubscribe();
   }, [db, clientId, user, isLoadingPage, router, toast]);
 
-  const pendingActivities = useMemo(() => allActivities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso'), [allActivities]);
-  const approvedActivities = useMemo(() => allActivities.filter(a => a.status === 'aprovada'), [allActivities]);
+    const activityTree = useMemo(() => {
+        const activityMap = new Map(allActivities.map(a => [a.id, a]));
+        const tree: (Activity & { children: Activity[] })[] = [];
+        const childrenOf: Record<string, Activity[]> = {};
+
+        allActivities.forEach(activity => {
+            if (activity.parentId) {
+                if (!childrenOf[activity.parentId]) {
+                    childrenOf[activity.parentId] = [];
+                }
+                childrenOf[activity.parentId].push(activity);
+            }
+        });
+        
+        allActivities.forEach(activity => {
+            if (!activity.parentId) {
+                const children = (childrenOf[activity.id] || []).sort((a, b) => ((a.createdAt as any)?.seconds || 0) - ((b.createdAt as any)?.seconds || 0));
+                tree.push({ ...activity, children });
+            }
+        });
+        
+        tree.sort((a, b) => ((b.createdAt as any)?.seconds || 0) - ((a.createdAt as any)?.seconds || 0));
+
+        return tree;
+    }, [allActivities]);
+
+  const pendingActivities = useMemo(() => activityTree.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso'), [activityTree]);
+  const approvedActivities = useMemo(() => activityTree.filter(a => a.status === 'aprovada'), [activityTree]);
   
   const activeActivity = useMemo(() => {
     return allActivities.find(a => a.id === selectedActivityId);
@@ -240,7 +289,6 @@ export default function ClassificationPage() {
               <CardContent className="p-3">
                 <TabsContent value="pendentes">
                   <ActivityList
-                    title="Pendentes"
                     activities={pendingActivities}
                     selectedActivityId={selectedActivityId}
                     onSelectActivity={setSelectedActivityId}
@@ -250,7 +298,6 @@ export default function ClassificationPage() {
                 </TabsContent>
                 <TabsContent value="aprovadas">
                   <ActivityList
-                    title="Aprovadas"
                     activities={approvedActivities}
                     selectedActivityId={selectedActivityId}
                     onSelectActivity={setSelectedActivityId}
@@ -419,5 +466,3 @@ export default function ClassificationPage() {
     </div>
   );
 }
-
-    
