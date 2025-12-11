@@ -64,6 +64,7 @@ function AddSubActivityForm({ parentId, onAddSubActivity, onFinished }: { parent
             setRecorrencia("");
             setPrazo(undefined);
             setFile(null);
+            if (fileInputRef.current) fileInputRef.current.value = "";
             onFinished(); // Call the callback to close the form
         });
     }
@@ -129,15 +130,22 @@ function AddSubActivityForm({ parentId, onAddSubActivity, onFinished }: { parent
                  )}
                   <div className="space-y-2">
                       <Label className="text-xs">Anexo (Opcional)</Label>
-                      <Input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
-                        className="h-9 text-xs"
-                        disabled={isAdding}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      {file && <p className="text-xs text-muted-foreground">Arquivo selecionado: {file.name}</p>}
+                        <div className="flex items-center gap-2">
+                            <Label htmlFor="sub-attachment" className="flex-shrink-0 cursor-pointer">
+                                <div className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), "h-9")}>
+                                <Paperclip className="mr-2 h-4 w-4" /> Anexar
+                                </div>
+                            </Label>
+                            <Input id="sub-attachment" type="file" ref={fileInputRef} onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)} className="hidden" disabled={isAdding} />
+                            {file && (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted p-1.5 rounded-md">
+                                    <span className="truncate max-w-[120px]">{file.name}</span>
+                                    <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}>
+                                        <X className="h-3 w-3" />
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
                  </div>
                 <Button type="submit" size="sm" className="h-9 w-full" disabled={isAdding || !subActivityName.trim() || !responsavel.trim() || !recorrencia || (recorrencia === 'Sob demanda' && !prazo)}>
                     {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus className="h-4 w-4 mr-2" /> Adicionar</>}
@@ -506,32 +514,38 @@ export default function BrainstormPage() {
             <div className="text-sm font-medium text-muted-foreground pt-1 shrink-0">{mainActivities.length} atividades levantadas</div>
           </div>
           <form onSubmit={handleAddSubmit} className="flex flex-col gap-4 pt-4">
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Input
-                type="text"
-                placeholder="Ex: Processar folha de pagamento"
-                value={newActivityName}
-                onChange={(e) => setNewActivityName(e.target.value)}
-                className="h-12 text-base flex-grow"
-                disabled={isAdding || !clientId}
-                aria-label="Nova atividade principal"
-              />
-               <Button type="submit" size="lg" className="h-12 w-full sm:w-auto" disabled={isAdding || !newActivityName.trim() || !clientId}>
+            <div className="flex flex-col sm:flex-row gap-2 items-start">
+                <div className="w-full flex-grow space-y-2">
+                    <Input
+                        type="text"
+                        placeholder="Ex: Processar folha de pagamento"
+                        value={newActivityName}
+                        onChange={(e) => setNewActivityName(e.target.value)}
+                        className="h-12 text-base"
+                        disabled={isAdding || !clientId}
+                        aria-label="Nova atividade principal"
+                    />
+                    <div className="flex items-center gap-2">
+                        <Label htmlFor="main-attachment" className="flex-shrink-0 cursor-pointer">
+                           <div className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), "h-9")}>
+                               <Paperclip className="mr-2 h-4 w-4"/> Anexo (Opcional)
+                           </div>
+                        </Label>
+                        <Input id="main-attachment" type="file" ref={fileInputRef} onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)} className="hidden" disabled={isAdding || !clientId} />
+                        {file && (
+                             <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted p-1.5 rounded-md">
+                                <span className="truncate max-w-[200px]">{file.name}</span>
+                                <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => { setFile(null); if(fileInputRef.current) fileInputRef.current.value = ""; }}>
+                                    <X className="h-3 w-3" />
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+               <Button type="submit" size="lg" className="h-12 w-full sm:w-auto flex-shrink-0" disabled={isAdding || !newActivityName.trim() || !clientId}>
                   {isAdding ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5 sm:mr-2" />}
                   <span className="hidden sm:inline">Adicionar</span>
                </Button>
-            </div>
-             <div>
-                <Label htmlFor="main-attachment" className="text-sm font-medium">Anexo (Opcional)</Label>
-                 <Input
-                    id="main-attachment"
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
-                    className="h-11 text-sm mt-1"
-                    disabled={isAdding || !clientId}
-                />
-                 {file && <p className="text-xs text-muted-foreground mt-1">Arquivo selecionado: {file.name}</p>}
             </div>
           </form>
             {showConsultantPrompt && (
