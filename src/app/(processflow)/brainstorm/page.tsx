@@ -285,7 +285,7 @@ export default function BrainstormPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAdding, startMainAddTransition] = useTransition();
 
-  const [dialogState, setDialogState] = useState<{ open: boolean; similarTo?: string; nameToAdd?: string }>({ open: false });
+  const [dialogState, setDialogState] = useState<{ open: boolean; similarTo?: string; nameToAdd?: string; fileToAdd?: File | null }>({ open: false });
   
   const { toast } = useToast();
 
@@ -447,7 +447,7 @@ export default function BrainstormPage() {
     startMainAddTransition(() => {
         const similar = mainActivities.find(act => isSimilar(act.nome, trimmedName));
         if (similar) {
-          setDialogState({ open: true, similarTo: similar.nome, nameToAdd: trimmedName });
+          setDialogState({ open: true, similarTo: similar.nome, nameToAdd: trimmedName, fileToAdd: file });
         } else {
           addActivity(trimmedName, null, null, null, undefined, file);
         }
@@ -456,7 +456,7 @@ export default function BrainstormPage() {
 
   const handleConfirmAdd = () => {
     if (dialogState.nameToAdd) {
-      addActivity(dialogState.nameToAdd, null, null, null, undefined, file);
+      addActivity(dialogState.nameToAdd, null, null, null, undefined, dialogState.fileToAdd);
     }
     setDialogState({ open: false });
   };
