@@ -1,5 +1,5 @@
 
-import type { Answer, Question, SelectedQuestion, SurveyResponse } from '@/types/activity';
+import type { Answer, Question, SelectedQuestion, Response as SurveyResponse } from '@/types/activity';
 
 // --- JSDoc Types for Clarity ---
 
