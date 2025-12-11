@@ -309,8 +309,8 @@ export default function ClassificationPage() {
                         <Textarea id="justificativa" placeholder="Por que esta atividade é importante e qual o impacto dela?" value={justificativa} onChange={(e) => setJustificativa(e.target.value)} rows={5} />
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-8 items-end">
-                        <div>
+                    <div className="grid md:grid-cols-2 gap-8">
+                       <div>
                             <Label htmlFor="responsavel" className="text-lg font-semibold flex items-center gap-2 mb-2">
                                 <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground font-bold text-sm">3</span>
                                 Responsável
@@ -334,32 +334,33 @@ export default function ClassificationPage() {
                                 </SelectContent>
                             </Select>
                         </div>
-                         {recorrencia === 'Sob demanda' && (
-                            <motion.div 
-                                initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-                                className="md:col-span-2"
-                            >
-                                <Label className="text-lg font-semibold flex items-center gap-2 mb-2">
-                                     <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground font-bold text-sm">5</span>
-                                    Prazo de Conclusão (Obrigatório)
-                                </Label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant={"outline"}
-                                            className={cn("w-full justify-start text-left font-normal", !prazo && "text-muted-foreground")}
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {prazo ? format(prazo, "PPP", { locale: ptBR }) : <span>Escolha uma data</span>}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                        <Calendar mode="single" selected={prazo} onSelect={setPrazo} initialFocus />
-                                    </PopoverContent>
-                                </Popover>
-                            </motion.div>
-                        )}
                     </div>
+
+                    {recorrencia === 'Sob demanda' && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+                            className="space-y-2"
+                        >
+                            <Label className="text-lg font-semibold flex items-center gap-2">
+                                 <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground font-bold text-sm">5</span>
+                                Prazo de Conclusão (Obrigatório)
+                            </Label>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant={"outline"}
+                                        className={cn("w-full justify-start text-left font-normal", !prazo && "text-muted-foreground")}
+                                    >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {prazo ? format(prazo, "PPP", { locale: ptBR }) : <span>Escolha uma data</span>}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                    <Calendar mode="single" selected={prazo} onSelect={setPrazo} initialFocus />
+                                </PopoverContent>
+                            </Popover>
+                        </motion.div>
+                    )}
                     
                     {activeActivity.status === 'aguardando_consenso' && (
                         <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
