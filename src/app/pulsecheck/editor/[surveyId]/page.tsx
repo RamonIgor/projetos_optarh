@@ -104,7 +104,7 @@ export default function SurveyEditorPage() {
         const idToSave = isNewSurvey ? doc(collection(db, 'clients')).id : surveyId as string;
         const docRef = doc(db, 'clients', clientId, 'surveys', idToSave);
 
-        const surveyData: Partial<Survey> = {
+        const surveyData: any = {
           ...data,
           clientId: clientId,
           status: 'draft',

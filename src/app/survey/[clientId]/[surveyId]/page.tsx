@@ -199,7 +199,7 @@ export default function SurveyResponsePage() {
 
     setIsSubmitting(true);
     try {
-        const responseData: Omit<SurveyResponse, 'id'> = {
+        const responseData: any = {
             surveyId: survey!.id,
             clientId: client!.id,
             respondentId: null, // For now, only anonymous

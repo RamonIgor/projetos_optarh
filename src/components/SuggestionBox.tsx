@@ -39,14 +39,15 @@ export function SuggestionBox() {
 
     setIsSubmitting(true);
     try {
-      await addDoc(collection(db, 'system_suggestions'), {
+      const data: any = {
         text: suggestionText,
         userId: user.uid,
         userEmail: user.email,
         clientId: clientId,
         createdAt: serverTimestamp(),
         status: 'new',
-      });
+      };
+      await addDoc(collection(db, 'system_suggestions'), data);
       toast({ title: 'Sugestão enviada com sucesso!', description: 'Obrigado pelo seu feedback.' });
       setSuggestionText('');
       setIsOpen(false);
