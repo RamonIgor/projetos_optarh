@@ -1,8 +1,9 @@
 
 "use client";
 
-import { useState, useEffect, useTransition, FormEvent, useMemo } from 'react';
+import { useState, useEffect, useTransition, FormEvent, useMemo, useRef } from 'react';
 import { collection, addDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, doc } from 'firebase/firestore';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { type Activity } from '@/types/activity';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,9 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { X, Plus, Loader2, ThumbsUp, ActivitySquare, Square, GitBranchPlus, Calendar as CalendarIcon } from 'lucide-react';
+import { X, Plus, Loader2, ThumbsUp, ActivitySquare, Square, GitBranchPlus, Calendar as CalendarIcon, Paperclip, Upload } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useFirestore, useClient } from '@/firebase';
+import { useFirestore, useClient, useFirebase } from '@/firebase';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { useUser } from '@/firebase/auth/use-user';
@@ -25,6 +26,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import Link from 'next/link';
 
 
 // Simple similarity check
@@ -40,11 +42,13 @@ const statusInfo: { [key: string]: { label: string; icon: React.ReactNode; varia
   aprovada: { label: 'Aprovada', icon: <ThumbsUp className="h-3 w-3" />, variant: 'secondary', className: 'bg-green-100 text-green-800' },
 };
 
-function AddSubActivityForm({ parentId, onAddSubActivity, onFinished }: { parentId: string; onAddSubActivity: (name: string, parentId: string, responsavel: string, recorrencia: string, prazo: Date | undefined) => void; onFinished: () => void; }) {
+function AddSubActivityForm({ parentId, onAddSubActivity, onFinished }: { parentId: string; onAddSubActivity: (name: string, parentId: string, responsavel: string, recorrencia: string, prazo: Date | undefined, file: File | null) => void; onFinished: () => void; }) {
     const [subActivityName, setSubActivityName] = useState("");
     const [responsavel, setResponsavel] = useState("");
     const [recorrencia, setRecorrencia] = useState("");
     const [prazo, setPrazo] = useState<Date | undefined>();
+    const [file, setFile] = useState<File | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [isAdding, startAdding] = useTransition();
 
     const handleAddSubmit = (e: FormEvent) => {
@@ -54,11 +58,12 @@ function AddSubActivityForm({ parentId, onAddSubActivity, onFinished }: { parent
         if(recorrencia === 'Sob demanda' && !prazo) return;
 
         startAdding(() => {
-            onAddSubActivity(subActivityName, parentId, responsavel, recorrencia, prazo);
+            onAddSubActivity(subActivityName, parentId, responsavel, recorrencia, prazo, file);
             setSubActivityName("");
             setResponsavel("");
             setRecorrencia("");
             setPrazo(undefined);
+            setFile(null);
             onFinished(); // Call the callback to close the form
         });
     }
@@ -122,6 +127,18 @@ function AddSubActivityForm({ parentId, onAddSubActivity, onFinished }: { parent
                             </Popover>
                         </motion.div>
                  )}
+                  <div className="space-y-2">
+                      <Label className="text-xs">Anexo (Opcional)</Label>
+                      <Input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
+                        className="h-9 text-xs"
+                        disabled={isAdding}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      {file && <p className="text-xs text-muted-foreground">Arquivo selecionado: {file.name}</p>}
+                 </div>
                 <Button type="submit" size="sm" className="h-9 w-full" disabled={isAdding || !subActivityName.trim() || !responsavel.trim() || !recorrencia || (recorrencia === 'Sob demanda' && !prazo)}>
                     {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus className="h-4 w-4 mr-2" /> Adicionar</>}
                 </Button>
@@ -131,7 +148,7 @@ function AddSubActivityForm({ parentId, onAddSubActivity, onFinished }: { parent
 }
 
 
-function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddSubActivity, onDeleteActivity }: { activity: Activity, isSubItem?: boolean, hasChildren?: boolean, onAddSubActivity: (name: string, parentId: string, responsavel: string, recorrencia: string, prazo: Date | undefined) => void, onDeleteActivity: (id: string) => void }) {
+function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddSubActivity, onDeleteActivity }: { activity: Activity, isSubItem?: boolean, hasChildren?: boolean, onAddSubActivity: (name: string, parentId: string, responsavel: string, recorrencia: string, prazo: Date | undefined, file: File | null) => void, onDeleteActivity: (id: string) => void }) {
     const [showAddSub, setShowAddSub] = useState(false);
     const [isDeleting, startDeleting] = useTransition();
 
@@ -169,7 +186,23 @@ function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddS
         >
              <div className="flex items-center justify-between">
                 <div className="flex flex-col">
-                    <span className={cn("font-medium", isSubItem ? "text-muted-foreground" : "text-foreground")}>{activity.nome}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={cn("font-medium", isSubItem ? "text-muted-foreground" : "text-foreground")}>{activity.nome}</span>
+                      {activity.attachmentUrl && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Link href={activity.attachmentUrl} target="_blank" rel="noopener noreferrer">
+                                        <Paperclip className="h-4 w-4 text-primary cursor-pointer" />
+                                    </Link>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Ver anexo: {activity.attachmentFilename}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
                      {isSubItem && activity.responsavel && (
                         <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-2">
                             <span>Responsável: {activity.responsavel}</span>
@@ -231,12 +264,16 @@ function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddS
 
 export default function BrainstormPage() {
   const db = useFirestore();
+  const { app } = useFirebase();
+  const storage = app ? getStorage(app) : null;
   const { user, loading: userLoading } = useUser();
   const { clientId, isClientLoading, isConsultant } = useClient();
   const router = useRouter();
 
   const [activities, setActivities] = useState<Activity[]>([]);
   const [newActivityName, setNewActivityName] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdding, startMainAddTransition] = useTransition();
 
@@ -315,16 +352,43 @@ export default function BrainstormPage() {
   }, [activities, mainActivities]);
 
 
-  const addActivity = (name: string, parentId: string | null = null, responsavel: string | null = null, recorrencia: string | null = null, prazo: Date | undefined = undefined) => {
+  const addActivity = async (name: string, parentId: string | null = null, responsavel: string | null = null, recorrencia: string | null = null, prazo: Date | undefined = undefined, fileToAdd: File | null = null) => {
     const trimmedName = name.trim();
-    if (!trimmedName || !db || !clientId) return;
+    if (!trimmedName || !db || !clientId || !storage) return;
     
+    let attachmentUrl: string | null = null;
+    let attachmentFilename: string | null = null;
+
+    if (fileToAdd) {
+        const uniqueFilename = `${Date.now()}-${fileToAdd.name}`;
+        const fileRef = storageRef(storage, `attachments/${clientId}/${uniqueFilename}`);
+        try {
+            const snapshot = await uploadBytes(fileRef, fileToAdd);
+            attachmentUrl = await getDownloadURL(snapshot.ref);
+            attachmentFilename = fileToAdd.name;
+        } catch (uploadError) {
+            console.error("File upload error:", uploadError);
+            toast({
+                title: "Erro no Upload",
+                description: "Não foi possível anexar o arquivo.",
+                variant: "destructive",
+            });
+            // Stop if upload fails
+            return; 
+        }
+    }
+
+
     let parentActivity: Activity | undefined;
     if (parentId) {
         parentActivity = activities.find(a => a.id === parentId);
     }
     
-    if(!parentId) setNewActivityName("");
+    if(!parentId) {
+        setNewActivityName("");
+        setFile(null);
+        if(fileInputRef.current) fileInputRef.current.value = "";
+    }
     
     const activityData: any = {
         nome: trimmedName,
@@ -345,6 +409,8 @@ export default function BrainstormPage() {
         prazoTransicao: null,
         prazo: prazo || null,
         historicoExecucoes: [],
+        attachmentUrl,
+        attachmentFilename,
       };
 
       const activitiesCollection = collection(db, 'clients', clientId, 'activities');
@@ -375,14 +441,14 @@ export default function BrainstormPage() {
         if (similar) {
           setDialogState({ open: true, similarTo: similar.nome, nameToAdd: trimmedName });
         } else {
-          addActivity(trimmedName);
+          addActivity(trimmedName, null, null, null, undefined, file);
         }
     });
   };
 
   const handleConfirmAdd = () => {
     if (dialogState.nameToAdd) {
-      addActivity(dialogState.nameToAdd);
+      addActivity(dialogState.nameToAdd, null, null, null, undefined, file);
     }
     setDialogState({ open: false });
   };
@@ -393,6 +459,8 @@ export default function BrainstormPage() {
     const activityToDelete = activities.find(a => a.id === id);
     if (!activityToDelete) return;
 
+    // Note: This does not delete the file from storage. A more robust implementation
+    // would require a Cloud Function to handle deletions.
     const docRef = doc(db, 'clients', clientId, 'activities', id);
     deleteDoc(docRef)
     .catch(async (error) => {
@@ -437,20 +505,34 @@ export default function BrainstormPage() {
             </div>
             <div className="text-sm font-medium text-muted-foreground pt-1 shrink-0">{mainActivities.length} atividades levantadas</div>
           </div>
-          <form onSubmit={handleAddSubmit} className="flex flex-col sm:flex-row gap-2 pt-4">
-            <Input
-              type="text"
-              placeholder="Ex: Processar folha de pagamento"
-              value={newActivityName}
-              onChange={(e) => setNewActivityName(e.target.value)}
-              className="h-12 text-base"
-              disabled={isAdding || !clientId}
-              aria-label="Nova atividade principal"
-            />
-            <Button type="submit" size="lg" className="h-12 w-full sm:w-auto" disabled={isAdding || !newActivityName.trim() || !clientId}>
-              {isAdding ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5 sm:mr-2" />}
-              <span className="hidden sm:inline">Adicionar</span>
-            </Button>
+          <form onSubmit={handleAddSubmit} className="flex flex-col gap-4 pt-4">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input
+                type="text"
+                placeholder="Ex: Processar folha de pagamento"
+                value={newActivityName}
+                onChange={(e) => setNewActivityName(e.target.value)}
+                className="h-12 text-base flex-grow"
+                disabled={isAdding || !clientId}
+                aria-label="Nova atividade principal"
+              />
+               <Button type="submit" size="lg" className="h-12 w-full sm:w-auto" disabled={isAdding || !newActivityName.trim() || !clientId}>
+                  {isAdding ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5 sm:mr-2" />}
+                  <span className="hidden sm:inline">Adicionar</span>
+               </Button>
+            </div>
+             <div>
+                <Label htmlFor="main-attachment" className="text-sm font-medium">Anexo (Opcional)</Label>
+                 <Input
+                    id="main-attachment"
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
+                    className="h-11 text-sm mt-1"
+                    disabled={isAdding || !clientId}
+                />
+                 {file && <p className="text-xs text-muted-foreground mt-1">Arquivo selecionado: {file.name}</p>}
+            </div>
           </form>
             {showConsultantPrompt && (
               <p className="text-sm text-yellow-600 mt-2">Como consultor(a), por favor, selecione um cliente no Painel de Consultoria para começar a adicionar atividades.</p>
@@ -524,5 +606,3 @@ export default function BrainstormPage() {
     </div>
   );
 }
-
-    
