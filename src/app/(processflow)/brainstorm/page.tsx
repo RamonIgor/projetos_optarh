@@ -285,7 +285,7 @@ export default function BrainstormPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAdding, startMainAddTransition] = useTransition();
 
-  const [dialogState, setDialogState] = useState<{ open: boolean; similarTo?: string; nameToAdd?: string; }>({ open: false });
+  const [dialogState, setDialogState] = useState<{ open: boolean; onConfirm: () => void; similarTo?: string; nameToAdd?: string; }>({ open: false, onConfirm: () => {} });
   
   const { toast } = useToast();
 
@@ -444,22 +444,37 @@ export default function BrainstormPage() {
     const trimmedName = newActivityName.trim();
     if (!trimmedName || isAdding) return;
     
+    // Capture file at submission time
+    const fileToSubmit = file;
+    
+    const action = () => addActivity(trimmedName, null, null, null, undefined, fileToSubmit);
+    
     startMainAddTransition(() => {
         const similar = mainActivities.find(act => isSimilar(act.nome, trimmedName));
         if (similar) {
-          setDialogState({ open: true, similarTo: similar.nome, nameToAdd: trimmedName });
+          setDialogState({ 
+              open: true, 
+              similarTo: similar.nome, 
+              nameToAdd: trimmedName,
+              onConfirm: () => {
+                action();
+                setDialogState({ open: false, onConfirm: () => {} });
+              }
+          });
         } else {
-          addActivity(trimmedName, null, null, null, undefined, file);
+          action();
         }
     });
   };
 
-  const handleConfirmAdd = () => {
-    if (dialogState.nameToAdd) {
-      addActivity(dialogState.nameToAdd, null, null, null, undefined, file);
-    }
-    setDialogState({ open: false });
+  const handleDialogCancel = () => {
+    // Clear the form state when the user cancels the dialog to avoid stale data
+    setNewActivityName("");
+    setFile(null);
+    if(fileInputRef.current) fileInputRef.current.value = "";
+    setDialogState({ open: false, onConfirm: () => {} });
   };
+
 
   const handleDeleteActivity = (id: string) => {
     if (!db || !clientId) return;
@@ -603,7 +618,7 @@ export default function BrainstormPage() {
         </CardContent>
       </Card>
 
-      <AlertDialog open={dialogState.open} onOpenChange={(open) => setDialogState({ ...dialogState, open })}>
+      <AlertDialog open={dialogState.open} onOpenChange={(open) => { if(!open) handleDialogCancel() }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Atividade Similar Encontrada</AlertDialogTitle>
@@ -612,8 +627,8 @@ export default function BrainstormPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDialogState({ open: false })}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmAdd}>Sim, adicionar</AlertDialogAction>
+            <AlertDialogCancel onClick={handleDialogCancel}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={dialogState.onConfirm}>Sim, adicionar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
