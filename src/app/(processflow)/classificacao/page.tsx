@@ -48,6 +48,20 @@ const getDisplayName = (activity: Activity, allActivities: Activity[], isChild: 
 }
 
 function ActivityList({ activities, selectedActivityId, onSelectActivity, allActivities, emptyMessage }: { activities: (Activity & { children: Activity[] })[], selectedActivityId: string | null, onSelectActivity: (id: string) => void, allActivities: Activity[], emptyMessage: string }) {
+    
+    const getStatusBadge = (status: Activity['status']) => {
+        switch(status) {
+            case 'brainstorm':
+                return <Badge variant="secondary" className="mt-1">Não Classificada</Badge>;
+            case 'aguardando_consenso':
+                return <Badge variant="secondary" className="mt-1 bg-yellow-100 text-yellow-800">Aguardando Consenso</Badge>;
+            case 'aprovada':
+                return <Badge variant="secondary" className="mt-1 bg-green-100 text-green-800">Aprovada</Badge>;
+            default:
+                return null;
+        }
+    }
+    
     return (
         <ScrollArea className="h-[60vh]">
              <div className="space-y-2 pr-4">
@@ -68,9 +82,7 @@ function ActivityList({ activities, selectedActivityId, onSelectActivity, allAct
                             className="w-full text-left p-3"
                         >
                             {getDisplayName(mainActivity, allActivities, false)}
-                             <Badge variant="secondary" className="mt-1">
-                                {mainActivity.status === 'brainstorm' ? 'Não Classificada' : mainActivity.status === 'aguardando_consenso' ? 'Aguardando Consenso' : 'Aprovada'}
-                            </Badge>
+                            {getStatusBadge(mainActivity.status)}
                         </button>
                         {mainActivity.children.length > 0 && (
                             <div className="border-t border-dashed border-primary/20 space-y-1 p-2">

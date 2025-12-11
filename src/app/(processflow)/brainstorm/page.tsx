@@ -319,12 +319,17 @@ export default function BrainstormPage() {
     const trimmedName = name.trim();
     if (!trimmedName || !db || !clientId) return;
     
+    let parentActivity: Activity | undefined;
+    if (parentId) {
+        parentActivity = activities.find(a => a.id === parentId);
+    }
+    
     if(!parentId) setNewActivityName("");
     
     const activityData: Omit<Activity, 'id' | 'createdAt'> & { createdAt: any } = {
         nome: trimmedName,
         parentId: parentId,
-        categoria: parentId ? 'Compartilhado' : null,
+        categoria: parentId && parentActivity ? parentActivity.categoria : null,
         justificativa: parentId ? 'Micro-processo de uma atividade principal.' : null,
         responsavel: responsavel,
         recorrencia: recorrencia as Activity['recorrencia'],
