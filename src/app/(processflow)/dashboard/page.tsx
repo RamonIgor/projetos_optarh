@@ -153,7 +153,7 @@ export default function DashboardPage() {
         );
     }
     
-    if (allActivities.length === 0 && !isClientLoading) {
+    if (mainActivities.length === 0 && !isClientLoading) {
         return (
            <div className="text-center py-20 flex-1">
             <h1 className="mt-4 text-3xl font-bold">Nenhum dado para exibir</h1>

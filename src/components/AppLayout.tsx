@@ -56,8 +56,9 @@ const ProcessFlowNav = () => {
     return () => unsubscribe();
   }, [db, clientId]);
 
-  const hasActivities = activities.length > 0;
-  const unclassifiedCount = useMemo(() => activities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [activities]);
+  const mainActivities = useMemo(() => activities.filter(a => !a.parentId), [activities]);
+  const hasActivities = mainActivities.length > 0;
+  const unclassifiedCount = useMemo(() => mainActivities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [mainActivities]);
 
   const navItems = [
     { href: '/processflow/brainstorm', label: 'Brainstorm', icon: ListTodo },
