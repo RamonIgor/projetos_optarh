@@ -205,7 +205,7 @@ export default function TransitionPage() {
             setAllActivities([]);
             return;
         }
-
+        // Query for only approved main activities
         const q = query(
             collection(db, 'clients', clientId, 'activities'), 
             where('status', '==', 'aprovada'),
@@ -221,11 +221,7 @@ export default function TransitionPage() {
         return () => unsubscribe();
     }, [db, user, router, clientId, isLoadingPage]);
     
-    const getActivityName = (activity: Activity, all: Activity[]) => {
-        if (activity.parentId) {
-            const parent = all.find(a => a.id === activity.parentId);
-            return parent ? `${parent.nome} » ${activity.nome}` : activity.nome;
-        }
+    const getActivityName = (activity: Activity) => {
         return activity.nome;
     };
     
@@ -354,7 +350,7 @@ export default function TransitionPage() {
                                 const statusConfig = transitionStatusConfig[activity.statusTransicao] || transitionStatusConfig.undefined;
                                 return (
                                 <TableRow key={activity.id}>
-                                    <TableCell className="font-medium">{getActivityName(activity, allActivities)}</TableCell>
+                                    <TableCell className="font-medium">{getActivityName(activity)}</TableCell>
                                     <TableCell>
                                         <Badge variant="outline" className={cn(activity.categoria ? categoryStyles[activity.categoria] : '')}>
                                             {activity.categoria}
@@ -402,7 +398,7 @@ export default function TransitionPage() {
                              return (
                                 <Card key={activity.id} className="bg-muted/50">
                                     <CardHeader>
-                                        <CardTitle>{getActivityName(activity, allActivities)}</CardTitle>
+                                        <CardTitle>{getActivityName(activity)}</CardTitle>
                                         <div className="flex items-center gap-2 pt-2">
                                             <Badge variant="outline" className={cn(activity.categoria ? categoryStyles[activity.categoria] : '')}>
                                                 {activity.categoria}
@@ -457,3 +453,5 @@ export default function TransitionPage() {
         </div>
     );
 }
+
+    

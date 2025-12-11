@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { useFirestore, useClient } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
@@ -49,7 +49,7 @@ export default function DashboardPage() {
     const { clientId, isClientLoading } = useClient();
     const router = useRouter();
 
-    const [allActivities, setAllActivities] = useState<Activity[]>([]);
+    const [mainActivities, setMainActivities] = useState<Activity[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     
     const [categoryFilter, setCategoryFilter] = useState('all');
@@ -67,25 +67,23 @@ export default function DashboardPage() {
             return;
         }
         if (!db || !clientId) {
-            setAllActivities([]);
+            setMainActivities([]);
             setIsLoading(false);
             return;
         }
-
+        // Query only for main activities (where parentId is null)
         const q = query(
             collection(db, 'clients', clientId, 'activities'), 
-            orderBy('createdAt', 'desc')
+            where('parentId', '==', null)
         );
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
-            setAllActivities(activitiesData);
+            setMainActivities(activitiesData);
             setIsLoading(false);
         }, () => setIsLoading(false));
 
         return () => unsubscribe();
     }, [db, user, router, clientId, isLoadingPage]);
-
-    const mainActivities = useMemo(() => allActivities.filter(a => !a.parentId), [allActivities]);
 
     const filteredActivities = useMemo(() => {
         return mainActivities.filter(activity => {
@@ -130,11 +128,7 @@ export default function DashboardPage() {
         return { total, classified, approved, byCategory, byStatus, byResponsible, byRecurrence, pendingDecision, latestApproved };
     }, [filteredActivities, mainActivities]);
     
-    const getActivityName = (activity: Activity, all: Activity[]) => {
-        if (activity.parentId) {
-            const parent = all.find(a => a.id === activity.parentId);
-            return parent ? `${parent.nome} » ${activity.nome}` : activity.nome;
-        }
+    const getActivityName = (activity: Activity) => {
         return activity.nome;
     };
 
@@ -197,7 +191,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <StatCard title="Progresso do Levantamento" value={stats.total} icon={<FileText />} className="lg:col-span-1">
+              <StatCard title="Total de Atividades Principais" value={stats.total} icon={<FileText />} className="lg:col-span-1">
                   <p className="text-xs text-muted-foreground mt-2">
                       {stats.classified} classificadas, {stats.approved} aprovadas.
                   </p>
@@ -266,7 +260,7 @@ export default function DashboardPage() {
                               {stats.pendingDecision.map(activity => (
                                   <li key={activity.id}>
                                       <Link href={`/processflow/classificacao?activityId=${activity.id}`} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
-                                          <span className="font-medium">{getActivityName(activity, allActivities)}</span>
+                                          <span className="font-medium">{getActivityName(activity)}</span>
                                           <Badge variant="outline" className="text-yellow-600 border-yellow-500">{activity.categoria}</Badge>
                                       </Link>
                                   </li>
@@ -284,7 +278,7 @@ export default function DashboardPage() {
                           <ul className="space-y-2">
                               {stats.latestApproved.map(activity => (
                                   <li key={activity.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
-                                      <span className="font-medium">{getActivityName(activity, allActivities)}</span>
+                                      <span className="font-medium">{getActivityName(activity)}</span>
                                       <span className="text-sm text-muted-foreground">
                                           {activity.dataAprovacao && format((activity.dataAprovacao as any).toDate(), "dd/MM/yyyy 'às' HH:mm")}
                                       </span>
@@ -298,3 +292,5 @@ export default function DashboardPage() {
         </div>
     );
 }
+
+    

@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -24,15 +23,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
-const getActivityName = (activity: Activity, allActivities: Activity[]) => {
-    if (activity.parentId) {
-        const parent = allActivities.find(a => a.id === activity.parentId);
-        return parent ? `${parent.nome} » ${activity.nome}` : activity.nome;
-    }
+const getActivityName = (activity: Activity) => {
     return activity.nome;
 };
 
-function ActivityList({ title, activities, selectedActivityId, onSelectActivity, allActivities, emptyMessage }: { title: string, activities: Activity[], selectedActivityId: string | null, onSelectActivity: (id: string) => void, allActivities: Activity[], emptyMessage: string }) {
+function ActivityList({ title, activities, selectedActivityId, onSelectActivity, emptyMessage }: { title: string, activities: Activity[], selectedActivityId: string | null, onSelectActivity: (id: string) => void, emptyMessage: string }) {
     return (
         <ScrollArea className="h-[60vh]">
              <div className="space-y-2 pr-4">
@@ -47,7 +42,7 @@ function ActivityList({ title, activities, selectedActivityId, onSelectActivity,
                                 : "bg-transparent hover:bg-muted"
                         )}
                     >
-                        <p className="font-semibold">{getActivityName(activity, allActivities)}</p>
+                        <p className="font-semibold">{getActivityName(activity)}</p>
                         <Badge variant="secondary" className={cn(
                             "mt-1",
                             activity.status === 'aguardando_consenso' && 'bg-yellow-200 text-yellow-800',
@@ -103,6 +98,7 @@ export default function ClassificationPage() {
     }
 
     setIsLoading(true);
+    // Query only for main activities (where parentId is null)
     const q = query(
       collection(db, 'clients', clientId, 'activities'),
       where('parentId', '==', null)
@@ -188,7 +184,7 @@ export default function ClassificationPage() {
 
       toast({
         title: toastTitle,
-        description: `"${getActivityName(activeActivity, allActivities)}" foi atualizada com sucesso.`
+        description: `"${getActivityName(activeActivity)}" foi atualizada com sucesso.`
       });
       
       if(newStatus === 'brainstorm'){
@@ -227,7 +223,6 @@ export default function ClassificationPage() {
                     activities={pendingActivities}
                     selectedActivityId={selectedActivityId}
                     onSelectActivity={setSelectedActivityId}
-                    allActivities={allActivities}
                     emptyMessage="Nenhuma atividade pendente!"
                   />
                 </TabsContent>
@@ -237,7 +232,6 @@ export default function ClassificationPage() {
                     activities={approvedActivities}
                     selectedActivityId={selectedActivityId}
                     onSelectActivity={setSelectedActivityId}
-                    allActivities={allActivities}
                     emptyMessage="Nenhuma atividade aprovada ainda."
                   />
                 </TabsContent>
@@ -250,7 +244,7 @@ export default function ClassificationPage() {
             {activeActivity ? (
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-2xl">{getActivityName(activeActivity, allActivities)}</CardTitle>
+                        <CardTitle className="text-2xl">{getActivityName(activeActivity)}</CardTitle>
                         <CardDescription>
                             Use o formulário abaixo para classificar e detalhar esta atividade.
                         </CardDescription>
