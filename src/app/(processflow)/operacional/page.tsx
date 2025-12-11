@@ -90,6 +90,9 @@ function ActivityItem({ activity, name, onToggle, isSubItem = false }: { activit
                     }
                     <div className="flex items-center gap-1.5"><User className="h-3 w-3" /> {activity.responsavel}</div>
                     {activity.recorrencia && !isSubItem && <div className="flex items-center gap-1.5"><Repeat className="h-3 w-3" /> {activity.recorrencia}</div>}
+                    {activity.recorrencia === 'Sob demanda' && activity.prazo && 
+                        <div className="flex items-center gap-1.5"><Calendar className="h-3 w-3" /> Prazo: {format((activity.prazo as Timestamp).toDate(), 'dd/MM/yyyy')}</div>
+                    }
                 </div>
                 <div className="text-xs text-muted-foreground mt-2 space-y-1">
                    {activity.ultimaExecucao && (
@@ -347,7 +350,15 @@ export default function OperationalPage() {
         
         // Sort main activities within each group
         for (const recurrence in groups) {
-            groups[recurrence as Recurrence].sort((a, b) => {
+            const typedRecurrence = recurrence as Recurrence;
+            groups[typedRecurrence].sort((a, b) => {
+                // Special sort for 'Sob demanda' by prazo
+                if (typedRecurrence === 'Sob demanda') {
+                    const aPrazo = a.prazo ? (a.prazo as Timestamp).toMillis() : Infinity;
+                    const bPrazo = b.prazo ? (b.prazo as Timestamp).toMillis() : Infinity;
+                    if (aPrazo !== bPrazo) return aPrazo - bPrazo;
+                }
+                // General sorting for all other recurrences
                 const aIsPending = isActivityPending(a);
                 const bIsPending = isActivityPending(b);
                 if (aIsPending && !bIsPending) return -1;
