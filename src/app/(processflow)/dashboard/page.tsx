@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query } from 'firebase/firestore';
 import { useFirestore, useClient } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
@@ -63,7 +63,7 @@ export default function DashboardPage() {
     const { clientId, isClientLoading } = useClient();
     const router = useRouter();
 
-    const [mainActivities, setMainActivities] = useState<Activity[]>([]);
+    const [allActivities, setAllActivities] = useState<Activity[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     
     const [categoryFilter, setCategoryFilter] = useState('all');
@@ -81,23 +81,24 @@ export default function DashboardPage() {
             return;
         }
         if (!db || !clientId) {
-            setMainActivities([]);
+            setAllActivities([]);
             setIsLoading(false);
             return;
         }
         
         const q = query(
-            collection(db, 'clients', clientId, 'activities'), 
-            where('parentId', '==', null)
+            collection(db, 'clients', clientId, 'activities')
         );
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
-            setMainActivities(activitiesData);
+            setAllActivities(activitiesData);
             setIsLoading(false);
         }, () => setIsLoading(false));
 
         return () => unsubscribe();
     }, [db, user, router, clientId, isLoadingPage]);
+    
+    const mainActivities = useMemo(() => allActivities.filter(a => !a.parentId), [allActivities]);
 
     const filteredActivities = useMemo(() => {
         return mainActivities.filter(activity => {
@@ -108,26 +109,26 @@ export default function DashboardPage() {
     }, [mainActivities, categoryFilter, statusFilter]);
 
     const stats = useMemo(() => {
-        const total = filteredActivities.length;
-        const classified = filteredActivities.filter(a => a.status !== 'brainstorm').length;
-        const approved = filteredActivities.filter(a => a.status === 'aprovada').length;
+        const total = mainActivities.length;
+        const classified = mainActivities.filter(a => a.status !== 'brainstorm').length;
+        const approved = mainActivities.filter(a => a.status === 'aprovada').length;
 
-        const byCategory = filteredActivities.reduce((acc, a) => {
+        const byCategory = mainActivities.reduce((acc, a) => {
             if (a.categoria) acc[a.categoria] = (acc[a.categoria] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
 
-        const byStatus = filteredActivities.reduce((acc, a) => {
+        const byStatus = mainActivities.reduce((acc, a) => {
             acc[a.status] = (acc[a.status] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
 
-        const byResponsible = filteredActivities.reduce((acc, a) => {
+        const byResponsible = mainActivities.reduce((acc, a) => {
             if (a.responsavel) acc[a.responsavel] = (acc[a.responsavel] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
 
-        const byRecurrence = filteredActivities.reduce((acc, a) => {
+        const byRecurrence = mainActivities.reduce((acc, a) => {
             if (a.recorrencia) acc[a.recorrencia] = (acc[a.recorrencia] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
@@ -140,7 +141,7 @@ export default function DashboardPage() {
 
 
         return { total, classified, approved, byCategory, byStatus, byResponsible, byRecurrence, pendingDecision, latestApproved };
-    }, [filteredActivities, mainActivities]);
+    }, [mainActivities]);
     
     const categoryChartData: CategoryChartData[] = useMemo(() => [
         { name: 'DP', value: stats.byCategory['DP'] || 0, fill: '#6d28d9' },
