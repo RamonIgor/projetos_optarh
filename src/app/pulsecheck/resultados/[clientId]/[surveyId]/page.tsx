@@ -15,7 +15,7 @@ import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Bar, Cell, PieCha
 import { Progress } from '@/components/ui/progress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
-import { calculateNPS, calculateCategoryScore, getCategoryStatus, getTopIssues, type CategoryScore } from '@/lib/pulsecheck-analytics';
+import { calculateNPS, calculateCategoryScore, getCategoryStatus, getTopIssues, type CategoryScore as BaseCategoryScore } from '@/lib/pulsecheck-analytics';
 import { differenceInMinutes } from 'date-fns';
 import { Tooltip as TooltipComponent, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import jsPDF from 'jspdf';
@@ -36,6 +36,11 @@ const STATUS_CONFIG: Record<ReturnType<typeof getCategoryStatus>, { label: strin
     bom: { label: "Bom", color: "bg-blue-500", textColor: "text-blue-500" },
     atencao: { label: "Atenção", color: "bg-yellow-500", textColor: "text-yellow-500" },
     critico: { label: "Crítico", color: "bg-red-500", textColor: "text-red-500" }
+};
+
+// Define a local type that includes the questions array
+type CategoryAnalysis = BaseCategoryScore & {
+  questions: SelectedQuestion[];
 };
 
 
@@ -338,7 +343,7 @@ export default function SurveyResultsPage() {
             }
             acc[categoryName].questions.push(q);
             return acc;
-        }, {} as Record<string, CategoryScore>);
+        }, {} as Record<string, CategoryAnalysis>);
 
         Object.keys(categories).forEach(catName => {
             const category = categories[catName];
