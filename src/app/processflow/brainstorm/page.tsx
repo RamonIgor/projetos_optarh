@@ -259,7 +259,7 @@ export default function BrainstormPage() {
     const activityMap = new Map(activities.map(a => [a.id, a]));
 
     activities.forEach(activity => {
-        if (activity.parentId && activityMap.has(activity.parentId)) {
+        if (activity.parentId) {
             if (!childrenOf[activity.parentId]) {
                 childrenOf[activity.parentId] = [];
             }
@@ -267,20 +267,15 @@ export default function BrainstormPage() {
         }
     });
     
-    activities.forEach(activity => {
-        if (!activity.parentId) {
-            const children = (childrenOf[activity.id] || []).sort((a,b) => ((a.createdAt as any)?.seconds || 0) - ((b.createdAt as any)?.seconds || 0));
-            tree.push({ ...activity, children });
-        } else if (!activityMap.has(activity.parentId)) {
-            const children = (childrenOf[activity.id] || []).sort((a,b) => ((a.createdAt as any)?.seconds || 0) - ((b.createdAt as any)?.seconds || 0));
-            tree.push({ ...activity, children });
-        }
+    mainActivities.forEach(activity => {
+        const children = (childrenOf[activity.id] || []).sort((a,b) => ((a.createdAt as any)?.seconds || 0) - ((b.createdAt as any)?.seconds || 0));
+        tree.push({ ...activity, children });
     });
     
     tree.sort((a,b) => ((b.createdAt as any)?.seconds || 0) - ((a.createdAt as any)?.seconds || 0));
 
     return tree;
-  }, [activities]);
+  }, [activities, mainActivities]);
 
 
   const addActivity = (name: string, parentId: string | null = null, responsavel: string | null = null, prazo: Date | undefined = undefined) => {
@@ -306,7 +301,7 @@ export default function BrainstormPage() {
         dataInicioTransicao: null,
         dataConclusaoTransicao: parentId ? serverTimestamp() : null,
         prazoTransicao: null,
-        prazo: prazo,
+        prazo: prazo || null,
         historicoExecucoes: [],
       };
 
@@ -334,7 +329,7 @@ export default function BrainstormPage() {
     if (!trimmedName || isAdding) return;
     
     startMainAddTransition(() => {
-        const similar = activities.find(act => !act.parentId && isSimilar(act.nome, trimmedName));
+        const similar = mainActivities.find(act => isSimilar(act.nome, trimmedName));
         if (similar) {
           setDialogState({ open: true, similarTo: similar.nome, nameToAdd: trimmedName });
         } else {
