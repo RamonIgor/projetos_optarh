@@ -39,7 +39,7 @@ const statusInfo: { [key: string]: { label: string; icon: React.ReactNode; varia
   aprovada: { label: 'Aprovada', icon: <ThumbsUp className="h-3 w-3" />, variant: 'secondary', className: 'bg-green-100 text-green-800' },
 };
 
-function AddSubActivityForm({ parentId, onAddSubActivity }: { parentId: string; onAddSubActivity: (name: string, parentId: string, responsavel: string, prazo: Date | undefined) => void }) {
+function AddSubActivityForm({ parentId, onAddSubActivity, onFinished }: { parentId: string; onAddSubActivity: (name: string, parentId: string, responsavel: string, prazo: Date | undefined) => void; onFinished: () => void; }) {
     const [subActivityName, setSubActivityName] = useState("");
     const [responsavel, setResponsavel] = useState("");
     const [prazo, setPrazo] = useState<Date | undefined>();
@@ -55,12 +55,19 @@ function AddSubActivityForm({ parentId, onAddSubActivity }: { parentId: string; 
             setSubActivityName("");
             setResponsavel("");
             setPrazo(undefined);
+            onFinished(); // Call the callback to close the form
         });
     }
 
     return (
-        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-4">
-            <form onSubmit={handleAddSubmit} className="space-y-3 p-4 bg-card border rounded-lg ml-6">
+        <motion.div 
+            initial={{ opacity: 0, height: 0 }} 
+            animate={{ opacity: 1, height: 'auto' }} 
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="overflow-hidden"
+        >
+            <form onSubmit={handleAddSubmit} className="space-y-3 p-4 bg-card border rounded-lg ml-6 mt-4">
                 <h4 className="font-semibold text-sm">Adicionar Micro-processo</h4>
                 <Input
                     type="text" placeholder="Nome do micro-processo"
@@ -187,7 +194,9 @@ function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddS
                     )}
                 </div>
             </div>
-            {showAddSub && <AddSubActivityForm parentId={activity.id} onAddSubActivity={onAddSubActivity} />}
+            <AnimatePresence>
+                {showAddSub && <AddSubActivityForm parentId={activity.id} onAddSubActivity={onAddSubActivity} onFinished={() => setShowAddSub(false)} />}
+            </AnimatePresence>
         </motion.div>
     )
 }
