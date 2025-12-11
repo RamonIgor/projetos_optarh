@@ -26,12 +26,13 @@ export type Recurrence = 'Diária' | 'Semanal' | 'Mensal' | 'Trimestral' | 'Seme
  * Checks if an activity is pending based on its last execution date and recurrence.
  * An activity is pending if it has never been executed or if its last execution
  * is outside the current period for its recurrence.
+ * For 'Sob Demanda' with a prazo, it's considered pending if not executed, even if the prazo has passed.
  * @param activity The activity to check.
  * @returns True if the activity is pending, false otherwise.
  */
 export function isActivityPending(activity: Activity): boolean {
   if (activity.recorrencia === 'Sob demanda') {
-    // On-demand tasks are always pending until they are manually marked as completed for the current instance.
+    // On-demand tasks are always pending until they are manually marked as completed (ultimaExecucao is set).
     return activity.ultimaExecucao === null;
   }
   
@@ -69,7 +70,7 @@ export function isActivityPending(activity: Activity): boolean {
 /**
  * Checks if a pending activity is overdue.
  * An activity is overdue if its expected execution date (based on creation) is in the past.
- * For "Sob demanda", it's overdue if it has a `prazo` and that date is in the past.
+ * For "Sob demanda", it's overdue if it has a `prazo` and that date is in the past and it's still pending.
  * @param activity The activity to check.
  * @returns True if the activity is overdue, false otherwise.
  */
@@ -83,7 +84,7 @@ export function isActivityOverdue(activity: Activity): boolean {
       const prazoDate = (activity.prazo as Timestamp).toDate();
       // It's overdue if the deadline is in the past AND it hasn't been completed yet.
       // isActivityPending already checks for `ultimaExecucao === null`.
-      return isPast(prazoDate);
+      return isPast(startOfDay(prazoDate));
     }
     return false; // No deadline, so it can't be overdue.
   }

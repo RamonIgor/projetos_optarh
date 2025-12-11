@@ -11,13 +11,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Calendar as CalendarIcon, User, Repeat, CheckSquare, Clock, ChevronsDown, History, ListChecks, CalendarPlus } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon, User, Repeat, CheckSquare, Clock, ChevronsDown, History, ListChecks, CalendarPlus, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { isActivityPending, isActivityOverdue, getNextExecution, type Recurrence } from '@/lib/date-utils';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -47,115 +47,145 @@ const StatCard = ({ title, value, icon, className }: { title: string, value: str
 const recurrenceOrder: Recurrence[] = ['Diária', 'Semanal', 'Mensal', 'Trimestral', 'Semestral', 'Anual', 'Sob demanda'];
 
 const categoryStyles: Record<string, string> = {
-    DP: 'bg-purple-100 text-purple-800 border-purple-200',
-    RH: 'bg-green-100 text-green-800 border-green-200',
-    Compartilhado: 'bg-blue-100 text-blue-800 border-blue-200',
+    DP: 'border-purple-200 bg-purple-50 text-purple-800',
+    RH: 'border-green-200 bg-green-50 text-green-800',
+    Compartilhado: 'border-blue-200 bg-blue-50 text-blue-800',
 };
 
-function ActivityItem({ activity, name, onToggle, onUpdatePrazo, isSubItem = false }: { activity: Activity, name: string, onToggle: (id: string, isPending: boolean) => void, onUpdatePrazo: (id: string, prazo: Date) => void, isSubItem?: boolean }) {
+
+function SubActivityItem({ activity, onToggle, onUpdatePrazo }: { activity: Activity, onToggle: (id: string, isPending: boolean) => void, onUpdatePrazo: (id: string, prazo: Date) => void }) {
     const isPending = isActivityPending(activity);
     const isOverdue = isPending && isActivityOverdue(activity);
-    const nextExecution = getNextExecution(activity);
     const [isUpdating, setIsUpdating] = useState(false);
     const [calendarOpen, setCalendarOpen] = useState(false);
-
+    
     const handleToggle = () => {
         setIsUpdating(true);
         onToggle(activity.id, isPending);
         setTimeout(() => setIsUpdating(false), 1000);
-    }
-    
+    };
+
     const handleDateSelect = (date: Date | undefined) => {
         if (date) {
             onUpdatePrazo(activity.id, date);
         }
         setCalendarOpen(false);
-    }
+    };
 
+    return (
+        <div className="flex items-start gap-3 pl-8 py-3 border-t">
+            <Checkbox 
+                id={`sub-activity-${activity.id}`}
+                checked={!isPending}
+                onCheckedChange={handleToggle}
+                className="h-5 w-5 mt-0.5"
+                disabled={isUpdating}
+            />
+            <div className="flex-1">
+                 <label htmlFor={`sub-activity-${activity.id}`} className={cn("font-medium text-sm cursor-pointer", !isPending && "line-through text-muted-foreground")}>
+                    {activity.nome}
+                </label>
+                <div className="flex items-center gap-x-3 text-xs text-muted-foreground mt-1">
+                    <div className="flex items-center gap-1"><User className="h-3 w-3"/> {activity.responsavel}</div>
+                     {activity.recorrencia === 'Sob demanda' && activity.prazo && (
+                       <div className={cn("flex items-center gap-1", isOverdue && "text-red-500 font-semibold")}>
+                          <CalendarIcon className="h-3 w-3"/> 
+                          Prazo: {format((activity.prazo as Timestamp).toDate(), 'dd/MM/yyyy')}
+                       </div>
+                    )}
+                </div>
+            </div>
+            <div className="flex items-center gap-1">
+                {isOverdue && <Badge variant="destructive" className="h-5">Atrasada</Badge>}
+                {activity.recorrencia === 'Sob demanda' && (
+                    <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                        <TooltipProvider>
+                           <Tooltip>
+                             <TooltipTrigger asChild>
+                                <PopoverTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <CalendarPlus className="h-4 w-4 text-muted-foreground" />
+                                    </Button>
+                                </PopoverTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Alterar Prazo</p></TooltipContent>
+                           </Tooltip>
+                        </TooltipProvider>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar
+                                mode="single"
+                                selected={activity.prazo ? (activity.prazo as Timestamp).toDate() : undefined}
+                                onSelect={handleDateSelect}
+                                initialFocus
+                            />
+                        </PopoverContent>
+                    </Popover>
+                )}
+            </div>
+        </div>
+    )
+}
+
+function ActivityCard({ activity, children, onToggle }: { activity: Activity, children: Activity[], onToggle: (id: string, isPending: boolean) => void }) {
+    const isPending = isActivityPending(activity);
+    const isOverdue = isPending && isActivityOverdue(activity);
+    const nextExecution = getNextExecution(activity);
+    const [isUpdating, setIsUpdating] = useState(false);
+
+    const handleToggle = () => {
+        setIsUpdating(true);
+        onToggle(activity.id, isPending);
+        setTimeout(() => setIsUpdating(false), 1000);
+    };
+
+    const borderColor = isOverdue ? "border-red-500" : !isPending ? "border-green-500" : "border-transparent";
 
     return (
         <motion.div
             layout
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className={cn(
-                "flex items-start gap-4 rounded-lg p-4 transition-colors",
-                !isPending ? 'bg-green-500/10' : isOverdue ? 'bg-red-500/10' : 'bg-card',
-                isSubItem && 'ml-6 border-l-2 border-primary/20' // Indent sub-items
-            )}
+            exit={{ opacity: 0, x: -50 }}
+            className={cn("bg-card rounded-xl border-l-4 transition-colors", borderColor)}
         >
-            <Checkbox 
-                id={`activity-${activity.id}`}
-                checked={!isPending}
-                onCheckedChange={handleToggle}
-                className="h-6 w-6 mt-1"
-                disabled={isUpdating}
-            />
-            <div className="flex-1">
-                <label htmlFor={`activity-${activity.id}`} className={cn("font-semibold text-lg cursor-pointer", isSubItem && "font-normal")}>{name}</label>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-2">
-                    {activity.categoria && !isSubItem &&
-                      <Badge variant="outline" className={cn(categoryStyles[activity.categoria] || '')}>
-                          {activity.categoria}
-                      </Badge>
-                    }
-                    <div className="flex items-center gap-1.5"><User className="h-3 w-3" /> {activity.responsavel}</div>
-                    {activity.recorrencia && <div className="flex items-center gap-1.5"><Repeat className="h-3 w-3" /> {activity.recorrencia}</div>}
-                    {activity.prazo && activity.recorrencia === 'Sob demanda' && (
-                        <div className="flex items-center gap-1.5"><CalendarIcon className="h-3 w-3" /> Prazo: {format((activity.prazo as Timestamp).toDate(), 'dd/MM/yyyy')}</div>
-                    )}
+            <div className="flex items-start gap-4 p-4">
+                <Checkbox 
+                    id={`activity-${activity.id}`}
+                    checked={!isPending}
+                    onCheckedChange={handleToggle}
+                    className="h-6 w-6 mt-1"
+                    disabled={isUpdating}
+                />
+                <div className="flex-1">
+                    <label htmlFor={`activity-${activity.id}`} className={cn("font-semibold text-lg cursor-pointer", !isPending && "line-through text-muted-foreground")}>{activity.nome}</label>
+                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-2">
+                        <div className="flex items-center gap-1.5"><User className="h-3 w-3" /> {activity.responsavel}</div>
+                        {activity.recorrencia && <div className="flex items-center gap-1.5"><Repeat className="h-3 w-3" /> {activity.recorrencia}</div>}
+                    </div>
+                     <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                       {activity.ultimaExecucao && (
+                         <p>
+                            Última execução: {formatDistanceToNow((activity.ultimaExecucao as Timestamp).toDate(), { addSuffix: true, locale: ptBR })}
+                         </p>
+                       )}
+                       {nextExecution && (
+                         <p className={cn(isOverdue && 'text-red-500 font-medium')}>
+                            {isOverdue ? 'Execução atrasada!' : `Próxima execução: ${formatDistanceToNow(nextExecution, { addSuffix: true, locale: ptBR })}`}
+                         </p>
+                       )}
+                    </div>
                 </div>
-                <div className="text-xs text-muted-foreground mt-2 space-y-1">
-                   {activity.ultimaExecucao && (
-                     <p>
-                        Última execução: {formatDistanceToNow((activity.ultimaExecucao as Timestamp).toDate(), { addSuffix: true, locale: ptBR })}
-                     </p>
-                   )}
-                   {nextExecution && (
-                     <p className={cn(isOverdue && 'text-red-500 font-medium')}>
-                        {isOverdue ? 'Execução atrasada!' : `Próxima execução esperada: ${formatDistanceToNow(nextExecution, { addSuffix: true, locale: ptBR })}`}
-                     </p>
-                   )}
+                 <div className="flex flex-col items-end gap-2">
+                    {isOverdue && <Badge variant="destructive">Atrasada</Badge>}
+                    <HistoryModal activity={activity} />
                 </div>
             </div>
-             <div className="flex flex-col items-end gap-2">
-                 {isOverdue && <Badge variant="destructive">Atrasada</Badge>}
-                 <div className="flex items-center gap-1">
-                     <HistoryModal activity={activity} name={name} />
-                     {activity.recorrencia === 'Sob demanda' && (
-                        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                            <TooltipProvider>
-                               <Tooltip>
-                                 <TooltipTrigger asChild>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-9 w-9">
-                                            <CalendarPlus className="h-4 w-4" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Definir Prazo</p>
-                                </TooltipContent>
-                               </Tooltip>
-                            </TooltipProvider>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                    mode="single"
-                                    selected={activity.prazo ? (activity.prazo as Timestamp).toDate() : undefined}
-                                    onSelect={handleDateSelect}
-                                    initialFocus
-                                />
-                            </PopoverContent>
-                        </Popover>
-                    )}
-                 </div>
-            </div>
+            {children}
         </motion.div>
-    );
+    )
 }
 
-function HistoryModal({ activity, name }: { activity: Activity, name: string }) {
+function HistoryModal({ activity }: { activity: Activity }) {
     const history = useMemo(() => {
         if (!activity.historicoExecucoes) return [];
         const sorted = [...(activity.historicoExecucoes || [])];
@@ -178,7 +208,7 @@ function HistoryModal({ activity, name }: { activity: Activity, name: string }) 
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Histórico de Execução</DialogTitle>
-                    <DialogDescription>{name}</DialogDescription>
+                    <DialogDescription>{activity.nome}</DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="max-h-80">
                     <div className="pr-6">
@@ -208,52 +238,50 @@ function HistoryModal({ activity, name }: { activity: Activity, name: string }) 
     )
 }
 
-
-function RecurrenceGroup({ title, activities, onToggle, onUpdatePrazo, getActivityName }: { title: Recurrence, activities: (Activity & { children: Activity[] })[], onToggle: (id: string, isPending: boolean) => void, onUpdatePrazo: (id: string, prazo: Date) => void, getActivityName: (act: Activity) => string }) {
+function RecurrenceGroup({ title, activities, onToggle, onUpdatePrazo }: { title: Recurrence, activities: (Activity & { children: Activity[] })[], onToggle: (id: string, isPending: boolean) => void, onUpdatePrazo: (id: string, prazo: Date) => void }) {
     const [isOpen, setIsOpen] = useState(true);
     
-    // Only consider main activities for completion progress
-    const mainActivities = activities;
-    const completed = mainActivities.filter(a => !isActivityPending(a)).length;
-    const total = mainActivities.length;
-    const progress = total > 0 ? (completed / total) * 100 : 0;
-
     if (activities.length === 0) return null;
 
+    const completed = activities.filter(a => !isActivityPending(a)).length;
+    const total = activities.length;
+    const progress = total > 0 ? (completed / total) * 100 : 0;
+
     return (
-        <Card className="overflow-hidden">
-            <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-                <CollapsibleTrigger asChild>
-                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between cursor-pointer hover:bg-muted/50 p-4 gap-4">
-                        <div className="flex items-center gap-4">
-                            <h2 className="text-xl font-bold">{title}</h2>
-                            <Badge variant="secondary">{activities.length} atividades</Badge>
-                        </div>
-                        <div className="flex items-center gap-4 w-full sm:w-auto">
-                            <span className="text-sm text-muted-foreground hidden lg:inline">{completed} de {total} concluídas</span>
-                            <Progress value={progress} className="w-full sm:w-32 h-2" />
-                            <Button variant="ghost" size="sm" className="w-9 p-0">
-                                <ChevronsDown className={cn("h-5 w-5 transition-transform", isOpen && "rotate-180")} />
-                            </Button>
-                        </div>
+         <Collapsible open={isOpen} onOpenChange={setIsOpen} className="space-y-4">
+            <CollapsibleTrigger asChild>
+                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between cursor-pointer hover:bg-muted/50 p-4 gap-4 rounded-lg border">
+                    <div className="flex items-center gap-4">
+                        <h2 className="text-xl font-bold">{title}</h2>
+                        <Badge variant="secondary">{activities.length} atividades</Badge>
                     </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent asChild>
-                    <CardContent className="p-4 space-y-3">
-                         <AnimatePresence>
-                            {activities.map(activity => (
-                                <div key={activity.id}>
-                                    <ActivityItem activity={activity} name={getActivityName(activity)} onToggle={onToggle} onUpdatePrazo={onUpdatePrazo} />
-                                    {activity.children.map(child => (
-                                        <ActivityItem key={child.id} activity={child} name={getActivityName(child)} onToggle={onToggle} onUpdatePrazo={onUpdatePrazo} isSubItem />
-                                    ))}
-                                </div>
-                            ))}
-                        </AnimatePresence>
-                    </CardContent>
-                </CollapsibleContent>
-            </Collapsible>
-        </Card>
+                    <div className="flex items-center gap-4 w-full sm:w-auto">
+                        <span className="text-sm text-muted-foreground hidden lg:inline">{completed} de {total} concluídas</span>
+                        <Progress value={progress} className="w-full sm:w-32 h-2" />
+                        <Button variant="ghost" size="sm" className="w-9 p-0">
+                            <ChevronsDown className={cn("h-5 w-5 transition-transform", isOpen && "rotate-180")} />
+                        </Button>
+                    </div>
+                </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent asChild>
+                <div className="space-y-4">
+                     <AnimatePresence>
+                        {activities.map(activity => (
+                             <ActivityCard key={activity.id} activity={activity} onToggle={onToggle}>
+                                {activity.children.length > 0 && (
+                                     <div>
+                                        {activity.children.map(child => (
+                                            <SubActivityItem key={child.id} activity={child} onToggle={onToggle} onUpdatePrazo={onUpdatePrazo} />
+                                        ))}
+                                    </div>
+                                )}
+                             </ActivityCard>
+                        ))}
+                    </AnimatePresence>
+                </div>
+            </CollapsibleContent>
+        </Collapsible>
     )
 }
 
@@ -266,12 +294,11 @@ export default function OperationalPage() {
 
     const [allActivities, setAllActivities] = useState<Activity[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isUpdating, startUpdateTransition] = useTransition();
 
     const [categoryFilter, setCategoryFilter] = useState<string>('Todas');
     const [recurrenceFilter, setRecurrenceFilter] = useState('all');
     const [responsibleFilter, setResponsibleFilter] = useState('all');
-    const [statusFilter, setStatusFilter] = useState('pending'); // 'all', 'pending'
+    const [statusFilter, setStatusFilter] = useState('all');
 
     const isLoadingPage = userLoading || isClientLoading;
 
@@ -291,7 +318,6 @@ export default function OperationalPage() {
         }
 
         setIsLoading(true);
-        // Query for all approved activities (main and sub-activities)
         const q = query(collection(db, 'clients', clientId, 'activities'), where('status', '==', 'aprovada'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
@@ -302,34 +328,32 @@ export default function OperationalPage() {
         return () => unsubscribe();
     }, [db, user, router, clientId, isLoadingPage]);
 
-    const handleToggleActivity = (activityId: string, isCurrentlyPending: boolean) => {
+    const handleToggleActivity = async (activityId: string, isCurrentlyPending: boolean) => {
         if (!db || !clientId) return;
-        startUpdateTransition(async () => {
-            try {
-                const docRef = doc(db, 'clients', clientId, 'activities', activityId);
-                
-                const updateData: any = {
-                    ultimaExecucao: isCurrentlyPending ? serverTimestamp() : null
-                };
+        try {
+            const docRef = doc(db, 'clients', clientId, 'activities', activityId);
+            
+            const updateData: any = {
+                ultimaExecucao: isCurrentlyPending ? serverTimestamp() : null
+            };
 
-                if (isCurrentlyPending) {
-                   updateData.historicoExecucoes = arrayUnion(new Date());
-                }
-                
-                await updateDoc(docRef, updateData);
-
-                toast({
-                    title: `Atividade ${isCurrentlyPending ? 'concluída' : 'reaberta'}!`,
-                    description: 'O status da atividade foi atualizado.',
-                });
-            } catch (error) {
-                console.error(error);
-                toast({
-                    title: 'Erro ao atualizar atividade',
-                    variant: 'destructive'
-                });
+            if (isCurrentlyPending) {
+               updateData.historicoExecucoes = arrayUnion(new Date());
             }
-        });
+            
+            await updateDoc(docRef, updateData);
+
+            toast({
+                title: `Atividade ${isCurrentlyPending ? 'concluída' : 'reaberta'}!`,
+                description: 'O status da atividade foi atualizado.',
+            });
+        } catch (error) {
+            console.error(error);
+            toast({
+                title: 'Erro ao atualizar atividade',
+                variant: 'destructive'
+            });
+        }
     };
     
     const handleUpdatePrazo = async (activityId: string, prazo: Date) => {
@@ -347,107 +371,69 @@ export default function OperationalPage() {
         }
     };
     
-    const allResponsibles = useMemo(() => Array.from(new Set(allActivities.map(a => a.responsavel).filter(Boolean))), [allActivities]);
-    
-    const allRecurrences = useMemo(() => {
-        const recurrences = new Set(allActivities.map(a => a.recorrencia).filter(Boolean) as Recurrence[]);
-        return recurrenceOrder.filter(r => recurrences.has(r));
-    }, [allActivities]);
+    const allResponsibles = useMemo(() => Array.from(new Set(allActivities.map(a => a.responsavel).filter(Boolean) as string[])), [allActivities]);
+    const allRecurrences = useMemo(() => recurrenceOrder.filter(r => new Set(allActivities.map(a => a.recorrencia)).has(r)), [allActivities]);
+    const mainActivities = useMemo(() => allActivities.filter(a => !a.parentId), [allActivities]);
 
-    const getActivityName = (activity: Activity) => {
-        if (activity.parentId) {
-            const parent = allActivities.find(a => a.id === activity.parentId);
-            return parent ? `${parent.nome} » ${activity.nome}` : activity.nome;
-        }
-        return activity.nome;
-    };
-
-
-    const filteredActivities = useMemo(() => {
-        return allActivities.filter(activity => {
-            // Include main activities that match filters
-            if (!activity.parentId) {
-                const categoryMatch = categoryFilter === 'Todas' || activity.categoria === categoryFilter;
-                const recurrenceMatch = recurrenceFilter === 'all' || activity.recorrencia === recurrenceFilter;
-                const responsibleMatch = responsibleFilter === 'all' || activity.responsavel === responsibleFilter;
-                const statusMatch = statusFilter === 'all' || (statusFilter === 'pending' && isActivityPending(activity)) || (statusFilter === 'executed' && !isActivityPending(activity));
-                return categoryMatch && recurrenceMatch && responsibleMatch && statusMatch;
-            }
-            // Always include children of filtered main activities
-            const parent = allActivities.find(a => a.id === activity.parentId);
-            if (parent) {
-                 const categoryMatch = categoryFilter === 'Todas' || parent.categoria === categoryFilter;
-                const recurrenceMatch = recurrenceFilter === 'all' || parent.recorrencia === recurrenceFilter;
-                const responsibleMatch = responsibleFilter === 'all' || parent.responsavel === responsibleFilter;
-                const statusMatch = statusFilter === 'all' || (statusFilter === 'pending' && isActivityPending(parent)) || (statusFilter === 'executed' && !isActivityPending(parent));
-                if(categoryMatch && recurrenceMatch && responsibleMatch && statusMatch) return true;
-            }
-
-            return false;
+    const filteredMainActivities = useMemo(() => {
+        return mainActivities.filter(activity => {
+            const categoryMatch = categoryFilter === 'Todas' || activity.categoria === categoryFilter;
+            const recurrenceMatch = recurrenceFilter === 'all' || activity.recorrencia === recurrenceFilter;
+            const responsibleMatch = responsibleFilter === 'all' || activity.responsavel === responsibleFilter;
+            
+            let statusMatch = true;
+            if (statusFilter === 'pending') statusMatch = isActivityPending(activity);
+            if (statusFilter === 'executed') statusMatch = !isActivityPending(activity);
+            if (statusFilter === 'overdue') statusMatch = isActivityPending(activity) && isActivityOverdue(activity);
+            
+            return categoryMatch && recurrenceMatch && responsibleMatch && statusMatch;
         });
-    }, [allActivities, categoryFilter, recurrenceFilter, responsibleFilter, statusFilter]);
-    
-    const mainActivitiesApproved = useMemo(() => allActivities.filter(a => !a.parentId), [allActivities]);
+    }, [mainActivities, categoryFilter, recurrenceFilter, responsibleFilter, statusFilter]);
 
-    const groupedActivities = useMemo(() => {
-        const activityMap = new Map(allActivities.map(a => [a.id, a]));
-        const groups = recurrenceOrder.reduce((acc, r) => ({...acc, [r]: []}), {} as Record<Recurrence, (Activity & {children: Activity[]})[]>);
-
-        for (const activity of filteredActivities) {
-            if (!activity.parentId && activity.recorrencia && groups[activity.recorrencia]) {
-                 const children = allActivities
-                    .filter(c => c.parentId === activity.id)
-                    .sort((a,b) => ((a.createdAt as any)?.seconds || 0) - ((b.createdAt as any)?.seconds || 0));
-
-                groups[activity.recorrencia].push({ ...activity, children });
+    const activityTree = useMemo(() => {
+        const childrenOf: Record<string, Activity[]> = {};
+        allActivities.forEach(activity => {
+            if (activity.parentId) {
+                if (!childrenOf[activity.parentId]) childrenOf[activity.parentId] = [];
+                childrenOf[activity.parentId].push(activity);
             }
-        }
+        });
         
-        // Sort main activities within each group
-        for (const recurrence in groups) {
-            const typedRecurrence = recurrence as Recurrence;
-            groups[typedRecurrence].sort((a, b) => {
-                // Special sort for 'Sob demanda' by prazo
-                if (typedRecurrence === 'Sob demanda') {
-                    const aPrazo = a.prazo ? (a.prazo as Timestamp).toMillis() : Infinity;
-                    const bPrazo = b.prazo ? (b.prazo as Timestamp).toMillis() : Infinity;
-                    if (aPrazo !== bPrazo) return aPrazo - bPrazo;
-                }
-                // General sorting for all other recurrences
-                const aIsPending = isActivityPending(a);
-                const bIsPending = isActivityPending(b);
-                if (aIsPending && !bIsPending) return -1;
-                if (!aIsPending && bIsPending) return 1;
-                return ((a.createdAt as any)?.seconds || 0) - ((b.createdAt as any)?.seconds || 0);
-            });
-        }
+        return filteredMainActivities.map(main => ({
+            ...main,
+            children: (childrenOf[main.id] || []).sort((a,b) => ((a.createdAt as any)?.seconds || 0) - ((b.createdAt as any)?.seconds || 0)),
+        }));
+    }, [filteredMainActivities, allActivities]);
+    
+    const groupedByRecurrence = useMemo(() => {
+        const groups = recurrenceOrder.reduce((acc, r) => ({...acc, [r]: []}), {} as Record<Recurrence, (Activity & {children: Activity[]})[]>);
+        activityTree.forEach(activity => {
+             if (activity.recorrencia && groups[activity.recorrencia]) {
+                groups[activity.recorrencia].push(activity);
+            }
+        });
         return groups;
-    }, [filteredActivities, allActivities]);
+    }, [activityTree]);
 
     const stats = useMemo(() => {
-        const total = mainActivitiesApproved.length;
-        const pending = mainActivitiesApproved.filter(isActivityPending).length;
+        const total = mainActivities.length;
+        const pending = mainActivities.filter(isActivityPending).length;
+        const overdue = mainActivities.filter(a => isActivityPending(a) && isActivityOverdue(a)).length;
         const executed = total - pending;
         const completionRate = total > 0 ? (executed / total) * 100 : 0;
-        return { total, pending, executed, completionRate };
-    }, [mainActivitiesApproved]);
+        return { total, pending, executed, overdue, completionRate };
+    }, [mainActivities]);
 
     if (isLoadingPage || isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-[60vh] w-full">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            </div>
-        );
+        return <div className="flex items-center justify-center min-h-[60vh] w-full"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
     }
     
-    if (mainActivitiesApproved.length === 0 && !isClientLoading) {
+    if (mainActivities.length === 0 && !isClientLoading) {
         return (
            <div className="text-center py-20 flex-1">
             <h1 className="mt-4 text-3xl font-bold">Nenhuma atividade aprovada</h1>
             <p className="mt-2 text-lg text-muted-foreground">Classifique e aprove atividades para popular o checklist operacional.</p>
-            <Button onClick={() => router.push('/classificacao')} className="mt-6">
-              Ir para Classificação
-            </Button>
+            <Button onClick={() => router.push('/classificacao')} className="mt-6">Ir para Classificação</Button>
           </div>
         )
     }
@@ -460,10 +446,10 @@ export default function OperationalPage() {
           </motion.div>
           
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 my-8">
-              <StatCard title="Total de Atividades Principais" value={stats.total} icon={<CalendarIcon className="h-6 w-6 text-muted-foreground" />} />
+              <StatCard title="Total de Atividades" value={stats.total} icon={<CalendarIcon className="h-6 w-6 text-muted-foreground" />} />
               <StatCard title="Executadas no Período" value={stats.executed} icon={<CheckSquare className="h-6 w-6 text-green-500" />} />
               <StatCard title="Pendentes" value={stats.pending} icon={<Clock className="h-6 w-6 text-yellow-500" />} />
-              <StatCard title="Taxa de Conclusão" value={`${Math.round(stats.completionRate)}%`} icon={<Progress value={stats.completionRate} className="w-12 h-3" /> } />
+              <StatCard title="Atrasadas" value={stats.overdue} icon={<AlertTriangle className="h-6 w-6 text-red-500" />} />
           </div>
 
             <Tabs value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as any)}>
@@ -477,31 +463,26 @@ export default function OperationalPage() {
 
                   <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                       <Select value={recurrenceFilter} onValueChange={setRecurrenceFilter}>
-                          <SelectTrigger className="w-full sm:w-[180px]">
-                              <SelectValue placeholder="Filtrar por recorrência" />
-                          </SelectTrigger>
+                          <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Filtrar por recorrência" /></SelectTrigger>
                           <SelectContent>
                               <SelectItem value="all">Todas Recorrências</SelectItem>
                               {allRecurrences.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                           </SelectContent>
                       </Select>
                       <Select value={responsibleFilter} onValueChange={setResponsibleFilter}>
-                          <SelectTrigger className="w-full sm:w-[180px]">
-                              <SelectValue placeholder="Filtrar por responsável" />
-                          </SelectTrigger>
+                          <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Filtrar por responsável" /></SelectTrigger>
                           <SelectContent>
                               <SelectItem value="all">Todos Responsáveis</SelectItem>
                               {allResponsibles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                           </SelectContent>
                       </Select>
                       <Select value={statusFilter} onValueChange={setStatusFilter}>
-                          <SelectTrigger className="w-full sm:w-[180px]">
-                              <SelectValue placeholder="Filtrar por status" />
-                          </SelectTrigger>
+                          <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Filtrar por status" /></SelectTrigger>
                           <SelectContent>
-                              <SelectItem value="all">Mostrar Todas</SelectItem>
+                              <SelectItem value="all">Todos os Status</SelectItem>
                               <SelectItem value="pending">Apenas Pendentes</SelectItem>
                               <SelectItem value="executed">Apenas Executadas</SelectItem>
+                              <SelectItem value="overdue">Apenas Atrasadas</SelectItem>
                           </SelectContent>
                       </Select>
                   </div>
@@ -511,13 +492,12 @@ export default function OperationalPage() {
                         <RecurrenceGroup
                             key={recurrence}
                             title={recurrence}
-                            activities={groupedActivities[recurrence] || []}
+                            activities={groupedByRecurrence[recurrence] || []}
                             onToggle={handleToggleActivity}
                             onUpdatePrazo={handleUpdatePrazo}
-                            getActivityName={(act) => getActivityName(act)}
                         />
                     ))}
-                    {filteredActivities.length === 0 && !isLoading && (
+                    {activityTree.length === 0 && !isLoading && (
                       <div className="text-center py-20 border-2 border-dashed rounded-lg">
                           <h3 className="text-xl font-semibold">Nenhuma atividade encontrada</h3>
                           <p className="mt-2 text-muted-foreground">Tente ajustar os filtros ou adicione mais atividades.</p>
@@ -528,8 +508,3 @@ export default function OperationalPage() {
         </div>
     );
 }
-
-    
-    
-
-    
