@@ -34,7 +34,7 @@ import {
 import { useState, useMemo, useEffect } from 'react';
 import { onSnapshot, query, collection, where } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
-import { type Activity, type Survey, type Response as SurveyResponse } from "@/types/activity";
+import { type Activity, type Suggestion } from "@/types/activity";
 import { SuggestionBox } from './SuggestionBox';
 
 
@@ -157,11 +157,26 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const auth = useAuth();
+  const db = useFirestore();
   const { user } = useUser();
   const { isConsultant } = useClient();
   const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [hasNewSuggestionResponse, setHasNewSuggestionResponse] = useState(false);
+
+  useEffect(() => {
+      if (!user || !db) return;
+      const q = query(
+          collection(db, "system_suggestions"),
+          where("userId", "==", user.uid),
+          where("isResponseRead", "==", false)
+      );
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+          setHasNewSuggestionResponse(!snapshot.empty);
+      });
+      return () => unsubscribe();
+  }, [user, db]);
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -215,8 +230,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     </UserManagementDialog>
                 )}
                  <DropdownMenuItem onClick={() => { router.push('/minhas-sugestoes'); setMobileMenuOpen(false); }}>
-                    <Bell className="mr-2 h-4 w-4" />
-                    Minhas Sugestões
+                    <div className="relative flex items-center w-full">
+                       <Bell className="mr-2 h-4 w-4" />
+                       <span>Minhas Sugestões</span>
+                       {hasNewSuggestionResponse && (
+                         <span className="absolute right-0 h-2 w-2 rounded-full bg-primary animate-pulse" />
+                       )}
+                    </div>
                 </DropdownMenuItem>
                  <DropdownMenuSeparator />
                  <DropdownMenuItem onClick={() => { router.push('/change-password'); setMobileMenuOpen(false); }}>

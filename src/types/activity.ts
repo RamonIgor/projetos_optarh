@@ -132,4 +132,5 @@ export interface Suggestion {
   createdAt: Timestamp;
   status: 'new' | 'in_review' | 'implemented' | 'declined';
   response: string | null;
+  isResponseRead?: boolean;
 }

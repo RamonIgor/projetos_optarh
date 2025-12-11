@@ -83,7 +83,10 @@ function RespondSuggestionDialog({ suggestion, onFinished }: { suggestion: Sugge
         startSaving(async () => {
             const suggestionRef = doc(db, 'system_suggestions', suggestion.id);
             try {
-                await updateDoc(suggestionRef, { response: responseText });
+                await updateDoc(suggestionRef, { 
+                    response: responseText,
+                    isResponseRead: false // Mark as unread for the user
+                });
                 toast({ title: 'Resposta salva com sucesso!' });
                 onFinished();
             } catch (error) {

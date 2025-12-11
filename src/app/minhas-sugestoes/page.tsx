@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useFirestore, useUser } from '@/firebase';
-import { collection, query, where, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, Timestamp, writeBatch, doc } from 'firebase/firestore';
 import { type Suggestion } from '@/types/activity';
 import { Loader2, ArrowLeft, Lightbulb, MessageSquare } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+
 
 const statusConfig: Record<Suggestion['status'], { label: string; color: string; }> = {
   new: { label: 'Nova', color: 'bg-blue-100 text-blue-800' },
@@ -38,15 +40,33 @@ export default function MySuggestionsPage() {
     const q = query(
       collection(db, 'system_suggestions'),
       where('userId', '==', user.uid)
-      // orderBy('createdAt', 'desc') -> Removido para evitar erro de índice
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
       const userSuggestions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Suggestion));
-      // Ordena as sugestões no lado do cliente
       userSuggestions.sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime());
       setSuggestions(userSuggestions);
       setIsLoading(false);
+      
+      // Mark new responses as read
+      const batch = writeBatch(db);
+      let hasUnread = false;
+      snapshot.docs.forEach(document => {
+        const data = document.data() as Suggestion;
+        if (data.response && data.isResponseRead === false) {
+          hasUnread = true;
+          const docRef = doc(db, 'system_suggestions', document.id);
+          batch.update(docRef, { isResponseRead: true });
+        }
+      });
+
+      if (hasUnread) {
+        try {
+          await batch.commit();
+        } catch (error) {
+          console.error("Error marking suggestions as read:", error);
+        }
+      }
     }, (error) => {
       console.error('Error fetching suggestions:', error);
       setIsLoading(false);
@@ -92,8 +112,10 @@ export default function MySuggestionsPage() {
         <div className="space-y-6">
           {suggestions.map((suggestion) => {
             const config = statusConfig[suggestion.status];
+            const isNewResponse = suggestion.response && suggestion.isResponseRead === false;
+
             return (
-              <Card key={suggestion.id} className="overflow-hidden">
+              <Card key={suggestion.id} className={cn("overflow-hidden transition-all", isNewResponse && "border-primary shadow-lg")}>
                 <CardHeader className="flex flex-row items-start justify-between gap-4">
                   <div>
                     <CardTitle className="text-lg">Sua sugestão</CardTitle>
@@ -110,6 +132,7 @@ export default function MySuggestionsPage() {
                         <div className="flex items-center gap-2 mb-2">
                            <MessageSquare className="h-5 w-5 text-primary" />
                            <h3 className="font-semibold text-foreground">Resposta do Consultor</h3>
+                            {isNewResponse && <Badge className="animate-pulse">Nova</Badge>}
                         </div>
                         <p className="text-sm text-muted-foreground italic">"{suggestion.response}"</p>
                     </div>
