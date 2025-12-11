@@ -29,7 +29,7 @@ export interface Activity {
   categoria: 'DP' | 'RH' | 'Compartilhado' | null;
   justificativa: string | null;
   responsavel: string | null;
-  recorrencia: 'Diária' | 'Semanal' | 'Mensal' | 'Trimestral' | 'Anual' | 'Sob demanda' | null;
+  recorrencia: 'Diária' | 'Semanal' | 'Mensal' | 'Trimestral' | 'Semestral' | 'Anual' | 'Sob demanda' | null;
   status: 'brainstorm' | 'aguardando_consenso' | 'aprovada';
   comentarios: ActivityComment[];
   dataAprovacao: Timestamp | Date | null;
@@ -130,3 +130,5 @@ export interface Suggestion {
   createdAt: Timestamp;
   status: 'new' | 'in_review' | 'implemented' | 'declined';
 }
+
+    

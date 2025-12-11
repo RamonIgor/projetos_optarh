@@ -328,6 +328,7 @@ export default function ClassificationPage() {
                                     <SelectItem value="Semanal">Semanal</SelectItem>
                                     <SelectItem value="Mensal">Mensal</SelectItem>
                                     <SelectItem value="Trimestral">Trimestral</SelectItem>
+                                    <SelectItem value="Semestral">Semestral</SelectItem>
                                     <SelectItem value="Anual">Anual</SelectItem>
                                     <SelectItem value="Sob demanda">Sob demanda</SelectItem>
                                 </SelectContent>
@@ -418,3 +419,5 @@ export default function ClassificationPage() {
     </div>
   );
 }
+
+    

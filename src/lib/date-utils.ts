@@ -1,3 +1,4 @@
+
 import {
   isToday,
   isThisWeek,
@@ -18,7 +19,7 @@ import {
 import type { Activity } from '@/types/activity';
 import type { Timestamp } from 'firebase/firestore';
 
-export type Recurrence = 'Diária' | 'Semanal' | 'Mensal' | 'Trimestral' | 'Anual' | 'Sob demanda';
+export type Recurrence = 'Diária' | 'Semanal' | 'Mensal' | 'Trimestral' | 'Semestral' | 'Anual' | 'Sob demanda';
 
 /**
  * Checks if an activity is pending based on its last execution date and recurrence.
@@ -47,6 +48,15 @@ export function isActivityPending(activity: Activity): boolean {
       return !isThisMonth(lastExecutionDate);
     case 'Trimestral':
       return !isThisQuarter(lastExecutionDate);
+    case 'Semestral':
+       // A 'semestral' task is not pending if the last execution was in the current semester.
+       // Semester 1: Month 0-5 (Jan-Jun), Semester 2: Month 6-11 (Jul-Dec)
+       const currentMonth = new Date().getMonth();
+       const lastExecutionMonth = lastExecutionDate.getMonth();
+       const currentSemester = Math.floor(currentMonth / 6);
+       const lastExecutionSemester = Math.floor(lastExecutionMonth / 6);
+       const sameYear = isThisYear(lastExecutionDate);
+       return !(sameYear && currentSemester === lastExecutionSemester);
     case 'Anual':
       return !isThisYear(lastExecutionDate);
     default:
@@ -104,6 +114,9 @@ function getNextExecutionDate(referenceDate: Date, recurrence: Recurrence | null
             return addMonths(startOfMonth(referenceDate), 1);
         case 'Trimestral':
             return addQuarters(startOfQuarter(referenceDate), 1);
+        case 'Semestral':
+            const startOfNextSemester = addMonths(startOfMonth(referenceDate), 6);
+            return startOfNextSemester;
         case 'Anual':
             return addYears(startOfYear(referenceDate), 1);
         default:
@@ -112,5 +125,7 @@ function getNextExecutionDate(referenceDate: Date, recurrence: Recurrence | null
             return referenceDate;
     }
 }
+
+    
 
     

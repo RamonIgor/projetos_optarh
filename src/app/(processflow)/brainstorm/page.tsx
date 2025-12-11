@@ -24,6 +24,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 // Simple similarity check
@@ -39,21 +40,24 @@ const statusInfo: { [key: string]: { label: string; icon: React.ReactNode; varia
   aprovada: { label: 'Aprovada', icon: <ThumbsUp className="h-3 w-3" />, variant: 'secondary', className: 'bg-green-100 text-green-800' },
 };
 
-function AddSubActivityForm({ parentId, onAddSubActivity, onFinished }: { parentId: string; onAddSubActivity: (name: string, parentId: string, responsavel: string, prazo: Date | undefined) => void; onFinished: () => void; }) {
+function AddSubActivityForm({ parentId, onAddSubActivity, onFinished }: { parentId: string; onAddSubActivity: (name: string, parentId: string, responsavel: string, recorrencia: string, prazo: Date | undefined) => void; onFinished: () => void; }) {
     const [subActivityName, setSubActivityName] = useState("");
     const [responsavel, setResponsavel] = useState("");
+    const [recorrencia, setRecorrencia] = useState("");
     const [prazo, setPrazo] = useState<Date | undefined>();
     const [isAdding, startAdding] = useTransition();
 
     const handleAddSubmit = (e: FormEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        if (!subActivityName.trim() || !responsavel.trim()) return;
+        if (!subActivityName.trim() || !responsavel.trim() || !recorrencia) return;
+        if(recorrencia === 'Sob demanda' && !prazo) return;
 
         startAdding(() => {
-            onAddSubActivity(subActivityName, parentId, responsavel, prazo);
+            onAddSubActivity(subActivityName, parentId, responsavel, recorrencia, prazo);
             setSubActivityName("");
             setResponsavel("");
+            setRecorrencia("");
             setPrazo(undefined);
             onFinished(); // Call the callback to close the form
         });
@@ -80,23 +84,45 @@ function AddSubActivityForm({ parentId, onAddSubActivity, onFinished }: { parent
                         value={responsavel} onChange={(e) => setResponsavel(e.target.value)}
                         className="h-9" disabled={isAdding} onClick={(e) => e.stopPropagation()}
                     />
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={cn("h-9 justify-start text-left font-normal", !prazo && "text-muted-foreground")}
-                                disabled={isAdding} onClick={(e) => e.stopPropagation()}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {prazo ? format(prazo, "PPP", { locale: ptBR }) : <span>Prazo (opcional)</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" onClick={(e) => e.stopPropagation()}>
-                            <Calendar mode="single" selected={prazo} onSelect={setPrazo} initialFocus />
-                        </PopoverContent>
-                    </Popover>
+                    <Select value={recorrencia} onValueChange={setRecorrencia} disabled={isAdding}>
+                        <SelectTrigger className="h-9" onClick={(e) => e.stopPropagation()}>
+                            <SelectValue placeholder="Recorrência" />
+                        </SelectTrigger>
+                        <SelectContent onClick={(e) => e.stopPropagation()}>
+                            <SelectItem value="Diária">Diária</SelectItem>
+                            <SelectItem value="Semanal">Semanal</SelectItem>
+                            <SelectItem value="Mensal">Mensal</SelectItem>
+                            <SelectItem value="Trimestral">Trimestral</SelectItem>
+                            <SelectItem value="Semestral">Semestral</SelectItem>
+                            <SelectItem value="Anual">Anual</SelectItem>
+                            <SelectItem value="Sob demanda">Sob demanda</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
-                <Button type="submit" size="sm" className="h-9 w-full" disabled={isAdding || !subActivityName.trim() || !responsavel.trim()}>
+                 {recorrencia === 'Sob demanda' && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+                            className="space-y-2"
+                        >
+                            <Label className="text-xs">Prazo de Conclusão (Obrigatório)</Label>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant={"outline"}
+                                        className={cn("h-9 w-full justify-start text-left font-normal", !prazo && "text-muted-foreground")}
+                                        disabled={isAdding} onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {prazo ? format(prazo, "PPP", { locale: ptBR }) : <span>Escolha uma data</span>}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" onClick={(e) => e.stopPropagation()}>
+                                    <Calendar mode="single" selected={prazo} onSelect={setPrazo} initialFocus />
+                                </PopoverContent>
+                            </Popover>
+                        </motion.div>
+                 )}
+                <Button type="submit" size="sm" className="h-9 w-full" disabled={isAdding || !subActivityName.trim() || !responsavel.trim() || !recorrencia || (recorrencia === 'Sob demanda' && !prazo)}>
                     {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus className="h-4 w-4 mr-2" /> Adicionar</>}
                 </Button>
             </form>
@@ -105,7 +131,7 @@ function AddSubActivityForm({ parentId, onAddSubActivity, onFinished }: { parent
 }
 
 
-function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddSubActivity, onDeleteActivity }: { activity: Activity, isSubItem?: boolean, hasChildren?: boolean, onAddSubActivity: (name: string, parentId: string, responsavel: string, prazo: Date | undefined) => void, onDeleteActivity: (id: string) => void }) {
+function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddSubActivity, onDeleteActivity }: { activity: Activity, isSubItem?: boolean, hasChildren?: boolean, onAddSubActivity: (name: string, parentId: string, responsavel: string, recorrencia: string, prazo: Date | undefined) => void, onDeleteActivity: (id: string) => void }) {
     const [showAddSub, setShowAddSub] = useState(false);
     const [isDeleting, startDeleting] = useTransition();
 
@@ -145,9 +171,11 @@ function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddS
                 <div className="flex flex-col">
                     <span className={cn("font-medium", isSubItem ? "text-muted-foreground" : "text-foreground")}>{activity.nome}</span>
                      {isSubItem && activity.responsavel && (
-                        <span className="text-xs text-muted-foreground">
-                            Responsável: {activity.responsavel} {activity.prazo && ` - Prazo: ${format((activity.prazo as any).toDate(), 'dd/MM/yyyy')}`}
-                        </span>
+                        <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-2">
+                            <span>Responsável: {activity.responsavel}</span>
+                            {activity.recorrencia && <span>| Recorrência: {activity.recorrencia}</span>}
+                            {activity.prazo && <span>| Prazo: {format((activity.prazo as any).toDate(), 'dd/MM/yyyy')}</span>}
+                        </div>
                      )}
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
@@ -287,7 +315,7 @@ export default function BrainstormPage() {
   }, [activities, mainActivities]);
 
 
-  const addActivity = (name: string, parentId: string | null = null, responsavel: string | null = null, prazo: Date | undefined = undefined) => {
+  const addActivity = (name: string, parentId: string | null = null, responsavel: string | null = null, recorrencia: string | null = null, prazo: Date | undefined = undefined) => {
     const trimmedName = name.trim();
     if (!trimmedName || !db || !clientId) return;
     
@@ -299,7 +327,7 @@ export default function BrainstormPage() {
         categoria: parentId ? 'Compartilhado' : null,
         justificativa: parentId ? 'Micro-processo de uma atividade principal.' : null,
         responsavel: responsavel,
-        recorrencia: null,
+        recorrencia: recorrencia as Activity['recorrencia'],
         status: parentId ? 'aprovada' : 'brainstorm',
         comentarios: [],
         dataAprovacao: parentId ? serverTimestamp() : null,
@@ -491,3 +519,5 @@ export default function BrainstormPage() {
     </div>
   );
 }
+
+    

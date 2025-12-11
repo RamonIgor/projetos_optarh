@@ -44,7 +44,7 @@ const StatCard = ({ title, value, icon, className }: { title: string, value: str
     </Card>
 );
 
-const recurrenceOrder: Recurrence[] = ['Diária', 'Semanal', 'Mensal', 'Trimestral', 'Anual', 'Sob demanda'];
+const recurrenceOrder: Recurrence[] = ['Diária', 'Semanal', 'Mensal', 'Trimestral', 'Semestral', 'Anual', 'Sob demanda'];
 
 const categoryStyles: Record<string, string> = {
     DP: 'bg-purple-100 text-purple-800 border-purple-200',
@@ -530,4 +530,6 @@ export default function OperationalPage() {
 }
 
     
+    
+
     
