@@ -18,7 +18,7 @@ const allProducts = {
   process_flow: {
     name: 'ProcessFlow',
     description: 'Estruture o fluxo de trabalho do seu time, da ideia à rotina, com automação inteligente e gestão visual.',
-    href: '/processflow',
+    href: '/dashboard',
     icon: <Workflow className="h-8 w-8 text-white" />,
     gradient: 'from-purple-500 to-indigo-500',
     glowClass: 'glow-icon-purple'
@@ -244,3 +244,5 @@ export default function ProductPortalPage() {
     </div>
   );
 }
+
+    

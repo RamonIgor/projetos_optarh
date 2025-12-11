@@ -152,7 +152,7 @@ export default function DashboardPage() {
            <div className="text-center py-20 flex-1">
             <h1 className="mt-4 text-3xl font-bold">Nenhum dado para exibir</h1>
             <p className="mt-2 text-lg text-muted-foreground">Adicione e classifique atividades para ver o dashboard.</p>
-            <Button onClick={() => router.push('/processflow/brainstorm')} className="mt-6">
+            <Button onClick={() => router.push('/brainstorm')} className="mt-6">
               Ir para Brainstorm
             </Button>
           </div>
@@ -259,7 +259,7 @@ export default function DashboardPage() {
                           <ul className="space-y-2">
                               {stats.pendingDecision.map(activity => (
                                   <li key={activity.id}>
-                                      <Link href={`/processflow/classificacao?activityId=${activity.id}`} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
+                                      <Link href={`/classificacao?activityId=${activity.id}`} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
                                           <span className="font-medium">{getActivityName(activity)}</span>
                                           <Badge variant="outline" className="text-yellow-600 border-yellow-500">{activity.categoria}</Badge>
                                       </Link>
@@ -292,4 +292,5 @@ export default function DashboardPage() {
         </div>
     );
 
+    
     

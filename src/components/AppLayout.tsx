@@ -1,3 +1,4 @@
+
 "use client";
 
 import { signOut } from 'firebase/auth';
@@ -61,14 +62,14 @@ const ProcessFlowNav = () => {
   const unclassifiedCount = useMemo(() => mainActivities.filter(a => a.status === 'brainstorm' || a.status === 'aguardando_consenso').length, [mainActivities]);
 
   const navItems = [
-    { href: '/processflow/brainstorm', label: 'Brainstorm', icon: ListTodo },
-    { href: '/processflow/classificacao', label: 'Classificação', icon: LayoutGrid, count: unclassifiedCount, disabled: !hasActivities && unclassifiedCount === 0 },
-    { href: '/processflow/transicao', label: 'Transição', icon: Shuffle, disabled: !hasActivities },
-    { href: '/processflow/operacional', label: 'Operacional', icon: PlayCircle, disabled: !hasActivities },
-    { href: '/processflow/dashboard', label: 'Dashboard', icon: BarChart3, disabled: !hasActivities },
+    { href: '/brainstorm', label: 'Brainstorm', icon: ListTodo },
+    { href: '/classificacao', label: 'Classificação', icon: LayoutGrid, count: unclassifiedCount, disabled: !hasActivities && unclassifiedCount === 0 },
+    { href: '/transicao', label: 'Transição', icon: Shuffle, disabled: !hasActivities },
+    { href: '/operacional', label: 'Operacional', icon: PlayCircle, disabled: !hasActivities },
+    { href: '/dashboard', label: 'Dashboard', icon: BarChart3, disabled: !hasActivities },
   ];
   
-  if (!pathname.startsWith('/processflow')) {
+  if (!pathname.startsWith('/brainstorm') && !pathname.startsWith('/classificacao') && !pathname.startsWith('/transicao') && !pathname.startsWith('/operacional') && !pathname.startsWith('/dashboard')) {
     return null;
   }
 
@@ -168,7 +169,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
     router.push('/login');
   };
   
-  const isProcessFlow = pathname.startsWith('/processflow');
+  const isProcessFlow = useMemo(() => 
+    ['/dashboard', '/brainstorm', '/classificacao', '/transicao', '/operacional'].some(p => pathname.startsWith(p)),
+    [pathname]
+  );
   const isPulseCheck = pathname.startsWith('/pulsecheck');
 
   const productName = useMemo(() => {
@@ -297,3 +301,5 @@ export default function AppLayout({ children }: AppLayoutProps) {
     </div>
   )
 }
+
+    

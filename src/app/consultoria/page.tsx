@@ -795,7 +795,7 @@ export default function ConsultancyPage() {
                 <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                     {isConsultant && renderClientSelector()}
                     <div className="border-t sm:border-t-0 sm:border-l pt-2 sm:pt-0 sm:pl-2 flex flex-col sm:flex-row gap-2">
-                        <Button variant="outline" onClick={() => router.push('/processflow')} disabled={!selectedClientId} className="w-full"><Workflow className="mr-2 h-4 w-4" />ProcessFlow</Button>
+                        <Button variant="outline" onClick={() => router.push('/dashboard')} disabled={!selectedClientId} className="w-full"><Workflow className="mr-2 h-4 w-4" />ProcessFlow</Button>
                         <Button variant="outline" onClick={() => router.push('/pulsecheck')} disabled={!selectedClientId} className="w-full"><BarChart2 className="mr-2 h-4 w-4" />PulseCheck</Button>
                     </div>
                 </div>
@@ -1091,3 +1091,5 @@ export default function ConsultancyPage() {
         </div>
     );
 }
+
+    
