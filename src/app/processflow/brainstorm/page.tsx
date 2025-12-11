@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { X, Plus, Loader2, ThumbsUp, ActivitySquare, Square, GitBranchPlus } from 'lucide-react';
+import { X, Plus, Loader2, ThumbsUp, ActivitySquare, Square, GitBranchPlus, Calendar as CalendarIcon } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useFirestore, useClient } from '@/firebase';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -19,6 +19,11 @@ import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Label } from '@/components/ui/label';
 
 
 // Simple similarity check
@@ -34,27 +39,71 @@ const statusInfo: { [key: string]: { label: string; icon: React.ReactNode; varia
   aprovada: { label: 'Aprovada', icon: <ThumbsUp className="h-3 w-3" />, variant: 'secondary', className: 'bg-green-100 text-green-800' },
 };
 
-
-function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddSubActivity, onDeleteActivity }: { activity: Activity, isSubItem?: boolean, hasChildren?: boolean, onAddSubActivity: (name: string, parentId: string) => void, onDeleteActivity: (id: string) => void }) {
-    const [showAddSub, setShowAddSub] = useState(false);
+function AddSubActivityForm({ parentId, onAddSubActivity }: { parentId: string; onAddSubActivity: (name: string, parentId: string, responsavel: string, prazo: Date | undefined) => void }) {
     const [subActivityName, setSubActivityName] = useState("");
+    const [responsavel, setResponsavel] = useState("");
+    const [prazo, setPrazo] = useState<Date | undefined>();
     const [isAdding, startAdding] = useTransition();
-    const [isDeleting, startDeleting] = useTransition();
-
-    const status = statusInfo[activity.status] || statusInfo.brainstorm;
-    const isDeletable = activity.status === 'brainstorm' && !hasChildren;
 
     const handleAddSubmit = (e: FormEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        if(!subActivityName.trim()) return;
+        if (!subActivityName.trim() || !responsavel.trim()) return;
 
         startAdding(() => {
-            onAddSubActivity(subActivityName, activity.id);
+            onAddSubActivity(subActivityName, parentId, responsavel, prazo);
             setSubActivityName("");
-            setShowAddSub(false);
+            setResponsavel("");
+            setPrazo(undefined);
         });
     }
+
+    return (
+        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-4">
+            <form onSubmit={handleAddSubmit} className="space-y-3 p-4 bg-card border rounded-lg ml-6">
+                <h4 className="font-semibold text-sm">Adicionar Micro-processo</h4>
+                <Input
+                    type="text" placeholder="Nome do micro-processo"
+                    value={subActivityName} onChange={(e) => setSubActivityName(e.target.value)}
+                    className="h-9" disabled={isAdding} onClick={(e) => e.stopPropagation()}
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                     <Input
+                        type="text" placeholder="Responsável"
+                        value={responsavel} onChange={(e) => setResponsavel(e.target.value)}
+                        className="h-9" disabled={isAdding} onClick={(e) => e.stopPropagation()}
+                    />
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className={cn("h-9 justify-start text-left font-normal", !prazo && "text-muted-foreground")}
+                                disabled={isAdding} onClick={(e) => e.stopPropagation()}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {prazo ? format(prazo, "PPP", { locale: ptBR }) : <span>Prazo (opcional)</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" onClick={(e) => e.stopPropagation()}>
+                            <Calendar mode="single" selected={prazo} onSelect={setPrazo} initialFocus />
+                        </PopoverContent>
+                    </Popover>
+                </div>
+                <Button type="submit" size="sm" className="h-9 w-full" disabled={isAdding || !subActivityName.trim() || !responsavel.trim()}>
+                    {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus className="h-4 w-4 mr-2" /> Adicionar</>}
+                </Button>
+            </form>
+        </motion.div>
+    )
+}
+
+
+function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddSubActivity, onDeleteActivity }: { activity: Activity, isSubItem?: boolean, hasChildren?: boolean, onAddSubActivity: (name: string, parentId: string, responsavel: string, prazo: Date | undefined) => void, onDeleteActivity: (id: string) => void }) {
+    const [showAddSub, setShowAddSub] = useState(false);
+    const [isDeleting, startDeleting] = useTransition();
+
+    const status = statusInfo[activity.status] || statusInfo.brainstorm;
+    const isDeletable = (activity.status === 'brainstorm' || activity.parentId) && !hasChildren;
 
     const handleDelete = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -86,14 +135,23 @@ function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddS
             className={cn("p-3 rounded-lg", isSubItem ? "ml-8 bg-card border" : "bg-muted/50")}
         >
              <div className="flex items-center justify-between">
-                <span className={cn("font-medium", isSubItem ? "text-muted-foreground" : "text-foreground")}>{activity.nome}</span>
+                <div className="flex flex-col">
+                    <span className={cn("font-medium", isSubItem ? "text-muted-foreground" : "text-foreground")}>{activity.nome}</span>
+                     {isSubItem && activity.responsavel && (
+                        <span className="text-xs text-muted-foreground">
+                            Responsável: {activity.responsavel} {activity.prazo && ` - Prazo: ${format((activity.prazo as any).toDate(), 'dd/MM/yyyy')}`}
+                        </span>
+                     )}
+                </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                    <Badge variant={status.variant} className={status.className}>
-                    <div className="flex items-center gap-1.5">
-                        {status.icon}
-                        {status.label}
-                    </div>
-                    </Badge>
+                    {!isSubItem && (
+                        <Badge variant={status.variant} className={status.className}>
+                            <div className="flex items-center gap-1.5">
+                                {status.icon}
+                                {status.label}
+                            </div>
+                        </Badge>
+                    )}
                      {!isSubItem && (
                         <TooltipProvider>
                             <Tooltip>
@@ -129,25 +187,7 @@ function ActivityItem({ activity, isSubItem = false, hasChildren = false, onAddS
                     )}
                 </div>
             </div>
-            {showAddSub && (
-                <motion.div initial={{opacity: 0, height: 0}} animate={{opacity: 1, height: 'auto'}} className="mt-2">
-                    <form onSubmit={handleAddSubmit} className="flex gap-2 ml-6">
-                         <Input
-                            type="text"
-                            placeholder="Nome do micro-processo"
-                            value={subActivityName}
-                            onChange={(e) => setSubActivityName(e.target.value)}
-                            className="h-9"
-                            disabled={isAdding}
-                            onClick={(e) => e.stopPropagation()}
-                            aria-label="Novo micro-processo"
-                        />
-                        <Button type="submit" size="sm" className="h-9" disabled={isAdding || !subActivityName.trim()}>
-                           {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                        </Button>
-                    </form>
-                </motion.div>
-            )}
+            {showAddSub && <AddSubActivityForm parentId={activity.id} onAddSubActivity={onAddSubActivity} />}
         </motion.div>
     )
 }
@@ -211,6 +251,8 @@ export default function BrainstormPage() {
     return () => unsubscribe();
   }, [db, toast, user, userLoading, router, clientId, isClientLoading]);
   
+  const mainActivities = useMemo(() => activities.filter(a => !a.parentId), [activities]);
+  
   const activityTree = useMemo(() => {
     const tree: (Activity & { children: Activity[] })[] = [];
     const childrenOf: Record<string, Activity[]> = {};
@@ -241,29 +283,30 @@ export default function BrainstormPage() {
   }, [activities]);
 
 
-  const addActivity = (name: string, parentId: string | null = null) => {
+  const addActivity = (name: string, parentId: string | null = null, responsavel: string | null = null, prazo: Date | undefined = undefined) => {
     const trimmedName = name.trim();
     if (!trimmedName || !db || !clientId) return;
     
-    setNewActivityName("");
+    if(!parentId) setNewActivityName("");
     
     const activityData: Omit<Activity, 'id' | 'createdAt'> & { createdAt: any } = {
         nome: trimmedName,
         parentId: parentId,
-        categoria: null,
-        justificativa: null,
-        responsavel: null,
+        categoria: parentId ? 'Compartilhado' : null,
+        justificativa: parentId ? 'Micro-processo de uma atividade principal.' : null,
+        responsavel: responsavel,
         recorrencia: null,
-        status: 'brainstorm',
+        status: parentId ? 'aprovada' : 'brainstorm',
         comentarios: [],
-        dataAprovacao: null,
+        dataAprovacao: parentId ? serverTimestamp() : null,
         ultimaExecucao: null,
         createdAt: serverTimestamp(),
-        statusTransicao: 'a_transferir',
+        statusTransicao: parentId ? 'concluida' : 'a_transferir',
         responsavelAnterior: null,
         dataInicioTransicao: null,
-        dataConclusaoTransicao: null,
+        dataConclusaoTransicao: parentId ? serverTimestamp() : null,
         prazoTransicao: null,
+        prazo: prazo,
         historicoExecucoes: [],
       };
 
@@ -355,7 +398,7 @@ export default function BrainstormPage() {
             <div>
               <CardTitle className="text-xl">Adicionar Nova Atividade Principal</CardTitle>
             </div>
-            <div className="text-sm font-medium text-muted-foreground pt-1 shrink-0">{activities.length} atividades levantadas</div>
+            <div className="text-sm font-medium text-muted-foreground pt-1 shrink-0">{mainActivities.length} atividades levantadas</div>
           </div>
           <form onSubmit={handleAddSubmit} className="flex flex-col sm:flex-row gap-2 pt-4">
             <Input

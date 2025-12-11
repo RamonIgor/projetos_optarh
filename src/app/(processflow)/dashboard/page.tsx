@@ -1,7 +1,8 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
 import { useFirestore, useClient } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
@@ -71,7 +72,10 @@ export default function DashboardPage() {
             return;
         }
 
-        const q = query(collection(db, 'clients', clientId, 'activities'), orderBy('createdAt', 'desc'));
+        const q = query(
+            collection(db, 'clients', clientId, 'activities'), 
+            orderBy('createdAt', 'desc')
+        );
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
             setAllActivities(activitiesData);
@@ -81,13 +85,15 @@ export default function DashboardPage() {
         return () => unsubscribe();
     }, [db, user, router, clientId, isLoadingPage]);
 
+    const mainActivities = useMemo(() => allActivities.filter(a => !a.parentId), [allActivities]);
+
     const filteredActivities = useMemo(() => {
-        return allActivities.filter(activity => {
+        return mainActivities.filter(activity => {
             const categoryMatch = categoryFilter === 'all' || activity.categoria === categoryFilter;
             const statusMatch = statusFilter === 'all' || activity.status === statusFilter;
             return categoryMatch && statusMatch;
         });
-    }, [allActivities, categoryFilter, statusFilter]);
+    }, [mainActivities, categoryFilter, statusFilter]);
 
     const stats = useMemo(() => {
         const total = filteredActivities.length;
@@ -114,15 +120,15 @@ export default function DashboardPage() {
             return acc;
         }, {} as Record<string, number>);
 
-        const pendingDecision = allActivities.filter(a => a.status === 'aguardando_consenso');
-        const latestApproved = allActivities
+        const pendingDecision = mainActivities.filter(a => a.status === 'aguardando_consenso');
+        const latestApproved = mainActivities
             .filter(a => a.status === 'aprovada' && a.dataAprovacao)
             .sort((a, b) => (b.dataAprovacao as any) - (a.dataAprovacao as any))
             .slice(0, 5);
 
 
         return { total, classified, approved, byCategory, byStatus, byResponsible, byRecurrence, pendingDecision, latestApproved };
-    }, [filteredActivities, allActivities]);
+    }, [filteredActivities, mainActivities]);
     
     const getActivityName = (activity: Activity, all: Activity[]) => {
         if (activity.parentId) {

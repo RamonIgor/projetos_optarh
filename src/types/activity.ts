@@ -1,4 +1,5 @@
 
+
 import type { Timestamp } from 'firebase/firestore';
 
 export interface Client {
@@ -41,6 +42,7 @@ export interface Activity {
   prazoTransicao: Timestamp | Date | null;
   historicoExecucoes?: (Timestamp | Date)[];
   parentId: string | null;
+  prazo?: Timestamp | Date | null; // For sub-activities
 }
 
 export interface ConsultancyAction {

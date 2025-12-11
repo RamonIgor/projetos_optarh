@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useTransition } from 'react';
@@ -205,7 +206,11 @@ export default function TransitionPage() {
             return;
         }
 
-        const q = query(collection(db, 'clients', clientId, 'activities'), where('status', '==', 'aprovada'));
+        const q = query(
+            collection(db, 'clients', clientId, 'activities'), 
+            where('status', '==', 'aprovada'),
+            where('parentId', '==', null)
+        );
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const activitiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
             const sortedActivities = activitiesData.sort((a, b) => ((a.createdAt as any)?.seconds || 0) - ((b.createdAt as any)?.seconds || 0));
