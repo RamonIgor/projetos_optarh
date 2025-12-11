@@ -89,7 +89,7 @@ function ActivityItem({ activity, name, onToggle, isSubItem = false }: { activit
                       </Badge>
                     }
                     <div className="flex items-center gap-1.5"><User className="h-3 w-3" /> {activity.responsavel}</div>
-                    {activity.recorrencia && !isSubItem && <div className="flex items-center gap-1.5"><Repeat className="h-3 w-3" /> {activity.recorrencia}</div>}
+                    {activity.recorrencia && <div className="flex items-center gap-1.5"><Repeat className="h-3 w-3" /> {activity.recorrencia}</div>}
                     {activity.recorrencia === 'Sob demanda' && activity.prazo && 
                         <div className="flex items-center gap-1.5"><Calendar className="h-3 w-3" /> Prazo: {format((activity.prazo as Timestamp).toDate(), 'dd/MM/yyyy')}</div>
                     }
@@ -472,3 +472,5 @@ export default function OperationalPage() {
         </div>
     );
 }
+
+    
