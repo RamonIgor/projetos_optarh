@@ -212,12 +212,22 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 {isMobile ? (
-                    <Button variant="ghost" className={commonItemClass}><Settings className="mr-2 h-4 w-4" /> Configurações</Button>
-                ) : (
-                    <Button variant="ghost" size="icon">
-                        <Settings className="h-5 w-5" />
-                        <span className="sr-only">Configurações</span>
+                     <Button variant="ghost" className={`${commonItemClass} relative`}>
+                        <Settings className="mr-2 h-4 w-4" /> Configurações
+                        {hasNewSuggestionResponse && (
+                          <span className="absolute right-4 h-2 w-2 rounded-full bg-primary" />
+                        )}
                     </Button>
+                ) : (
+                    <div className="relative">
+                        <Button variant="ghost" size="icon">
+                            <Settings className="h-5 w-5" />
+                            <span className="sr-only">Configurações</span>
+                        </Button>
+                        {hasNewSuggestionResponse && (
+                            <span className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-primary border-2 border-background" />
+                        )}
+                    </div>
                 )}
             </DropdownMenuTrigger>
             <DropdownMenuContent align={isMobile ? "start" : "end"}>
