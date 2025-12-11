@@ -45,7 +45,7 @@
     },
     "User": {
         "title": "User",
-        "description": "Mapeia um usuário do Firebase Auth a um cliente, seus produtos e seu papel. Unifica 'master' e 'employee' roles sob o booleano 'isConsultant' ou futuras permissões.",
+        "description": "Mapeia um usuário do Firebase Auth a um cliente, seus produtos и seu papel. Unifica 'master' e 'employee' roles sob o booleano 'isConsultant' ou futuras permissões.",
         "type": "object",
         "properties": {
             "clientId": {
@@ -94,7 +94,9 @@
         "responsavel": { "type": ["string", "null"] },
         "recorrencia": { "type": ["string", "null"], "enum": ["Diária", "Semanal", "Mensal", "Trimestral", "Anual", "Sob demanda", null] },
         "dataAprovacao": { "type": ["string", "null"], "format": "date-time" },
-        "parentId": { "type": ["string", "null"] }
+        "parentId": { "type": ["string", "null"] },
+        "attachmentUrl": { "type": ["string", "null"] },
+        "attachmentFilename": { "type": ["string", "null"] }
       },
       "required": ["nome", "status", "createdAt", "statusTransicao"]
     },
@@ -249,6 +251,10 @@
           "type": "string",
           "enum": ["new", "in_review", "implemented", "declined"],
           "description": "O status atual da sugestão."
+        },
+        "response": {
+          "type": ["string", "null"],
+          "description": "A resposta ou devolutiva do consultor para a sugestão do usuário."
         }
       },
       "required": ["text", "userId", "userEmail", "createdAt", "status"]

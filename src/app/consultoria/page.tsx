@@ -22,7 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, CalendarIcon, Trash2, Edit, BarChart, LineChart, FileText, CheckSquare, PieChart as PieChartIcon, Shuffle, Clock, Building, Wrench, LogOut, ArrowLeft, Settings, UserPlus, KeyRound, Workflow, BarChart2, Bell } from 'lucide-react';
+import { Loader2, PlusCircle, CalendarIcon, Trash2, Edit, BarChart, LineChart, FileText, CheckSquare, PieChart as PieChartIcon, Shuffle, Clock, Building, Wrench, LogOut, ArrowLeft, Settings, UserPlus, KeyRound, Workflow, BarChart2, Bell, MessageSquare } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -71,6 +71,56 @@ const suggestionStatusConfig: Record<Suggestion['status'], { label: string; colo
     implemented: { label: 'Implementado', color: 'bg-green-500' },
     declined: { label: 'Recusado', color: 'bg-gray-500' },
 }
+
+function RespondSuggestionDialog({ suggestion, onFinished }: { suggestion: Suggestion, onFinished: () => void }) {
+    const db = useFirestore();
+    const { toast } = useToast();
+    const [responseText, setResponseText] = useState(suggestion.response || '');
+    const [isSaving, startSaving] = useTransition();
+
+    const handleSave = () => {
+        if (!db) return;
+        startSaving(async () => {
+            const suggestionRef = doc(db, 'system_suggestions', suggestion.id);
+            try {
+                await updateDoc(suggestionRef, { response: responseText });
+                toast({ title: 'Resposta salva com sucesso!' });
+                onFinished();
+            } catch (error) {
+                console.error('Error saving suggestion response:', error);
+                toast({ title: 'Erro ao salvar resposta', variant: 'destructive' });
+            }
+        });
+    };
+
+    return (
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Responder à Sugestão</DialogTitle>
+                <DialogDescription>
+                    Escreva uma devolutiva para o usuário que enviou a sugestão.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+                <blockquote className="border-l-2 pl-4 italic text-sm">"{suggestion.text}"</blockquote>
+                <Textarea
+                    placeholder="Escreva sua resposta aqui..."
+                    value={responseText}
+                    onChange={(e) => setResponseText(e.target.value)}
+                    rows={5}
+                />
+            </div>
+            <DialogFooter>
+                <Button variant="ghost" onClick={onFinished}>Cancelar</Button>
+                <Button onClick={handleSave} disabled={isSaving}>
+                    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Salvar Resposta
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    );
+}
+
 
 function ClientSettingsDialog({ client, onFinished }: { client: Client | null, onFinished: () => void }) {
     const db = useFirestore();
@@ -517,6 +567,8 @@ export default function ConsultancyPage() {
     
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingAction, setEditingAction] = useState<ConsultancyAction | null>(null);
+    const [respondingSuggestion, setRespondingSuggestion] = useState<Suggestion | null>(null);
+
 
     const handleLogout = async () => {
         if (!auth) return;
@@ -776,6 +828,10 @@ export default function ConsultancyPage() {
                                     </DropdownMenuItem>
                                 </UserManagementDialog>
                             )}
+                             <DropdownMenuItem onClick={() => router.push('/minhas-sugestoes')}>
+                                <Bell className="mr-2 h-4 w-4" />
+                                Minhas Sugestões
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                              <DropdownMenuItem onClick={() => router.push('/change-password')}>
                                 <KeyRound className="mr-2 h-4 w-4" />
@@ -1032,6 +1088,9 @@ export default function ConsultancyPage() {
                             </div>
                         </CardContent>
                     </Card>
+                    <Dialog open={!!respondingSuggestion} onOpenChange={(open) => !open && setRespondingSuggestion(null)}>
+                        {respondingSuggestion && <RespondSuggestionDialog suggestion={respondingSuggestion} onFinished={() => setRespondingSuggestion(null)} />}
+                    </Dialog>
                     <Card className="lg:col-span-1">
                         <CardHeader>
                             <CardTitle className="text-2xl flex items-center justify-between">
@@ -1057,23 +1116,35 @@ export default function ConsultancyPage() {
                                         <p className="text-xs text-muted-foreground">
                                             Em: {format(suggestion.createdAt.toDate(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                                         </p>
-                                         <div className="mt-3 flex justify-end items-center gap-2">
-                                            <Label>Status:</Label>
-                                            <Select
-                                                defaultValue={suggestion.status}
-                                                onValueChange={(value) => handleStatusChange(suggestion.id, value as Suggestion['status'])}
-                                            >
-                                                <SelectTrigger className="h-8 text-xs w-[120px]">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {Object.entries(suggestionStatusConfig).map(([key, { label }]) => (
-                                                        <SelectItem key={key} value={key} className="text-xs">
-                                                            {label}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                        {suggestion.response && (
+                                            <div className="mt-2 p-2 bg-background/50 rounded-md">
+                                                <p className="text-xs font-semibold">Sua Resposta:</p>
+                                                <p className="text-xs italic text-muted-foreground">"{suggestion.response}"</p>
+                                            </div>
+                                        )}
+                                         <div className="mt-3 flex justify-between items-center gap-2">
+                                            <Button variant="link" className="p-0 h-auto text-xs" onClick={() => setRespondingSuggestion(suggestion)}>
+                                                <MessageSquare className="mr-1 h-3 w-3" />
+                                                {suggestion.response ? 'Editar Resposta' : 'Responder'}
+                                            </Button>
+                                            <div className="flex items-center gap-2">
+                                                <Label className="text-xs">Status:</Label>
+                                                <Select
+                                                    defaultValue={suggestion.status}
+                                                    onValueChange={(value) => handleStatusChange(suggestion.id, value as Suggestion['status'])}
+                                                >
+                                                    <SelectTrigger className="h-8 text-xs w-[120px]">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {Object.entries(suggestionStatusConfig).map(([key, { label }]) => (
+                                                            <SelectItem key={key} value={key} className="text-xs">
+                                                                {label}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
                                         </div>
                                     </div>
                                 )) : (

@@ -42,6 +42,8 @@ export interface Activity {
   historicoExecucoes?: (Timestamp | Date)[];
   parentId: string | null;
   prazo?: Timestamp | Date | null; // For sub-activities
+  attachmentUrl?: string | null;
+  attachmentFilename?: string | null;
 }
 
 export interface ConsultancyAction {
@@ -129,4 +131,5 @@ export interface Suggestion {
   clientId: string | null;
   createdAt: Timestamp;
   status: 'new' | 'in_review' | 'implemented' | 'declined';
+  response: string | null;
 }
